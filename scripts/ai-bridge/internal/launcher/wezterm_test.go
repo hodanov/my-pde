@@ -18,13 +18,13 @@ func TestWezTerm_Args(t *testing.T) {
 			name:       "basic",
 			cwd:        "/home/user/project",
 			scriptPath: "/tmp/ai-bridge-12345.sh",
-			want:       []string{"cli", "spawn", "--cwd", "/home/user/project", "--", "bash", "-l", "/tmp/ai-bridge-12345.sh"},
+			want:       []string{"cli", "spawn", "--cwd", "/home/user/project", "--", "bash", "/tmp/ai-bridge-12345.sh"},
 		},
 		{
 			name:       "path with spaces",
 			cwd:        "/home/user/my project",
 			scriptPath: "/tmp/ai-bridge-99999.sh",
-			want:       []string{"cli", "spawn", "--cwd", "/home/user/my project", "--", "bash", "-l", "/tmp/ai-bridge-99999.sh"},
+			want:       []string{"cli", "spawn", "--cwd", "/home/user/my project", "--", "bash", "/tmp/ai-bridge-99999.sh"},
 		},
 	}
 
@@ -53,14 +53,14 @@ func TestWezTerm_Launch(t *testing.T) {
 			cwd:        "/tmp",
 			scriptPath: "/tmp/script.sh",
 			wantName:   "wezterm",
-			wantArgs:   []string{"cli", "spawn", "--cwd", "/tmp", "--", "bash", "-l", "/tmp/script.sh"},
+			wantArgs:   []string{"cli", "spawn", "--cwd", "/tmp", "--", "bash", "/tmp/script.sh"},
 		},
 		{
 			name:       "path with spaces is passed correctly",
 			cwd:        "/home/user/my project",
 			scriptPath: "/tmp/ai-bridge-99999.sh",
 			wantName:   "wezterm",
-			wantArgs:   []string{"cli", "spawn", "--cwd", "/home/user/my project", "--", "bash", "-l", "/tmp/ai-bridge-99999.sh"},
+			wantArgs:   []string{"cli", "spawn", "--cwd", "/home/user/my project", "--", "bash", "/tmp/ai-bridge-99999.sh"},
 		},
 	}
 

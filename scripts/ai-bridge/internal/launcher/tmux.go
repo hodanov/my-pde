@@ -13,8 +13,11 @@ func shellQuote(s string) string {
 }
 
 // args returns the command-line arguments for tmux new-window.
+// Bash is intentionally invoked WITHOUT `-l` (login shell): some interactive
+// AI CLIs (e.g. cursor-agent) detect the login-shell context and refuse to
+// enter their TUI mode, causing the spawned window to exit immediately.
 func (t *Tmux) args(cwd, scriptPath string) []string {
-	shellCmd := "bash -l " + shellQuote(scriptPath)
+	shellCmd := "bash " + shellQuote(scriptPath)
 	return []string{"new-window", "-c", cwd, shellCmd}
 }
 
