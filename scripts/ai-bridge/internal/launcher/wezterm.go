@@ -6,8 +6,11 @@ type WezTerm struct {
 }
 
 // args returns the command-line arguments for wezterm cli spawn.
+// Bash is intentionally invoked WITHOUT `-l` (login shell): some interactive
+// AI CLIs (e.g. cursor-agent) detect the login-shell context and refuse to
+// enter their TUI mode, causing the spawned tab to exit immediately.
 func (w *WezTerm) args(cwd, scriptPath string) []string {
-	return []string{"cli", "spawn", "--cwd", cwd, "--", "bash", "-l", scriptPath}
+	return []string{"cli", "spawn", "--cwd", cwd, "--", "bash", scriptPath}
 }
 
 // Launch opens a new WezTerm tab and runs the script.
