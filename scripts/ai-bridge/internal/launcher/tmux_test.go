@@ -18,13 +18,13 @@ func TestTmux_Args(t *testing.T) {
 			name:       "basic",
 			cwd:        "/home/user/project",
 			scriptPath: "/tmp/ai-bridge-12345.sh",
-			want:       []string{"new-window", "-c", "/home/user/project", "bash -l '/tmp/ai-bridge-12345.sh'"},
+			want:       []string{"new-window", "-c", "/home/user/project", "bash '/tmp/ai-bridge-12345.sh'"},
 		},
 		{
 			name:       "path with single quote",
 			cwd:        "/tmp",
 			scriptPath: "/tmp/ai-bridge-it's.sh",
-			want:       []string{"new-window", "-c", "/tmp", "bash -l '/tmp/ai-bridge-it'\"'\"'s.sh'"},
+			want:       []string{"new-window", "-c", "/tmp", "bash '/tmp/ai-bridge-it'\"'\"'s.sh'"},
 		},
 	}
 
@@ -53,14 +53,14 @@ func TestTmux_Launch(t *testing.T) {
 			cwd:        "/tmp",
 			scriptPath: "/tmp/script.sh",
 			wantName:   "tmux",
-			wantArgs:   []string{"new-window", "-c", "/tmp", "bash -l '/tmp/script.sh'"},
+			wantArgs:   []string{"new-window", "-c", "/tmp", "bash '/tmp/script.sh'"},
 		},
 		{
 			name:       "path with single quote is shell-quoted correctly",
 			cwd:        "/home/user/project",
 			scriptPath: "/tmp/ai-bridge-it's.sh",
 			wantName:   "tmux",
-			wantArgs:   []string{"new-window", "-c", "/home/user/project", "bash -l '/tmp/ai-bridge-it'\"'\"'s.sh'"},
+			wantArgs:   []string{"new-window", "-c", "/home/user/project", "bash '/tmp/ai-bridge-it'\"'\"'s.sh'"},
 		},
 	}
 
