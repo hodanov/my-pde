@@ -32,7 +32,7 @@ ENV LC_CTYPE=ja_JP.UTF-8
 # Stage 1: Build Neovim from source
 FROM base AS nvim-builder
 
-ARG NEOVIM_VERSION=0.12.2
+ARG NEOVIM_VERSION=null
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ninja-build gettext cmake \
   && git clone https://github.com/neovim/neovim /neovim \
