@@ -64,9 +64,11 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 | JSON/YAML  | `prettier --check .`                          | `prettier --write .`        |
 | Shell      | `shellcheck`                                  | `shfmt`                     |
 | Dockerfile | `hadolint environment/docker/nvim.dockerfile` | —                           |
+| Terraform  | `tflint`                                      | `terraform fmt`             |
 
 - AI Bridge has Go unit tests: `make ai-bridge-test`.
 - No repository-level test suite beyond per-directory checks.
+- Terraform definition jump/completion is provided by `terraform-ls`. `tflint`'s AWS ruleset (`tflint-ruleset-aws`) is not bundled here; install it per Terraform project via `.tflint.hcl` + `tflint --init`.
 
 ## Commit & PR Guidelines
 

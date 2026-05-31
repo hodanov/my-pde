@@ -12,6 +12,8 @@ require("conform").setup({
 		lua = { "stylua" },
 		markdown = { "markdownlint-cli2" },
 		python = { "ruff_fix", "ruff_format", "ruff_organize_imports" },
+		terraform = { "terraform_fmt" },
+		["terraform-vars"] = { "terraform_fmt" },
 		yaml = { "prettierd", "prettier", stop_after_first = true },
 	},
 })
