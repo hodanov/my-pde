@@ -72,7 +72,9 @@ return function(config)
 		{
 			source = {
 				Gradient = {
-					colors = { "#11111b", "#11111b" },
+					-- colors = { "#1e1e2e", "#1e1e2e" },
+					colors = { "#181825", "#181825" },
+					-- colors = { "#11111b", "#11111b" },
 					orientation = {
 						Linear = { angle = -30.0 },
 					},
