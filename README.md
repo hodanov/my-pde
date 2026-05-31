@@ -39,7 +39,7 @@ The Neovim dotfiles work in any environment. You can find [the dotfiles here](./
 
 ## Features
 
-- **LSP / Linter / Formatter**: Go (gopls, golangci-lint), Python (pyright, ruff), JavaScript (eslint, prettier), Lua (stylua), YAML, TOML, Markdown, etc.
+- **LSP / Linter / Formatter**: Go (gopls, golangci-lint), Python (pyright, ruff), JavaScript (eslint, prettier), Lua (stylua), Terraform (terraform-ls, tflint, terraform fmt), YAML, TOML, Markdown, etc.
 - **Completion**: nvim-cmp
 - **Fuzzy Finder**: telescope.nvim
 - **File Manager**: fern.vim

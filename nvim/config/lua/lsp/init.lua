@@ -46,6 +46,9 @@ vim.lsp.enable("eslint")
 vim.lsp.enable("pyright")
 vim.lsp.enable("ruff")
 
+-- Terraform
+vim.lsp.enable("terraformls")
+
 -- Config files
 vim.lsp.enable("yamlls")
 vim.lsp.enable("tombi")
