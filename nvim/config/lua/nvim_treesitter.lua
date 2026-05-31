@@ -10,10 +10,10 @@ ts.setup({
 -- nvim-treesitter 新 main では `incremental_selection` モジュールが廃止されているため、
 -- ここでプラグイン側のキー (gnn / grn / grm / grc 等) を再現する設定は入れない。
 
-ts.install({ "go", "python", "markdown", "markdown_inline" })
+ts.install({ "go", "python", "markdown", "markdown_inline", "terraform", "hcl" })
 
 vim.api.nvim_create_autocmd("FileType", {
-	pattern = { "go", "python", "markdown", "markdown_inline" },
+	pattern = { "go", "python", "markdown", "markdown_inline", "terraform", "hcl" },
 	callback = function()
 		-- highlight
 		vim.treesitter.start()

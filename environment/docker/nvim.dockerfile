@@ -164,6 +164,30 @@ RUN set -eux; \
   install -m 0755 "$BIN_PATH" /usr/local/bin/hadolint
 
 ####################
+# Stage 7: Fetch Terraform CLI binary only
+FROM base AS terraform-builder
+
+ARG TERRAFORM_VERSION=1.15.5
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN set -eux; \
+  ARCH="$(dpkg --print-architecture)"; \
+  case "$ARCH" in \
+    amd64) TF_ARCH="linux_amd64" ;; \
+    arm64) TF_ARCH="linux_arm64" ;; \
+    *) echo "Unsupported arch for terraform: $ARCH" >&2; exit 1 ;; \
+  esac; \
+  BASE_URL="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}"; \
+  TMPDIR="/tmp/terraform"; \
+  mkdir -p "$TMPDIR"; \
+  ZIP_NAME="terraform_${TERRAFORM_VERSION}_${TF_ARCH}.zip"; \
+  SUMS_NAME="terraform_${TERRAFORM_VERSION}_SHA256SUMS"; \
+  curl -fsSL "$BASE_URL/$ZIP_NAME" -o "$TMPDIR/$ZIP_NAME"; \
+  curl -fsSL "$BASE_URL/$SUMS_NAME" -o "$TMPDIR/$SUMS_NAME"; \
+  (cd "$TMPDIR" && grep " ${ZIP_NAME}$" "$SUMS_NAME" | sha256sum -c -); \
+  unzip -o "$TMPDIR/$ZIP_NAME" -d "$TMPDIR"; \
+  install -m 0755 "$TMPDIR/terraform" /usr/local/bin/terraform
+
+####################
 # Final stage
 FROM base
 
@@ -183,6 +207,7 @@ ENV PYTHONIOENCODING=utf-8
 COPY --from=go-builder /usr/local/go/ /usr/local/go/
 COPY --from=go-builder /root/go/bin/ /root/go/bin/
 COPY --from=hadolint-builder /usr/local/bin/hadolint /usr/local/bin/hadolint
+COPY --from=terraform-builder /usr/local/bin/terraform /usr/local/bin/terraform
 COPY --from=nvim-builder /neovim-install/ /
 COPY --from=node-builder /opt/node/ /opt/node/
 COPY --from=node-builder /opt/npm-tools/ /opt/npm-tools/

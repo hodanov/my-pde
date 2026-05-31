@@ -39,11 +39,15 @@ jobs:
           # npm cli latest
           NPM_VERSION=$(curl -s https://registry.npmjs.org/npm/latest | jq -r '.version')
 
+          # Terraform latest GA (Checkpoint API matches releases.hashicorp.com download source)
+          TERRAFORM_VERSION=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r '.current_version')
+
           echo "node=$NODE_VERSION" >> $GITHUB_OUTPUT
           echo "go=$GO_VERSION" >> $GITHUB_OUTPUT
           echo "neovim=$NEOVIM_VERSION" >> $GITHUB_OUTPUT
           echo "rust=$RUST_TOOLCHAIN" >> $GITHUB_OUTPUT
           echo "npm=$NPM_VERSION" >> $GITHUB_OUTPUT
+          echo "terraform=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
 
       - name: Update Dockerfile ARGs
         shell: bash
@@ -54,6 +58,7 @@ jobs:
           sed -i.bak -E "s/^ARG RUST_TOOLCHAIN(=.*)?$/ARG RUST_TOOLCHAIN=${{ steps.resolve.outputs.rust }}/" environment/docker/nvim.dockerfile
           sed -i.bak -E "s/^ARG NEOVIM_VERSION(=.*)?$/ARG NEOVIM_VERSION=${{ steps.resolve.outputs.neovim }}/" environment/docker/nvim.dockerfile
           sed -i.bak -E "s/^ARG NPM_VERSION(=.*)?$/ARG NPM_VERSION=${{ steps.resolve.outputs.npm }}/" environment/docker/nvim.dockerfile
+          sed -i.bak -E "s/^ARG TERRAFORM_VERSION(=.*)?$/ARG TERRAFORM_VERSION=${{ steps.resolve.outputs.terraform }}/" environment/docker/nvim.dockerfile
           rm -f environment/docker/nvim.dockerfile.bak
 
       - name: Create Pull Request
@@ -67,6 +72,7 @@ jobs:
             - Neovim: ${{ steps.resolve.outputs.neovim }}
             - Rust: ${{ steps.resolve.outputs.rust }}
             - npm: ${{ steps.resolve.outputs.npm }}
+            - Terraform: ${{ steps.resolve.outputs.terraform }}
           title: "chore: bump tool versions"
           body: |-
             This PR bumps toolchain versions used in `environment/docker/nvim.dockerfile`.
@@ -76,6 +82,7 @@ jobs:
             - Neovim: `${{ steps.resolve.outputs.neovim }}`
             - Rust toolchain: `${{ steps.resolve.outputs.rust }}`
             - npm CLI: `${{ steps.resolve.outputs.npm }}`
+            - Terraform: `${{ steps.resolve.outputs.terraform }}`
 
             Automated by scheduled workflow.
           branch: chore/bump-tool-versions
