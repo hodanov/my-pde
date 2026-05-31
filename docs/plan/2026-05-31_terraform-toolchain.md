@@ -109,12 +109,12 @@
 
 フルイメージ再ビルドが必要 (未実施):
 
-- [ ] イメージを再ビルドして `nvim --headless -c 'checkhealth' -c 'qall'` がエラーなく完了する
-- [ ] `terraform-ls --version` / `tflint --version` がコンテナ内で実行できる
-- [ ] `.tf` を開いて `gd` でリソース/変数/モジュール参照の定義ジャンプができる
-- [ ] `.tf` 保存時に `terraform fmt` 相当の format on save が走る
-- [ ] 構文エラーや tflint 違反が diagnostics として表示される
-- [ ] `.tf` / `.tfvars` の treesitter ハイライトが効く
+- [x] イメージを再ビルドして `nvim --headless -c 'checkhealth' -c 'qall'` がエラーなく完了する
+- [x] `terraform-ls --version` / `tflint --version` がコンテナ内で実行できる
+- [x] `.tf` を開いて `gd` でリソース/変数/モジュール参照の定義ジャンプができる
+- [x] `.tf` 保存時に `terraform fmt` 相当の format on save が走る
+- [x] 構文エラーや tflint 違反が diagnostics として表示される
+- [x] `.tf` / `.tfvars` の treesitter ハイライトが効く
 - [ ] `bump-tool-versions` workflow を `workflow_dispatch` で実行し `TERRAFORM_VERSION` が更新された PR が作られる
 
 ## Resolved decisions
