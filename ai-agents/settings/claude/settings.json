@@ -48,26 +48,55 @@
     ]
   },
   "model": "opus",
-  "enabledPlugins": {
-    "swift-lsp@claude-plugins-official": true,
-    "gopls-lsp@claude-plugins-official": true
-  },
-  "effortLevel": "high",
-  "autoUpdatesChannel": "latest",
   "hooks": {
     "PostToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
-          { "type": "command", "command": "~/.claude/hooks/goimports.sh" },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/goimports.sh"
+          },
           {
             "type": "command",
             "command": "~/.claude/hooks/markdown-format.sh"
           },
-          { "type": "command", "command": "~/.claude/hooks/shfmt.sh" },
-          { "type": "command", "command": "~/.claude/hooks/prettier.sh" },
-          { "type": "command", "command": "~/.claude/hooks/stylua.sh" },
-          { "type": "command", "command": "~/.claude/hooks/tombi.sh" }
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/shfmt.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/prettier.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/stylua.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/tombi.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/notify-macos.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/notify-macos.sh"
+          }
         ]
       }
     ]
@@ -75,5 +104,12 @@
   "statusLine": {
     "type": "command",
     "command": "jq -r '(.model.display_name // \"Claude\") + \" | Context: \" + (.context_window.used_percentage // 0 | tostring) + \"% used\"'"
-  }
+  },
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true
+  },
+  "effortLevel": "high",
+  "autoUpdatesChannel": "latest",
+  "editorMode": "vim"
 }
