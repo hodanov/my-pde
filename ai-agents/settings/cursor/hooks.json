@@ -8,6 +8,7 @@
       { "command": "~/.cursor/hooks/prettier.sh" },
       { "command": "~/.cursor/hooks/stylua.sh" },
       { "command": "~/.cursor/hooks/tombi.sh" }
-    ]
+    ],
+    "stop": [{ "command": "~/.cursor/hooks/notify-macos.sh" }]
   }
 }
