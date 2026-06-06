@@ -63,9 +63,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends xz-utils \
   && cd /tmp \
   && NODE_TARBALL="node-v${NODE_VERSION}-${NODE_ARCH}.tar.xz" \
   && NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TARBALL}" \
-  && curl -fsSL "$NODE_URL" -o "$NODE_TARBALL" \
+  && curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$NODE_URL" -o "$NODE_TARBALL" \
   && SHA_URL="https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt" \
-  && curl -fsSL "$SHA_URL" -o SHASUMS256.txt \
+  && curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$SHA_URL" -o SHASUMS256.txt \
   && grep " ${NODE_TARBALL}$" SHASUMS256.txt | sha256sum -c - \
   && tar -xJf "$NODE_TARBALL" \
   && mkdir -p "$NODE_HOME" \
@@ -93,8 +93,8 @@ RUN ARCH="$(dpkg --print-architecture)" \
   esac \
   && GO_TARBALL="go${GO_VERSION}.${GO_ARCH}.tar.gz" \
   && GO_BASE_URL="https://dl.google.com/go" \
-  && wget -q "${GO_BASE_URL}/${GO_TARBALL}" -O "$GO_TARBALL" \
-  && wget -q "${GO_BASE_URL}/${GO_TARBALL}.sha256" -O "${GO_TARBALL}.sha256" \
+  && curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "${GO_BASE_URL}/${GO_TARBALL}" -o "$GO_TARBALL" \
+  && curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "${GO_BASE_URL}/${GO_TARBALL}.sha256" -o "${GO_TARBALL}.sha256" \
   && GO_HASH_REF="$(tr -d ' \r\n' < "${GO_TARBALL}.sha256")" \
   && GO_HASH_ACTUAL="$(sha256sum "$GO_TARBALL" | awk '{print $1}')" \
   && [ "$GO_HASH_ACTUAL" = "$GO_HASH_REF" ] || (echo "Go tarball checksum mismatch: expected=$GO_HASH_REF actual=$GO_HASH_ACTUAL" >&2; exit 1) \
@@ -115,7 +115,7 @@ ARG RUST_TOOLCHAIN=stable
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
   clang libclang-dev \
-  && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "$RUST_TOOLCHAIN" \
+  && curl --proto '=https' --tlsv1.2 --retry 5 --retry-all-errors --retry-delay 2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "$RUST_TOOLCHAIN" \
   && apt-get clean -y \
   && rm -rf /var/lib/apt/lists/*
 ENV PATH="/root/.cargo/bin:${PATH}"
@@ -127,7 +127,7 @@ FROM base AS python-builder
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv \
-  && curl -LsSf https://astral.sh/uv/install.sh | sh \
+  && curl --retry 5 --retry-all-errors --retry-delay 2 -LsSf https://astral.sh/uv/install.sh | sh \
   && export PATH="$HOME/.local/bin:$PATH" \
   && uv --version >/dev/null \
   && apt-get clean -y \
@@ -156,8 +156,8 @@ RUN set -eux; \
   mkdir -p "$TMPDIR"; \
   BIN_PATH="$TMPDIR/hadolint"; \
   SHA_PATH="$TMPDIR/hadolint.sha256"; \
-  curl -fsSL "$BASE_URL/hadolint-$HL_ARCH" -o "$BIN_PATH"; \
-  curl -fsSL "$BASE_URL/hadolint-$HL_ARCH.sha256" -o "$SHA_PATH"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/hadolint-$HL_ARCH" -o "$BIN_PATH"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/hadolint-$HL_ARCH.sha256" -o "$SHA_PATH"; \
   REF_SHA="$(awk '{print $1}' "$SHA_PATH")"; \
   ACT_SHA="$(sha256sum "$BIN_PATH" | awk '{print $1}')"; \
   [ "$ACT_SHA" = "$REF_SHA" ] || (echo "hadolint checksum mismatch: expected=$REF_SHA actual=$ACT_SHA" >&2; exit 1); \
@@ -181,8 +181,8 @@ RUN set -eux; \
   mkdir -p "$TMPDIR"; \
   ZIP_NAME="terraform_${TERRAFORM_VERSION}_${TF_ARCH}.zip"; \
   SUMS_NAME="terraform_${TERRAFORM_VERSION}_SHA256SUMS"; \
-  curl -fsSL "$BASE_URL/$ZIP_NAME" -o "$TMPDIR/$ZIP_NAME"; \
-  curl -fsSL "$BASE_URL/$SUMS_NAME" -o "$TMPDIR/$SUMS_NAME"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$ZIP_NAME" -o "$TMPDIR/$ZIP_NAME"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$SUMS_NAME" -o "$TMPDIR/$SUMS_NAME"; \
   (cd "$TMPDIR" && grep " ${ZIP_NAME}$" "$SUMS_NAME" | sha256sum -c -); \
   unzip -o "$TMPDIR/$ZIP_NAME" -d "$TMPDIR"; \
   install -m 0755 "$TMPDIR/terraform" /usr/local/bin/terraform
