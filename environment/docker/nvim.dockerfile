@@ -82,7 +82,7 @@ RUN cd /opt/npm-tools && npm install --omit=dev --no-audit --no-fund
 # Stage 3: Build Go toolchain and tools
 FROM base AS go-builder
 
-ARG GO_VERSION=1.26.3
+ARG GO_VERSION=1.26.4
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH="$(dpkg --print-architecture)" \
