@@ -50,14 +50,16 @@ jobs:
         if: matrix.target.name == 'code'
         working-directory: scripts/ai-bridge
         run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh \
-            | sh -s -- -b "$(go env GOPATH)/bin"
+          # 取得元スクリプト・導入バージョンとも v2.3.1 に固定（environment/tools/go/go-tools.txt と一致させ再現性を担保）
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v2.3.1/install.sh \
+            | sh -s -- -b "$(go env GOPATH)/bin" v2.3.1
           "$(go env GOPATH)/bin/golangci-lint" run ./... 2>&1 | tee /tmp/lint.txt || true
 
       - name: Run actionlint
         if: matrix.target.name == 'ci'
         run: |
-          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          # 取得元スクリプト・導入バージョンとも v1.7.12 に固定（main 追従をやめ再現性を担保）
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
           ./actionlint -color 2>&1 | tee /tmp/lint.txt || true
 
       # 既存 Open Issue を取得し、重複排除の判断材料として Claude に渡す
