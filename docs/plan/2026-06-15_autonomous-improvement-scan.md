@@ -170,7 +170,7 @@ jobs:
 
 > **定義の管理**: 以降で扱う Routine（Neovim 動向スキャン / adopted Issue の PR 化）の定義は [`routines/`](../../routines/) ディレクトリの JSON を**正（source of truth）**として一元管理する。`name` / `cron_expression` / `model` / `allowed_tools` / `prompt` などを宣言的に保持し、変更は PR レビューを経て `/schedule`（Update）で反映する。`trigger_id` / `environment_id` は稼働中 Routine を指す識別子（資格情報ではない）として各 JSON にピン留めしている。スキーマと apply 手順・制約は [`routines/README.md`](../../routines/README.md) を参照。
 
-### 設計
+### 設計（Neovim 動向スキャン）
 
 - **実行基盤**: claude.ai の Routine（cron スケジュールで隔離されたクラウドセッションを起動）。GitHub Actions ランナーではなく、Anthropic クラウド上で git チェックアウト・ツール実行まで行う。ローカル環境には依存しない。
 - **対象**: `nvim/config/` 配下のみ。`init.lua` をエントリに、lazy.nvim（`lazy_nvim.lua` / `plugins.lua`）でプラグイン管理、LSP は `nvim/config/lua/lsp/`。
@@ -182,7 +182,7 @@ jobs:
 - **Skip ではなく「別角度」へ**: Actions 版は重複時に「更新またはスキップ」だったが、Routine 版では**有力候補が既存と被る場合はその候補を捨て、被らない別の改善提案を選び直して 1 件起票する**。理由は (1) Neovim 側に変化が無いと永遠に起票されなくなる、(2) 起票 Issue が全て採用されるとは限らず未採用が溜まる、ため。被らない提案がどうしても無い場合に限り起票せず終了する。
 - **採用判定の運用**: 不採用にした Issue は Close し `rejected` ラベルを付与する運用が前提（次回スキャンの重複排除が機能する条件）。`adopted` / `rejected` ラベルの考え方は Actions 版と共通。
 
-### Routine 設定値
+### Routine 設定値（Neovim 動向スキャン）
 
 | 項目         | 値                                                              |
 | ------------ | --------------------------------------------------------------- |
@@ -211,7 +211,7 @@ jobs:
 
 スキャンで起票され、人手レビューで `adopted` ラベルが付いた採用済み Issue を、**実装してドラフト PR を作成する** Routine。本プランの「PR 自動化フェーズ」をクラウド Routine として実装したもので、Neovim 動向スキャンと組み合わせて**スキャン → Issue 起票 → 人が `adopted` 付与 → PR Bot がドラフト PR 作成**という一連の自律改善ループを閉じる。動作確認済みで稼働中。
 
-### 設計
+### 設計（adopted Issue の PR 化）
 
 - **実行基盤**: claude.ai の Routine（クラウド CCR）。Neovim スキャンと同じ基盤。
 - **対象**: `adopted` ラベルが付いた Open Issue **全般**（系統ラベルは問わない）。`scan:nvim` 由来に限定せず、将来 `scan:code` 等にも使い回せるようにした。そのぶん変更範囲は Issue 本文が指す箇所に限定し、最小差分を徹底する。
@@ -222,7 +222,7 @@ jobs:
 - **実装フロー**: 各 Issue ごとに ①`main` から作業ブランチ（例 `auto/issue-<番号>-<slug>`）を切る → ②提案を実装（最小差分）→ ③検証（Lua は stylua、Go は `golangci-lint run ./...` + `go test ./...`、`Makefile` の該当タスクがあれば活用）→ ④命令形コミット & push → ⑤`gh pr create --draft --assignee hodanov`（body に `Closes #<番号>` と何を・なぜ・検証結果）→ ⑥Issue に `pr-created` ラベル付与（無ければ `gh label create` で作成）。
 - **安全策**: すべてドラフト PR で出し、最終マージ判断は手動。`main` への直接コミットはしない。実装が困難・曖昧で安全に進められない Issue はスキップし最後に報告する（`pr-created` は付けない）。
 
-### Routine 設定値
+### Routine 設定値（adopted Issue の PR 化）
 
 | 項目         | 値                                                              |
 | ------------ | --------------------------------------------------------------- |
