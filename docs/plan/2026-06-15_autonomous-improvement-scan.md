@@ -2,6 +2,8 @@
 
 `anthropics/claude-code-action@v1` を cron で定期実行し、リポジトリ全体（コード・Skills・Workflows）を横断的に分析して改善提案を Issue として自動起票する。まずは「Issue 起票のみ」で 1〜2 週間試運転し、提案の質を見てから低リスク改善の自動 PR 化へ拡張する段階的アプローチを取る。
 
+> **方針転換（2026-06-18）**: 当初の GitHub Actions 版（`.github/workflows/weekly-improvement-scan.yml`）は**削除し、claude.ai の Routine に一本化した**。理由は (1) Actions 版で `--max-turns` 超過が発生した、(2) `CLAUDE_CODE_OAUTH_TOKEN` の発行・期限管理が手間、の 2 点。以降の「## Routine 版」セクションが現行の運用であり、本セクション以下の Actions 版の記述は設計経緯として残す。
+
 ## Background
 
 - このリポジトリ（`my-pde`）は個人開発環境であり、Go モジュール（`scripts/ai-bridge/`）、Skill 定義（`.claude/skills/`・`ai-agents/skills/`）、複数の lint/test ワークフロー（`.github/workflows/`）を横断的に持つ。
@@ -161,6 +163,89 @@ jobs:
 - **採用判定**: 専用ラベル `adopted` / `rejected` を Issue に付与して記録する。
 - **PR 自動化への移行基準**: `adopted` が 10 回連続（間に `rejected` を挟まない）になったら、PR 自動化フェーズへ移行する。試運転段階では手動チェックでカウントする。
 - **Issue の重複排除**: 毎回新規作成せず、各ジョブで既存 Open Issue（系統別ラベルで絞り込み）を `gh issue list` で取得 → Claude が確認し、重複は更新またはスキップする。
+
+## Routine 版（クラウドエージェント）: Neovim 動向スキャン
+
+本プラン（GitHub Actions / `claude-code-action` 版）とは別に、**claude.ai のスケジュール Routine（クラウドエージェント / CCR）**として、対象を **Neovim 設定（`nvim/config/`）**に絞った派生版を稼働させた。Actions 版がリポジトリ内部（コード / Skills / CI）の改善を扱うのに対し、こちらは **Web 上の Neovim 最新動向・トレンドを調査し、このリポジトリで活用できる改善を Issue 起票する**ことに特化する。
+
+> **定義の管理**: 以降で扱う Routine（Neovim 動向スキャン / adopted Issue の PR 化）の定義は [`routines/`](../../routines/) ディレクトリの JSON を**正（source of truth）**として一元管理する。`name` / `cron_expression` / `model` / `allowed_tools` / `prompt` などを宣言的に保持し、変更は PR レビューを経て `/schedule`（Update）で反映する。`trigger_id` / `environment_id` は稼働中 Routine を指す識別子（資格情報ではない）として各 JSON にピン留めしている。スキーマと apply 手順・制約は [`routines/README.md`](../../routines/README.md) を参照。
+
+### 設計
+
+- **実行基盤**: claude.ai の Routine（cron スケジュールで隔離されたクラウドセッションを起動）。GitHub Actions ランナーではなく、Anthropic クラウド上で git チェックアウト・ツール実行まで行う。ローカル環境には依存しない。
+- **対象**: `nvim/config/` 配下のみ。`init.lua` をエントリに、lazy.nvim（`lazy_nvim.lua` / `plugins.lua`）でプラグイン管理、LSP は `nvim/config/lua/lsp/`。
+- **調査範囲**: Web 検索（WebSearch / WebFetch）で Neovim の最新動向を調べつつ、`nvim/config/` の現状も読む。ネタは「最新リリースの新機能」だけに限定せず、**注目プラグイン・モダン代替プラグイン・現行設定のベストプラクティス化・古い書き方の刷新・未活用機能・LSP/treesitter/補完/フォーマッタ/キーマップ/UX 改善**まで広く対象にする。最新動向に変化が無くても素材が尽きないようにするため。
+- **出力**: Issue 起票のみ（コード変更・PR 作成はしない）。系統別ラベルは `scan:nvim`。**1 回のスキャンで最大 1 件**に絞り、ターン・コストを抑える。
+- **重複排除（Actions 版から強化）**: 起票前に以下の 2 系統を取得し、**いずれとも重複しない**提案を選ぶ。
+  1. `gh issue list --state open --label "scan:nvim"` — 既に提案済み（Open）
+  2. `gh issue list --state closed --label "scan:nvim" --label "rejected"` — 一度不採用になった（Close 済み rejected）
+- **Skip ではなく「別角度」へ**: Actions 版は重複時に「更新またはスキップ」だったが、Routine 版では**有力候補が既存と被る場合はその候補を捨て、被らない別の改善提案を選び直して 1 件起票する**。理由は (1) Neovim 側に変化が無いと永遠に起票されなくなる、(2) 起票 Issue が全て採用されるとは限らず未採用が溜まる、ため。被らない提案がどうしても無い場合に限り起票せず終了する。
+- **採用判定の運用**: 不採用にした Issue は Close し `rejected` ラベルを付与する運用が前提（次回スキャンの重複排除が機能する条件）。`adopted` / `rejected` ラベルの考え方は Actions 版と共通。
+
+### Routine 設定値
+
+| 項目         | 値                                                              |
+| ------------ | --------------------------------------------------------------- |
+| 名前         | `Weekly Neovim Trend Scan`                                      |
+| Routine ID   | `trig_01UdqdcQV6FGQkkbTvp3BJ3S`                                 |
+| 管理 URL     | <https://claude.ai/code/routines/trig_01UdqdcQV6FGQkkbTvp3BJ3S> |
+| スケジュール | `0 23 * * 5`（金 23:00 UTC = **毎週土曜 8:00 JST**）            |
+| モデル       | `claude-opus-4-8`（Opus 4.8）                                   |
+| リポジトリ   | `https://github.com/hodanov/my-pde`                             |
+| 許可ツール   | `Bash` / `Read` / `Grep` / `Glob` / `WebSearch` / `WebFetch`    |
+| environment  | Default（`env_01H6ttcff6EJXggu8Xqmx5gN`）                       |
+
+### Actions 版との違い
+
+| 観点         | Actions 版（本体）                       | Routine 版（Neovim）                    |
+| ------------ | ---------------------------------------- | --------------------------------------- |
+| 実行基盤     | GitHub Actions + `claude-code-action@v1` | claude.ai Routine（クラウド CCR）       |
+| 対象         | コード / Skills / CI（リポジトリ内部）   | Neovim 設定（`nvim/config/`）+ Web 動向 |
+| 分割         | matrix（3 系統並列）                     | 単一ジョブ（1 系統・最大 1 件）         |
+| 重複時の挙動 | 更新 or スキップ                         | 被らない別角度を選び直して起票          |
+| 重複対象     | Open Issue（系統別ラベル）               | Open + Close 済み rejected の両方       |
+| 認証         | `CLAUDE_CODE_OAUTH_TOKEN`(Secret)        | Routine が claude.ai 側で管理           |
+| 頻度         | 週次（日曜 `0 0 * * 0`）                 | 週次（土曜 8:00 JST `0 23 * * 5`）      |
+
+## Routine 版（クラウドエージェント）: adopted Issue の PR 化
+
+スキャンで起票され、人手レビューで `adopted` ラベルが付いた採用済み Issue を、**実装してドラフト PR を作成する** Routine。本プランの「PR 自動化フェーズ」をクラウド Routine として実装したもので、Neovim 動向スキャンと組み合わせて**スキャン → Issue 起票 → 人が `adopted` 付与 → PR Bot がドラフト PR 作成**という一連の自律改善ループを閉じる。動作確認済みで稼働中。
+
+### 設計
+
+- **実行基盤**: claude.ai の Routine（クラウド CCR）。Neovim スキャンと同じ基盤。
+- **対象**: `adopted` ラベルが付いた Open Issue **全般**（系統ラベルは問わない）。`scan:nvim` 由来に限定せず、将来 `scan:code` 等にも使い回せるようにした。そのぶん変更範囲は Issue 本文が指す箇所に限定し、最小差分を徹底する。
+- **処理件数**: 未処理の adopted Issue を**全件**処理する。**1 Issue = 1 ブランチ = 1 ドラフト PR**。
+- **処理済み判定（重複 PR 防止）**: 以下のいずれかに該当する Issue はスキップする。
+  1. その Issue に `pr-created` ラベルが付いている
+  2. その Issue を参照する Open PR が既に存在する（`gh pr list --state open` で本文に `Closes #<番号>` / `#<番号>` を含む PR があるか確認）
+- **実装フロー**: 各 Issue ごとに ①`main` から作業ブランチ（例 `auto/issue-<番号>-<slug>`）を切る → ②提案を実装（最小差分）→ ③検証（Lua は stylua、Go は `golangci-lint run ./...` + `go test ./...`、`Makefile` の該当タスクがあれば活用）→ ④命令形コミット & push → ⑤`gh pr create --draft --assignee hodanov`（body に `Closes #<番号>` と何を・なぜ・検証結果）→ ⑥Issue に `pr-created` ラベル付与（無ければ `gh label create` で作成）。
+- **安全策**: すべてドラフト PR で出し、最終マージ判断は手動。`main` への直接コミットはしない。実装が困難・曖昧で安全に進められない Issue はスキップし最後に報告する（`pr-created` は付けない）。
+
+### Routine 設定値
+
+| 項目         | 値                                                              |
+| ------------ | --------------------------------------------------------------- |
+| 名前         | `Weekly Adopted-Issue PR Bot`                                   |
+| Routine ID   | `trig_01GMx9Ye659J9dSa7D9LZoMV`                                 |
+| 管理 URL     | <https://claude.ai/code/routines/trig_01GMx9Ye659J9dSa7D9LZoMV> |
+| スケジュール | `0 23 * * 6`（土 23:00 UTC = **毎週日曜 8:00 JST**）            |
+| モデル       | `claude-opus-4-8`（Opus 4.8）                                   |
+| リポジトリ   | `https://github.com/hodanov/my-pde`                             |
+| 許可ツール   | `Bash` / `Read` / `Write` / `Edit` / `Grep` / `Glob`            |
+| environment  | Default（`env_01H6ttcff6EJXggu8Xqmx5gN`）                       |
+
+### 自律改善ループ全体像
+
+| 段階         | 担い手                        | スケジュール      | 出力                           |
+| ------------ | ----------------------------- | ----------------- | ------------------------------ |
+| 動向スキャン | `Weekly Neovim Trend Scan`    | 毎週土曜 8:00 JST | `scan:nvim` Issue（最大 1 件） |
+| 採用判定     | 人手レビュー                  | 任意              | `adopted` / `rejected` ラベル  |
+| PR 化        | `Weekly Adopted-Issue PR Bot` | 毎週日曜 8:00 JST | ドラフト PR（`Closes #N`）     |
+| マージ判断   | 人手レビュー                  | 任意              | マージ / クローズ              |
+
+- 追加ラベル: `pr-created`（PR 化済みの adopted Issue に付与し、重複 PR を防止）。
+- 前提運用: 実装させたい Issue には `adopted` を、見送る Issue には `rejected`（Close）を付ける。これでスキャン側の重複排除と PR 側の対象選別が両立する。
 
 ## Open questions
 
