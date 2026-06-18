@@ -63,6 +63,12 @@ jobs:
           bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
           ./actionlint -color 2>&1 | tee /tmp/lint.txt || true
 
+      # 対象ファイルを事前に確定し、Claude に探索（ls/Glob の往復）をさせずターン消費を抑える
+      - name: Collect target files
+        run: |
+          git ls-files -- '${{ matrix.target.paths }}' > /tmp/files.txt
+          cat /tmp/files.txt
+
       # 既存 Open Issue を取得し、重複排除の判断材料として Claude に渡す
       - name: List existing issues
         env:
@@ -84,12 +90,17 @@ jobs:
             対象パス: ${{ matrix.target.paths }}
             ${{ matrix.target.prompt }}
 
+            重要な制約（ターン消費を抑えるため厳守）:
+            - 分析対象は /tmp/files.txt に列挙されたファイルのみ。
+              ls / Glob / find などでの探索は禁止。記載外のファイルは読まない。
+            - 起票は最も価値の高い提案を **1 件だけ** に絞る。複数提案があっても 1 件に厳選する。
+
             手順:
             1. /tmp/existing_issues.json を読み、既存の Open Issue を把握する。
             2. lint 結果ファイル /tmp/lint.txt があれば読み、分析に反映する。
-            3. 対象パスを分析し、改善提案をまとめる。
-            4. 同等の提案が既存 Issue にある場合は新規作成せず、必要なら既存 Issue に
+            3. /tmp/files.txt のファイルを読んで分析し、最も価値の高い改善提案を 1 件選ぶ。
+            4. その提案と同等のものが既存 Issue にある場合は新規作成せず、必要なら既存 Issue に
                コメントで補足するか、何もしない。
-            5. 新規の提案がある場合のみ、
-               `gh issue create --label "${{ matrix.target.label }}"` で起票する。
+            5. 既存と重複しない新規提案の場合のみ、
+               `gh issue create --label "${{ matrix.target.label }}"` で 1 件だけ起票する。
                タイトルは簡潔に、本文に背景・該当箇所・推奨対応を記載する。
