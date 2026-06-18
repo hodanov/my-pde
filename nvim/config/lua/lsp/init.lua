@@ -32,6 +32,17 @@ vim.lsp.config("gopls", {
 				run_govulncheck = true,
 				gc_details = true,
 			},
+			-- gopls は hints を明示指定しないとインレイヒントを一切返さないため、
+			-- エディタ側の有効化 (LspAttach) と合わせてここで表示対象を指定する。
+			hints = {
+				assignVariableTypes = true,
+				compositeLiteralFields = true,
+				compositeLiteralTypes = true,
+				constantValues = true,
+				functionTypeParameters = true,
+				parameterNames = true,
+				rangeVariableTypes = true,
+			},
 		},
 	},
 })
@@ -88,6 +99,16 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		local client = vim.lsp.get_client_by_id(ev.data.client_id)
 		if client and client:supports_method("textDocument/codeLens") then
 			vim.lsp.codelens.enable(true, { bufnr = ev.buf })
+		end
+
+		-- Inlay hint (vim.lsp.inlay_hint) を対応サーバーで常時有効化する。
+		-- 変数の推論型・関数の引数名などをソースを書き換えずに仮想テキストで補足表示する。
+		-- ノイズに感じる場合は下の <space>h でバッファ単位にトグルできる。
+		if client and client:supports_method("textDocument/inlayHint") then
+			vim.lsp.inlay_hint.enable(true, { bufnr = ev.buf })
+			vim.keymap.set("n", "<space>h", function()
+				vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = 0 }), { bufnr = 0 })
+			end, opts)
 		end
 	end,
 })
