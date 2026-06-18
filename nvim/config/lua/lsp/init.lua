@@ -94,11 +94,14 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
 -- Diagnostic 設定
 -- - virtual_text は無効、float で詳細を確認する
+-- - virtual_lines = { current_line = true } でカーソル行の診断だけを直下にインライン表示する
+--   (0.11 で追加。全行に出さず現在行に限定するので「普段はクリーン、必要な行だけ詳細」を維持できる)
 -- - ]d/[d でジャンプした際に on_jump コールバックから open_float を呼び、
 --   DiagnosticRelatedInformation も含めてその場で確認できるようにする
 --   (0.12 で `jump.float` は deprecated)
 vim.diagnostic.config({
 	virtual_text = false,
+	virtual_lines = { current_line = true },
 	jump = {
 		on_jump = function(_, bufnr)
 			vim.diagnostic.open_float({ bufnr = bufnr })
