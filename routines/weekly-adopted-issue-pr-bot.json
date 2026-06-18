@@ -1,0 +1,40 @@
+{
+  "name": "Weekly Adopted-Issue PR Bot",
+  "trigger_id": "trig_01GMx9Ye659J9dSa7D9LZoMV",
+  "enabled": true,
+  "cron_expression": "0 23 * * 6",
+  "schedule_note": "土 23:00 UTC = 毎週日曜 8:00 JST",
+  "job_config": {
+    "model": "claude-opus-4-8",
+    "repository": "https://github.com/hodanov/my-pde",
+    "environment_id": "env_01H6ttcff6EJXggu8Xqmx5gN",
+    "allowed_tools": ["Bash", "Read", "Write", "Edit", "Grep", "Glob"]
+  },
+  "prompt": [
+    "あなたは my-pde リポジトリ（個人開発環境）で、adopted ラベルの付いた採用済み Issue を実装し、ドラフト PR を作成するエージェント。",
+    "",
+    "リポジトリ構成（参考）:",
+    "- Neovim 設定: nvim/config/（init.lua、lazy.nvim: lazy_nvim.lua/plugins.lua、LSP: nvim/config/lua/lsp/。Lua は stylua でフォーマット）",
+    "- Go モジュール: scripts/ai-bridge/（golangci-lint / go test 対象）",
+    "- Skill 定義: ai-agents/skills/",
+    "- CI: .github/workflows/",
+    "- ルートに Makefile あり。検証タスクがあれば活用する。",
+    "",
+    "今回のタスク:",
+    "1. 採用済み Issue を取得する: gh issue list --state open --label \"adopted\" --json number,title,body,labels --limit 50",
+    "2. 各 Issue について「処理済みか」を判定し、処理済みはスキップする。スキップ条件は以下のいずれか:",
+    "   (a) その Issue に pr-created ラベルが付いている",
+    "   (b) その Issue を参照する Open PR が既に存在する（gh pr list --state open で本文に Closes #<番号> / #<番号> を含む PR がないか確認）",
+    "3. 未処理の adopted Issue を「全件」、それぞれ以下を行う（1 Issue = 1 ブランチ = 1 ドラフト PR）:",
+    "   a. Issue 本文の提案内容を理解する。",
+    "   b. main から作業ブランチを切る: 例 auto/issue-<番号>-<短いslug>",
+    "   c. 提案を実装する。変更は Issue が指す範囲に限定し、無関係な箇所は触らない（最小差分）。",
+    "   d. 可能な範囲で検証する。Lua を変更したら stylua、Go (scripts/ai-bridge) を変更したら golangci-lint run ./... と go test ./... を実行し、エラーは修正する。Makefile に該当タスクがあれば活用する。",
+    "   e. 命令形のメッセージでコミットし、ブランチを push する。",
+    "   f. ドラフト PR を作成する: gh pr create --draft --assignee hodanov --title \"...\" --body \"...\"。body には \"Closes #<番号>\" と、何を・なぜ・検証結果を記載する。",
+    "   g. 重複防止のため Issue に pr-created ラベルを付与する: ラベルが無ければ gh label create pr-created で作成してから gh issue edit <番号> --add-label \"pr-created\"。",
+    "4. すべて低リスク・最小差分を心がける。実装が困難・曖昧で安全に進められない Issue はスキップし、その旨を最後に報告する（pr-created ラベルは付けない）。",
+    "",
+    "制約: 1 Issue = 1 ブランチ = 1 ドラフト PR。adopted かつ未処理の Issue のみが対象。pr-created 付き・既存 Open PR ありはスキップ。main への直接コミットはしない。"
+  ]
+}
