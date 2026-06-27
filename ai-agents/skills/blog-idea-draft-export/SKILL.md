@@ -1,6 +1,8 @@
 ---
 name: blog-idea-draft-export
 description: Create or update a Markdown blog draft from recent work and export it with `YYYY-MM-DD_slug.md` naming. Output directory can be set via environment variable or CLI option; if missing, ask the user and pass it explicitly.
+metadata:
+  version: 1
 ---
 
 # Blog Idea Draft Export

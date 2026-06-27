@@ -3,6 +3,8 @@ name: plan-issue-export
 description: AIとの壁打ちで整理したプラン、または指定ファイルの内容を GitHub Issue として作成する。セッション内のプランの Issue 化、既存プランファイルからの Issue 作成、config によるデフォルト値設定が必要なときに使う。
 argument-hint: [source-file-or-request]
 disable-model-invocation: true
+metadata:
+  version: 1
 ---
 
 # Plan Issue Export

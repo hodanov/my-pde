@@ -9,14 +9,14 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 - `nvim/`: Neovim configuration (`init.lua` + modular Lua).
 - `scripts/ai-bridge/`: Go daemon bridging Neovim to host-side AI CLIs. See `scripts/ai-bridge/AGENTS.md`.
 - `ai-agents/`: AI agent/skill definitions and settings deployed to `~/.claude`, `~/.cursor`, `~/.codex`.
-  - `ai-agents/agents/`: 9 agent definitions (review, investigation, textlint).
-  - `ai-agents/skills/`: 12 skills (commit, review, blog, log export, etc.).
-  - `ai-agents/settings/`: Claude/Cursor settings and hooks.
+  - `ai-agents/agents/`: subagent definitions (review, investigation).
+  - `ai-agents/skills/`: reusable skills (commit, review, blog, log export, etc.).
+  - `ai-agents/settings/`: Claude/Cursor settings, hooks, and shared rules.
   - `ai-agents/Makefile`: link/copy targets for deploying to each CLI (Claude, Cursor, Codex, Copilot).
 - `dotfiles/`: Shell and terminal configs (`.zshrc`, `wezterm/`).
 - `docs/plan/`: implementation plans. `docs/log/`: work logs.
 - `assets/`: screenshots and static media.
-- `.github/workflows/`: 9 CI workflows (lint, test, version bumps).
+- `.github/workflows/`: CI workflows (lint, test, version bumps).
 
 ## Build, Test, and Development Commands
 
@@ -49,23 +49,14 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 
 ## Coding Style
 
-- Keep `ARG` lines in `environment/docker/nvim.dockerfile` unindented and single-line (CI automation edits them).
-- Tool versions are pinned; update via workflows or scripts, not manual edits.
+- Per-language lint/format conventions load on demand from path-scoped rules in `.claude/rules/` (and personal rules in `~/.claude/rules/`) when you touch matching files.
+- Dockerfile/toolchain version constraints live in `.claude/rules/dockerfile-versions.md`; tool versions are pinned and updated via workflows or scripts, not manual edits.
 - For sub-directory conventions, see each directory's `AGENTS.md`.
 
 ## Testing & Linting
 
-| File type  | Lint                                          | Format                      |
-| ---------- | --------------------------------------------- | --------------------------- |
-| Go         | `go vet ./...` / `golangci-lint run`          | `goimports`                 |
-| Lua        | `stylua --check .`                            | `stylua .`                  |
-| Markdown   | `markdownlint-cli2 *`                         | `markdownlint-cli2 --fix *` |
-| TOML       | `tombi lint`                                  | `tombi format`              |
-| JSON/YAML  | `prettier --check .`                          | `prettier --write .`        |
-| Shell      | `shellcheck`                                  | `shfmt`                     |
-| Dockerfile | `hadolint environment/docker/nvim.dockerfile` | —                           |
-| Terraform  | `tflint`                                      | `terraform fmt`             |
-
+- Per-language lint/format commands load on demand as path-scoped rules (`.claude/rules/`, `~/.claude/rules/`): Go, Lua, Markdown, TOML, JSON/YAML, Shell.
+- Not covered by rules: Dockerfile (`hadolint environment/docker/nvim.dockerfile`), Terraform (`tflint`, `terraform fmt`).
 - AI Bridge has Go unit tests: `make ai-bridge-test`.
 - No repository-level test suite beyond per-directory checks.
 - Terraform definition jump/completion is provided by `terraform-ls`. `tflint`'s AWS ruleset (`tflint-ruleset-aws`) is not bundled here; install it per Terraform project via `.tflint.hcl` + `tflint --init`.

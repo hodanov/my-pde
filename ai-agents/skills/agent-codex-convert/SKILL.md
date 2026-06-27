@@ -2,6 +2,8 @@
 name: agent-codex-convert
 description: Convert Claude/Cursor markdown subagent files to Codex CLI TOML format. Parses YAML frontmatter and body, applies model/permission/tool mappings, and outputs to agents/codex/<name>.toml.
 disable-model-invocation: true
+metadata:
+  version: 1
 ---
 
 # Agent Codex Convert
