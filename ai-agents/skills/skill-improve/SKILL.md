@@ -5,6 +5,8 @@ description: >-
   Observe → Inspect → Amend → Evaluate ループの Inspect/Amend フェーズ。
   `--apply` フラグで承認後の適用も可能。
 argument-hint: "<スキル名|all> [--apply]"
+metadata:
+  version: 1
 ---
 
 # /skill-improve スキル

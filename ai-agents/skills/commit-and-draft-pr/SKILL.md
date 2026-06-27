@@ -1,6 +1,8 @@
 ---
 name: commit-and-draft-pr
 description: 変更をコミットしてドラフトPRを作成する一連のGit/ghワークフロー。ユーザーが「コミットして」「PR作って」「draft PR」等を求めたときに使用し、status/diff確認・命令形コミット・push・gh pr create --draft（--assignee hodanov）まで実行する。
+metadata:
+  version: 1
 ---
 
 # Commit and Draft PR

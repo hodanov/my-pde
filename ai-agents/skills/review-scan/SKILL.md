@@ -7,9 +7,13 @@ description: >-
   軽いチェックには /review（4並列専門レビュー）を使う。
 disable-model-invocation: true
 argument-hint: "[PR番号 | ブランチ名 | staged]"
+metadata:
+  version: 1
 ---
 
 # /review-scan スキル
+
+> 軽い差分チェックは組み込みの `/code-review`、4観点の並列レビューは `/review` を使う。本スキルは大きなPR・複雑な変更を scanner→critic で丁寧に掘りたいときに使う。
 
 ## Goal
 
