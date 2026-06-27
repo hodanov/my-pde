@@ -1,7 +1,7 @@
 ---
 name: credential-leak-prevention
 description: gitleaks + pre-commit を使ってローカルコミット時のクレデンシャル混入を機械的にブロックする。「クレデンシャル漏洩防止」「シークレット混入対策」「gitleaks」「pre-commit シークレット」「credential leak prevention」に言及した場合に使用する。
-disable-model-invocation: "true"
+disable-model-invocation: true
 metadata:
   version: 1
 ---

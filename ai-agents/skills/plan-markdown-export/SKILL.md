@@ -3,6 +3,8 @@ name: plan-markdown-export
 description: AIとの壁打ちで整理したプラン、または別ファイルの設計メモや実装メモを、読みやすいMarkdown形式の実装プランに整形して `docs/plan/YYYY-MM-DD_<plan-name>.md` に保存する作業で使う。会話中に提案したプランの書き出し、テキストメモの構造化、見出し整理、表への変換、チェックリスト化、保存が必要なときに使う。
 argument-hint: [source-file-or-request]
 disable-model-invocation: true
+metadata:
+  version: 1
 ---
 
 # Plan Markdown Export

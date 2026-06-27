@@ -1,8 +1,10 @@
 ---
 name: trip-register-to-calendar
 description: 旅行会社の予約メールなどの生テキストから、旅程（交通機関・宿泊）を抽出して Google Calendar primary にイベント登録する。フォーマットは問わない。登録前にユーザー承認を必須化し、開始 30 分前のポップアップ通知をデフォルトで付ける運用。
-disable-model-invocation: "true"
+disable-model-invocation: true
 argument-hint: "[旅の情報 例: SVリーグチャンピオンシップ観戦の佐賀旅行。以下の予約メールをカレンダーに登録して: ...（本文）]"
+metadata:
+  version: 1
 ---
 
 # Trip Register To Calendar

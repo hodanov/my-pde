@@ -5,6 +5,8 @@ description: >-
   スキルの改善サイクル（Observe → Inspect → Amend → Evaluate）の起点。
   使用後に `/skill-observe <スキル名> <結果> [問題/フィードバック]` で呼び出す。
 argument-hint: "<スキル名> <success|partial|failure> [問題やフィードバック]"
+metadata:
+  version: 1
 ---
 
 # /skill-observe スキル
