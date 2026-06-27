@@ -1,6 +1,6 @@
 {
   "name": "Weekly DevX Skills/Hooks Scan",
-  "trigger_id": "<TBD: /schedule(Create) で払い出して記録する>",
+  "trigger_id": "trig_01D5PgRsd48jxSR3iH12XcNG",
   "enabled": true,
   "cron_expression": "0 22 * * 3",
   "schedule_note": "水 22:00 UTC = 毎週木曜 7:00 JST",
