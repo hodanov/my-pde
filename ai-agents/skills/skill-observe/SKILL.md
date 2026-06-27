@@ -6,7 +6,7 @@ description: >-
   使用後に `/skill-observe <スキル名> <結果> [問題/フィードバック]` で呼び出す。
 argument-hint: "<スキル名> <success|partial|failure> [問題やフィードバック]"
 metadata:
-  version: 1
+  version: 2
 ---
 
 # /skill-observe スキル
@@ -85,6 +85,7 @@ date: YYYY-MM-DD
 
 ## Notes
 
+- observation は Stop hook（`ai-agents/settings/claude/hooks/skill-observe-nudge.sh`）が**自動記録**する。リポジトリスキルを使ったセッション終了時に、Claude がその場の文脈から結果を判定して observation を書き出す。本スキルは手動・補足記録およびバッチモード（引数なし）用として残る
 - observation ファイルは git 管理下に置く。`make claude-skills-copy` でローカル環境にもコピーされる
 - `/skill-improve` がこれらの observation を分析し、SKILL.md の改善提案を生成する
 - 1 日に複数回同じスキルの observation を記録しても問題ない（連番で区別）
