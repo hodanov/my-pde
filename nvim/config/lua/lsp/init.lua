@@ -110,6 +110,26 @@ vim.api.nvim_create_autocmd("LspAttach", {
 				vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = 0 }), { bufnr = 0 })
 			end, opts)
 		end
+
+		-- Document highlight (textDocument/documentHighlight) を対応サーバーで有効化する。
+		-- カーソルが一定時間止まったら (CursorHold) カーソル下シンボルの参照箇所をハイライトし、
+		-- カーソル移動 (CursorMoved) でクリアする。codelens / inlay hint と同じくコア機能のみで実現。
+		-- augroup を clear = false で保持しつつ当該バッファ分の autocmd だけ消してから貼り直すことで、
+		-- 同一バッファに複数 LSP がアタッチした際の CursorHold/CursorMoved 多重登録を防ぐ。
+		if client and client:supports_method("textDocument/documentHighlight") then
+			local hl_group = vim.api.nvim_create_augroup("UserLspDocumentHighlight", { clear = false })
+			vim.api.nvim_clear_autocmds({ group = hl_group, buffer = ev.buf })
+			vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+				group = hl_group,
+				buffer = ev.buf,
+				callback = vim.lsp.buf.document_highlight,
+			})
+			vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+				group = hl_group,
+				buffer = ev.buf,
+				callback = vim.lsp.buf.clear_references,
+			})
+		end
 	end,
 })
 
