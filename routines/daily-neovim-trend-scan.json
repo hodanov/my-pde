@@ -1,9 +1,9 @@
 {
-  "name": "Weekly Neovim Trend Scan",
+  "name": "Daily Neovim Trend Scan",
   "trigger_id": "trig_01UdqdcQV6FGQkkbTvp3BJ3S",
   "enabled": true,
-  "cron_expression": "0 23 * * 5",
-  "schedule_note": "金 23:00 UTC = 毎週土曜 8:00 JST",
+  "cron_expression": "0 23 * * *",
+  "schedule_note": "毎日 23:00 UTC = 毎日 8:00 JST",
   "job_config": {
     "model": "claude-opus-4-8",
     "repository": "https://github.com/hodanov/my-pde",
@@ -16,7 +16,7 @@
     "リポジトリ構成:",
     "- Neovim 設定は nvim/config/ 配下。init.lua がエントリ、プラグインは lazy.nvim (nvim/config/lua/lazy_nvim.lua, plugins.lua) で管理。LSP 設定は nvim/config/lua/lsp/。主なプラグイン: blink.cmp, conform, nvim-lint, treesitter, telescope, gitsigns, lualine, nvim-dap, indent-blankline, textlint。",
     "",
-    "今週のタスク:",
+    "今日のタスク:",
     "1. まず既存 Issue を取得して「提案してはいけない内容」を把握する。以下の2つを両方取得する:",
     "   (1) 提案済みの Open Issue: gh issue list --state open --label \"scan:nvim\" --json number,title,body --limit 50",
     "   (2) 不採用となった Close 済み Issue: gh issue list --state closed --label \"scan:nvim\" --label \"rejected\" --json number,title,body --limit 50",
