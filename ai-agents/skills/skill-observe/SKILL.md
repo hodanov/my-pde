@@ -86,6 +86,7 @@ date: YYYY-MM-DD
 ## Notes
 
 - observation は Stop hook（`ai-agents/settings/claude/hooks/skill-observe-nudge.sh`）が**自動記録**する。リポジトリスキルを使ったセッション終了時に、Claude がその場の文脈から結果を判定して observation を書き出す。本スキルは手動・補足記録およびバッチモード（引数なし）用として残る
+- 保存先は環境変数 `SKILL_OBSERVE_HOME`（my-pde のクローンパス。`settings.json` の `env` で `~/workspace/my-pde` を設定。先頭の `~` は hook 側で `$HOME` に展開するので別 PC でも動く）で決まる。これにより**どのリポジトリで作業していてもスキル使用が my-pde の git 管理下に集約**される。`SKILL_OBSERVE_HOME` 未設定時は現在の git リポジトリ直下の `ai-agents/skills` にフォールバックし、それも無ければ何もしない
 - observation ファイルは git 管理下に置く。`make claude-skills-copy` でローカル環境にもコピーされる
 - `/skill-improve` がこれらの observation を分析し、SKILL.md の改善提案を生成する
 - 1 日に複数回同じスキルの observation を記録しても問題ない（連番で区別）

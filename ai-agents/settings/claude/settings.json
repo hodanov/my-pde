@@ -55,6 +55,9 @@
     ]
   },
   "model": "opus",
+  "env": {
+    "SKILL_OBSERVE_HOME": "~/workspace/my-pde"
+  },
   "hooks": {
     "PostToolUse": [
       {

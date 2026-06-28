@@ -44,8 +44,10 @@ exit のイディオムに合わせる。ロジック:
 2. `transcript_path` / `session_id` / `stop_hook_active` / `cwd` を `jq` で抽出。
 3. **ループガード①**: `stop_hook_active == "true"` なら `exit 0`（継続中の再発火を抑止）。
 4. `transcript_path` が空 or ファイル無しなら `exit 0`。
-5. リポジトリルートを `git -C "$cwd" rev-parse --show-toplevel` で特定。`ai-agents/skills`
-   が無ければ `exit 0`。
+5. **保存先 `OBS_HOME` を解決**: 環境変数 `SKILL_OBSERVE_HOME`（my-pde のクローンパス、
+   `settings.json` の `env` で設定）に `ai-agents/skills` があればそれを採用。未設定なら
+   `git -C "$cwd" rev-parse --show-toplevel` の直下にフォールバック。どちらも該当しなければ
+   `exit 0`。これにより**他リポで作業していてもスキル使用を my-pde に集約**できる。
 6. **対象スキル集合**を構築: `ai-agents/skills/*/SKILL.md` の親ディレクトリ名一覧から
    `skill-observe` / `skill-improve` を除外。
 7. **使用スキル**を transcript から抽出（上記 jq）→ ユニーク化 → 対象スキル集合と積集合 =
@@ -61,9 +63,10 @@ exit のイディオムに合わせる。ロジック:
 
 - 「今セッションで次のリポジトリスキルを使用したが observation 未記録: `<pending一覧>`」
 - 各スキルについて、直近の使用結果を会話文脈から `success`/`partial`/`failure` で判定し、
-  `ai-agents/skills/<name>/observations/YYYY-MM-DD_NNN_obs.md` を
-  **`skill-observe` SKILL.md の6フィールド形式**（タスク/スキル/結果/問題/フィードバック/
-  コンテキスト）で作成せよ。`NNN` は当日連番、既存と重複しないよう採番。
+  `<OBS_HOME>/ai-agents/skills/<name>/observations/YYYY-MM-DD_NNN_obs.md`（**絶対パス**。
+  現在の作業リポと異なっても必ずここに書く）を **`skill-observe` SKILL.md の6フィールド形式**
+  （タスク/スキル/結果/問題/フィードバック/コンテキスト）で作成せよ。`NNN` は当日連番、既存と
+  重複しないよう採番。「コンテキスト」には実際の作業リポ（`cwd`）を記録。
 - 当日同スキルの observation が既にあればスキップ可。
 - **ユーザーへの確認は不要**。淡々と記録し、作成ファイルを1行で報告して終了せよ。
 - markdownlint を通すため既存 observation ファイルの体裁に合わせること
