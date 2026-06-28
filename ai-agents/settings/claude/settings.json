@@ -96,6 +96,10 @@
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/skill-observe-nudge.sh"
+          },
+          {
+            "type": "command",
             "command": "~/.claude/hooks/notify-macos.sh"
           }
         ]

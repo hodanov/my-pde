@@ -28,6 +28,7 @@ vim.opt.conceallevel = 0 -- Show double quotations in json file and so on.
 vim.g.mapleader = " " -- Set a space key to a leader.
 vim.opt.mouse = "" -- Don't use a mouse.
 vim.opt.signcolumn = "yes" -- Always show signcolumn to prevent rattling.
+vim.opt.updatetime = 300 -- Fire CursorHold sooner (default 4000ms) for LSP document highlight. Kept >250ms to avoid frequent swap writes.
 
 -- ----------------------------------------
 -- Neovim 0.12 で追加された UI オプション
