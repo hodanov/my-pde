@@ -5,7 +5,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -28,37 +30,53 @@ const (
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
 
-	if len(os.Args) < 2 {
-		usage()
-		os.Exit(1)
-	}
-
-	var err error
-	switch os.Args[1] {
-	case "watch":
-		err = runWatch()
-	case "sync":
-		err = runSync()
-	default:
-		usage()
-		os.Exit(1)
-	}
-
-	if err != nil {
+	if err := run(os.Args[1:], os.Stderr); err != nil {
 		slog.Error("fatal", "error", err)
 		os.Exit(1)
 	}
 }
 
-func usage() {
-	fmt.Fprintln(os.Stderr, "Usage: nvim-sync <command>")
-	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  watch   Watch nvim config and docker cp changes into the container")
-	fmt.Fprintln(os.Stderr, "  sync    Copy all nvim config files into the container once")
-	fmt.Fprintln(os.Stderr, "Environment:")
-	fmt.Fprintln(os.Stderr, "  NVIM_SYNC_CONTAINER  target container (default nvim-dev)")
-	fmt.Fprintln(os.Stderr, "  NVIM_SYNC_SRC        host config dir (default nvim/config)")
-	fmt.Fprintln(os.Stderr, "  NVIM_SYNC_DEST       container config dir (default /root/.config/nvim)")
+// errUsage signals that the command line was invalid and usage was printed.
+var errUsage = errors.New("invalid command")
+
+// run dispatches a subcommand and returns an error instead of exiting so it can
+// be exercised from tests. main() is the only place that calls os.Exit.
+func run(args []string, stderr io.Writer) error {
+	if len(args) < 1 {
+		usage(stderr)
+		return errUsage
+	}
+
+	switch args[0] {
+	case "watch":
+		s, err := newSyncer()
+		if err != nil {
+			return err
+		}
+		return runWatch(s)
+	case "sync":
+		s, err := newSyncer()
+		if err != nil {
+			return err
+		}
+		return runSync(s)
+	default:
+		usage(stderr)
+		return errUsage
+	}
+}
+
+func usage(w io.Writer) {
+	const msg = `Usage: nvim-sync <command>
+Commands:
+  watch   Watch nvim config and docker cp changes into the container
+  sync    Copy all nvim config files into the container once
+Environment:
+  NVIM_SYNC_CONTAINER  target container (default nvim-dev)
+  NVIM_SYNC_SRC        host config dir (default nvim/config)
+  NVIM_SYNC_DEST       container config dir (default /root/.config/nvim)
+`
+	_, _ = fmt.Fprint(w, msg)
 }
 
 // getenv returns the env var value or def when unset/empty.
@@ -97,15 +115,15 @@ func defaultRunner(name string, args ...string) error {
 	return nil
 }
 
-func runWatch() error {
-	s, syncerErr := newSyncer()
-	if syncerErr != nil {
-		return syncerErr
-	}
-
+func runWatch(s *syncer.Syncer) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
+	return watchLoop(ctx, s)
+}
 
+// watchLoop watches s.SrcRoot and syncs debounced batches until ctx is
+// cancelled. Split from runWatch so the loop is testable without OS signals.
+func watchLoop(ctx context.Context, s *syncer.Syncer) error {
 	w := watcher.New(s.SrcRoot, debounceWindow)
 	ch, watchErr := w.Watch(ctx)
 	if watchErr != nil {
@@ -114,23 +132,24 @@ func runWatch() error {
 
 	slog.Info("nvim-sync: watching", "container", s.Container, "src", s.SrcRoot, "dest", s.DestRoot)
 	for changed := range ch {
-		for _, file := range changed {
-			if copyErr := s.Copy(file); copyErr != nil {
-				slog.Warn("sync failed", "file", file, "error", copyErr)
-				continue
-			}
-			slog.Info("synced", "file", file)
-		}
+		syncBatch(s, changed)
 	}
 	return nil
 }
 
-func runSync() error {
-	s, syncerErr := newSyncer()
-	if syncerErr != nil {
-		return syncerErr
+// syncBatch copies a debounced batch of changed files, logging per-file results
+// and continuing past individual failures.
+func syncBatch(s *syncer.Syncer, changed []string) {
+	for _, file := range changed {
+		if copyErr := s.Copy(file); copyErr != nil {
+			slog.Warn("sync failed", "file", file, "error", copyErr)
+			continue
+		}
+		slog.Info("synced", "file", file)
 	}
+}
 
+func runSync(s *syncer.Syncer) error {
 	slog.Info("nvim-sync: initial sync", "container", s.Container, "src", s.SrcRoot, "dest", s.DestRoot)
 	count := 0
 	walkErr := filepath.WalkDir(s.SrcRoot, func(p string, d os.DirEntry, walkDirErr error) error {
