@@ -32,6 +32,17 @@ vim.lsp.config("gopls", {
 				run_govulncheck = true,
 				gc_details = true,
 			},
+			-- gopls は hints を明示指定しないとインレイヒントを一切返さないため、
+			-- エディタ側の有効化 (LspAttach) と合わせてここで表示対象を指定する。
+			hints = {
+				assignVariableTypes = true,
+				compositeLiteralFields = true,
+				compositeLiteralTypes = true,
+				constantValues = true,
+				functionTypeParameters = true,
+				parameterNames = true,
+				rangeVariableTypes = true,
+			},
 		},
 	},
 })
@@ -89,16 +100,49 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		if client and client:supports_method("textDocument/codeLens") then
 			vim.lsp.codelens.enable(true, { bufnr = ev.buf })
 		end
+
+		-- Inlay hint (vim.lsp.inlay_hint) を対応サーバーで使えるようにする。
+		-- 変数の推論型・関数の引数名などをソースを書き換えずに仮想テキストで補足表示するが、
+		-- 常時表示は視覚的ノイズが大きいためデフォルトは OFF とし、
+		-- 必要なときだけ <space>h でバッファ単位に ON/OFF をトグルする。
+		if client and client:supports_method("textDocument/inlayHint") then
+			vim.keymap.set("n", "<space>h", function()
+				vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = 0 }), { bufnr = 0 })
+			end, opts)
+		end
+
+		-- Document highlight (textDocument/documentHighlight) を対応サーバーで有効化する。
+		-- カーソルが一定時間止まったら (CursorHold) カーソル下シンボルの参照箇所をハイライトし、
+		-- カーソル移動 (CursorMoved) でクリアする。codelens / inlay hint と同じくコア機能のみで実現。
+		-- augroup を clear = false で保持しつつ当該バッファ分の autocmd だけ消してから貼り直すことで、
+		-- 同一バッファに複数 LSP がアタッチした際の CursorHold/CursorMoved 多重登録を防ぐ。
+		if client and client:supports_method("textDocument/documentHighlight") then
+			local hl_group = vim.api.nvim_create_augroup("UserLspDocumentHighlight", { clear = false })
+			vim.api.nvim_clear_autocmds({ group = hl_group, buffer = ev.buf })
+			vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+				group = hl_group,
+				buffer = ev.buf,
+				callback = vim.lsp.buf.document_highlight,
+			})
+			vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+				group = hl_group,
+				buffer = ev.buf,
+				callback = vim.lsp.buf.clear_references,
+			})
+		end
 	end,
 })
 
 -- Diagnostic 設定
 -- - virtual_text は無効、float で詳細を確認する
+-- - virtual_lines = { current_line = true } でカーソル行の診断だけを直下にインライン表示する
+--   (0.11 で追加。全行に出さず現在行に限定するので「普段はクリーン、必要な行だけ詳細」を維持できる)
 -- - ]d/[d でジャンプした際に on_jump コールバックから open_float を呼び、
 --   DiagnosticRelatedInformation も含めてその場で確認できるようにする
 --   (0.12 で `jump.float` は deprecated)
 vim.diagnostic.config({
 	virtual_text = false,
+	virtual_lines = { current_line = true },
 	jump = {
 		on_jump = function(_, bufnr)
 			vim.diagnostic.open_float({ bufnr = bufnr })

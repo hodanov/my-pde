@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(actionlint:*)",
+      "Bash(docker compose:*)",
       "Bash(find:*)",
       "Bash(git:*)",
       "Bash(gh:*)",
@@ -10,8 +11,11 @@
       "Bash(go build:*)",
       "Bash(golangci-lint run:*)",
       "Bash(go mod:*)",
+      "Bash(goimports:*)",
       "Bash(grep:*)",
+      "Bash(hadolint:*)",
       "Bash(ls:*)",
+      "Bash(make:*)",
       "Bash(markdownlint-cli2:*)",
       "Bash(npm run lint)",
       "Bash(npm run test *)",
@@ -24,6 +28,8 @@
       "Bash(shellcheck:*)",
       "Bash(shfmt:*)",
       "Bash(stylua:*)",
+      "Bash(terraform fmt:*)",
+      "Bash(tflint:*)",
       "Bash(tombi:*)",
       "Bash(which:*)",
       "Bash(xargs:*)",
@@ -31,6 +37,7 @@
       "Read(~/.codex/**)",
       "Read(~/.cursor/**)",
       "Read(~/.claude/**)",
+      "WebFetch(domain:code.claude.com)",
       "WebFetch(domain:docs.anthropic.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:hub.docker.com)",
@@ -48,6 +55,9 @@
     ]
   },
   "model": "opus",
+  "env": {
+    "SKILL_OBSERVE_HOME": "~/workspace/my-pde"
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -83,6 +93,14 @@
     "Stop": [
       {
         "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/lint-changed.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/skill-observe-nudge.sh"
+          },
           {
             "type": "command",
             "command": "~/.claude/hooks/notify-macos.sh"

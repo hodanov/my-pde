@@ -32,7 +32,7 @@ ENV LC_CTYPE=ja_JP.UTF-8
 # Stage 1: Build Neovim from source
 FROM base AS nvim-builder
 
-ARG NEOVIM_VERSION=0.12.2
+ARG NEOVIM_VERSION=0.12.3
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ninja-build gettext cmake \
   && git clone https://github.com/neovim/neovim /neovim \
@@ -47,8 +47,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Stage 2: Build Node runtime and npm tools
 FROM base AS node-builder
 
-ARG NODE_VERSION=24.16.0
-ARG NPM_VERSION=11.16.0
+ARG NODE_VERSION=24.17.0
+ARG NPM_VERSION=11.17.0
 ENV NODE_HOME="/opt/node"
 ENV PATH="${NODE_HOME}/bin:${PATH}"
 
@@ -167,7 +167,7 @@ RUN set -eux; \
 # Stage 7: Fetch Terraform CLI binary only
 FROM base AS terraform-builder
 
-ARG TERRAFORM_VERSION=1.15.5
+ARG TERRAFORM_VERSION=1.15.6
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \

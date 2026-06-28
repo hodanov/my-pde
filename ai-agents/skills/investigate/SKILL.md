@@ -6,6 +6,8 @@ description: >-
   scout が候補を広く洗い出し、diver が高優先の候補を深掘りする。
 disable-model-invocation: true
 argument-hint: "<調査対象の説明>"
+metadata:
+  version: 1
 ---
 
 # /investigate スキル

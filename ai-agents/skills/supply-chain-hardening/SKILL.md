@@ -1,8 +1,10 @@
 ---
 name: supply-chain-hardening
 description: GitHub Actions の SHA ピン留め（pinact 必須）と Dependabot・Renovate のクールダウン設定（14日間）をリポジトリに適用し、サプライチェーン攻撃対策を実施する。ユーザーが「サプライチェーン対策」「GHA ピン留め」「Dependabot クールダウン」「pinact」「supply chain hardening」に言及した場合に使用する。
-disable-model-invocation: "true"
+disable-model-invocation: true
 argument-hint: "[対象スコープ: all / gha / dependabot]"
+metadata:
+  version: 1
 ---
 
 # Supply Chain Hardening

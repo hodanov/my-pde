@@ -16,83 +16,12 @@
       Always verify your own work. Never mark a task as done without running tests and linters.
       This is the single highest-leverage practice for code quality.
     </principle>
-
-    <!-- New product development -->
-    <new_product>
-      <description>Workflow for developing and implementing new products.</description>
-      <steps>
-        <step name="explore">
-          - Use Plan Mode to read existing code and understand the project structure.
-          - Identify related modules, dependencies, and patterns already in use.
-          - Do NOT write any code in this phase.
-        </step>
-        <step name="plan">
-          - Create a detailed implementation plan.
-          - Define the test strategy: what to test, edge cases, and expected behavior.
-          - Identify which linters and type checkers apply to the project.
-          - Get user confirmation before proceeding.
-        </step>
-        <step name="implement">
-          - Implement the feature following the plan.
-          - Write test code alongside or immediately after each unit of implementation.
-          - Prefer small, incremental changes over large monolithic changes.
-        </step>
-        <step name="verify">
-          - Run the test suite and confirm all tests pass.
-          - Run linters (e.g., eslint, ruff, golangci-lint) and fix all errors and warnings.
-          - Run type checkers (e.g., tsc, mypy, pyright) if applicable and fix all errors.
-          - If any verification fails, fix the issue and re-run until all checks pass.
-          - Do NOT proceed to commit until all verification steps pass.
-        </step>
-        <step name="commit">
-          - Commit with a descriptive message summarizing the change.
-        </step>
-      </steps>
-    </new_product>
-
-    <!-- Existing product modification -->
-    <existing_product>
-      <description>Workflow for modifying or fixing existing products.</description>
-      <steps>
-        <step name="explore">
-          - Read the relevant code, git history, and existing tests to understand current behavior.
-          - Identify the root cause of the issue or the scope of the change.
-          - Do NOT write any code in this phase.
-        </step>
-        <step name="plan">
-          - Create a plan that minimizes blast radius and avoids unnecessary changes.
-          - Identify existing tests that cover the affected code.
-          - Plan what new tests or test modifications are needed.
-        </step>
-        <step name="test_first">
-          - Write a failing test that reproduces the bug or validates the new behavior BEFORE making changes.
-          - Run the test to confirm it fails for the expected reason.
-        </step>
-        <step name="implement">
-          - Make the minimal changes needed to fix the issue or implement the modification.
-          - Do NOT refactor unrelated code.
-        </step>
-        <step name="verify">
-          - Run the failing test again and confirm it now passes.
-          - Run the full related test suite to confirm no regressions.
-          - Run linters and type checkers, fix all errors.
-          - If any verification fails, fix and re-run until all checks pass.
-          - Do NOT proceed to commit until all verification steps pass.
-        </step>
-        <step name="commit">
-          - Commit with a descriptive message that explains the root cause and the fix.
-        </step>
-      </steps>
-    </existing_product>
-
-    <!-- Verification rules (cross-cutting) -->
-    <verification_rules>
-      <rule>ALWAYS run tests after implementation. Never skip this step.</rule>
-      <rule>ALWAYS run linters after implementation. Fix all errors before committing.</rule>
-      <rule>When a project has type checking configured, run it and fix all errors.</rule>
-      <rule>If you are unsure which test/lint/typecheck commands to use, check package.json, Makefile, pyproject.toml, or equivalent config files first.</rule>
-      <rule>When tests fail, address the root cause. Do NOT suppress errors or skip tests.</rule>
-      <rule>If the project has no existing tests, create a test file following the project's conventions.</rule>
-    </verification_rules>
+    <guidance>
+      - For non-trivial implementation, follow the explore → plan → implement → verify → commit
+        flow. The detailed playbook (new product vs. existing product, test-first) lives in the
+        `dev-workflow` skill — invoke `/dev-workflow` when you need it.
+      - Verification is also backed deterministically by the `lint-changed.sh` Stop hook, which runs
+        the relevant linters on changed files when a turn ends.
+    </guidance>
   </workflow>
 </agents_config>

@@ -1,8 +1,10 @@
 ---
 name: svleague-match-review
 description: SV リーグの試合詳細ページから REPORT-A / REPORT-B（任意で LiveScore）を取得し、応援チーム / 両チーム対比 / 注目選手ズームの 3 視点で 1 試合分のレビュー Markdown を `docs/svleague-match-review/` 配下に出力する。
-disable-model-invocation: "true"
+disable-model-invocation: true
 argument-hint: "<試合 ID または URL> [--team <応援チーム>] [--player <選手名>] [--views team,versus,player] [--with-livescore]"
+metadata:
+  version: 1
 ---
 
 # SV League Match Review
