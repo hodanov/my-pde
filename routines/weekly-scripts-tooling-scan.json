@@ -1,6 +1,6 @@
 {
   "name": "Weekly Scripts Tooling Scan",
-  "trigger_id": "PENDING_CREATE",
+  "trigger_id": "trig_01UxwRtDWkJ3E7xa2NTdNfU1",
   "enabled": true,
   "cron_expression": "0 22 * * 1",
   "schedule_note": "月 22:00 UTC = 毎週火曜 7:00 JST",
