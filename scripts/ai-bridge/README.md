@@ -157,6 +157,16 @@ type Launcher interface {
 
 ## トラブルシューティング
 
+**まず自己診断する:**
+
+`doctor` サブコマンドで以下の確認手順をまとめて実行できる。`fail` があれば終了コードが非ゼロになるため、SessionStart hook 等からの自動チェックにも使える。
+
+```bash
+./scripts/ai-bridge/ai-bridge doctor
+```
+
+検査項目: ブリッジディレクトリ（存在・ディレクトリ・書込み可）、AI CLI（`AI_BRIDGE_CLI`）と ランチャー（`AI_BRIDGE_LAUNCHER`）が PATH に存在するか。
+
 **フローティングウィンドウが開かない:**
 
 コンテナに最新の `ai_bridge.lua` が反映されていない可能性がある。
