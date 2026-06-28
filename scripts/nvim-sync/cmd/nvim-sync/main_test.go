@@ -42,18 +42,22 @@ func (r *recordingRunner) sources() []string {
 }
 
 func TestGetenv(t *testing.T) {
-	t.Run("returns default when unset", func(t *testing.T) {
-		t.Setenv("NVIM_SYNC_TEST_KEY", "")
-		if got := getenv("NVIM_SYNC_TEST_KEY", "fallback"); got != "fallback" {
-			t.Errorf("getenv = %q, want %q", got, "fallback")
-		}
-	})
-	t.Run("returns value when set", func(t *testing.T) {
-		t.Setenv("NVIM_SYNC_TEST_KEY", "explicit")
-		if got := getenv("NVIM_SYNC_TEST_KEY", "fallback"); got != "explicit" {
-			t.Errorf("getenv = %q, want %q", got, "explicit")
-		}
-	})
+	tests := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{name: "returns default when unset", value: "", want: "fallback"},
+		{name: "returns value when set", value: "explicit", want: "explicit"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("NVIM_SYNC_TEST_KEY", tt.value)
+			if got := getenv("NVIM_SYNC_TEST_KEY", "fallback"); got != tt.want {
+				t.Errorf("getenv = %q, want %q", got, tt.want)
+			}
+		})
+	}
 }
 
 func TestUsage(t *testing.T) {
@@ -70,14 +74,22 @@ func TestUsage(t *testing.T) {
 
 func TestDefaultRunner(t *testing.T) {
 	t.Parallel()
-	if err := defaultRunner("true"); err != nil {
-		t.Errorf("defaultRunner(true) = %v, want nil", err)
+	tests := []struct {
+		name    string
+		command string
+		wantErr bool
+	}{
+		{name: "successful command", command: "true", wantErr: false},
+		{name: "failing command", command: "false", wantErr: true},
+		{name: "missing binary", command: "nvim-sync-no-such-binary", wantErr: true},
 	}
-	if err := defaultRunner("false"); err == nil {
-		t.Error("defaultRunner(false) = nil, want error")
-	}
-	if err := defaultRunner("nvim-sync-no-such-binary"); err == nil {
-		t.Error("defaultRunner(missing) = nil, want error")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if err := defaultRunner(tt.command); (err != nil) != tt.wantErr {
+				t.Errorf("defaultRunner(%q) error = %v, wantErr %v", tt.command, err, tt.wantErr)
+			}
+		})
 	}
 }
 
@@ -146,26 +158,25 @@ func TestNewSyncer(t *testing.T) {
 
 func TestSyncBatch(t *testing.T) {
 	t.Parallel()
-	t.Run("copies every file on success", func(t *testing.T) {
-		t.Parallel()
-		rec := &recordingRunner{}
-		s := &syncer.Syncer{Container: "nvim-dev", SrcRoot: "/src", DestRoot: "/dest", Run: rec.run}
-		syncBatch(s, []string{"/src/a.lua", "/src/b.lua"})
-		if got := len(rec.calls); got != 2 {
-			t.Fatalf("calls = %d, want 2", got)
-		}
-	})
-
-	t.Run("continues past a failing copy", func(t *testing.T) {
-		t.Parallel()
-		rec := &recordingRunner{err: errors.New("boom")}
-		s := &syncer.Syncer{Container: "nvim-dev", SrcRoot: "/src", DestRoot: "/dest", Run: rec.run}
+	tests := []struct {
+		name   string
+		runErr error
+	}{
+		{name: "copies every file on success", runErr: nil},
 		// Should not panic and should attempt both files despite errors.
-		syncBatch(s, []string{"/src/a.lua", "/src/b.lua"})
-		if got := len(rec.calls); got != 2 {
-			t.Fatalf("calls = %d, want 2 (must continue past failures)", got)
-		}
-	})
+		{name: "continues past a failing copy", runErr: errors.New("boom")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			rec := &recordingRunner{err: tt.runErr}
+			s := &syncer.Syncer{Container: "nvim-dev", SrcRoot: "/src", DestRoot: "/dest", Run: rec.run}
+			syncBatch(s, []string{"/src/a.lua", "/src/b.lua"})
+			if got := len(rec.calls); got != 2 {
+				t.Fatalf("calls = %d, want 2 (must attempt every file)", got)
+			}
+		})
+	}
 }
 
 func TestRunSync(t *testing.T) {
@@ -270,42 +281,63 @@ func TestWatchLoop(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	t.Run("no args prints usage and errors", func(t *testing.T) {
-		var buf bytes.Buffer
-		if err := run(nil, &buf); !errors.Is(err, errUsage) {
-			t.Errorf("run(nil) error = %v, want errUsage", err)
-		}
-		if !strings.Contains(buf.String(), "Usage") {
-			t.Error("run(nil) did not print usage")
-		}
-	})
-
-	t.Run("unknown command prints usage and errors", func(t *testing.T) {
-		var buf bytes.Buffer
-		if err := run([]string{"bogus"}, &buf); !errors.Is(err, errUsage) {
-			t.Errorf("run(bogus) error = %v, want errUsage", err)
-		}
-		if !strings.Contains(buf.String(), "Usage") {
-			t.Error("run(bogus) did not print usage")
-		}
-	})
-
-	t.Run("sync over empty dir succeeds without docker", func(t *testing.T) {
-		t.Setenv("NVIM_SYNC_SRC", t.TempDir())
-		var buf bytes.Buffer
-		// Empty dir => no .lua files => runSync makes no docker calls.
-		if err := run([]string{"sync"}, &buf); err != nil {
-			t.Errorf("run(sync) error = %v, want nil", err)
-		}
-	})
-
-	t.Run("sync with invalid src errors", func(t *testing.T) {
-		t.Setenv("NVIM_SYNC_SRC", filepath.Join(t.TempDir(), "missing"))
-		var buf bytes.Buffer
-		if err := run([]string{"sync"}, &buf); err == nil {
-			t.Error("run(sync) = nil, want error for invalid src")
-		}
-	})
+	tests := []struct {
+		name string
+		args []string
+		// src resolves the NVIM_SYNC_SRC value for the case; nil leaves it unset.
+		src          func(t *testing.T) string
+		wantUsageErr bool // err must be errUsage and usage must be printed
+		wantErr      bool // err must be non-nil
+	}{
+		{
+			name:         "no args prints usage and errors",
+			args:         nil,
+			wantUsageErr: true,
+		},
+		{
+			name:         "unknown command prints usage and errors",
+			args:         []string{"bogus"},
+			wantUsageErr: true,
+		},
+		{
+			name: "sync over empty dir succeeds without docker",
+			args: []string{"sync"},
+			// Empty dir => no .lua files => runSync makes no docker calls.
+			src: func(t *testing.T) string { return t.TempDir() },
+		},
+		{
+			name:    "sync with invalid src errors",
+			args:    []string{"sync"},
+			src:     func(t *testing.T) string { return filepath.Join(t.TempDir(), "missing") },
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.src != nil {
+				t.Setenv("NVIM_SYNC_SRC", tt.src(t))
+			}
+			var buf bytes.Buffer
+			err := run(tt.args, &buf)
+			switch {
+			case tt.wantUsageErr:
+				if !errors.Is(err, errUsage) {
+					t.Errorf("run(%v) error = %v, want errUsage", tt.args, err)
+				}
+				if !strings.Contains(buf.String(), "Usage") {
+					t.Errorf("run(%v) did not print usage", tt.args)
+				}
+			case tt.wantErr:
+				if err == nil {
+					t.Errorf("run(%v) = nil, want error", tt.args)
+				}
+			default:
+				if err != nil {
+					t.Errorf("run(%v) error = %v, want nil", tt.args, err)
+				}
+			}
+		})
+	}
 }
 
 // mustWrite creates an empty file, making parent dirs as needed.
