@@ -89,6 +89,11 @@ return {
 				lazy = true,
 				event = { "BufRead", "BufNewFile" },
 			},
+			{
+				"theHamsta/nvim-dap-virtual-text",
+				lazy = true,
+				event = { "BufRead", "BufNewFile" },
+			},
 		},
 		config = function()
 			require("nvim_dap")

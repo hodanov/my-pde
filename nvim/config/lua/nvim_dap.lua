@@ -2,6 +2,18 @@ require("dap-go").setup()
 require("dap-python").setup("python")
 require("dap-python").test_runner = "pytest"
 
+require("nvim-dap-virtual-text").setup({
+	-- 直前のステップから変化した変数を強調する
+	highlight_changed_variables = true,
+	-- 例外などで停止した理由を表示する
+	show_stop_reason = true,
+	-- 値を行末ではなく変数の直後（行内）に出す。Neovim 0.10+ で利用可。
+	virt_text_pos = "inline",
+	-- 同名変数が複数定義されている場合、最初の定義だけに出す（ノイズ抑制）
+	only_first_definition = true,
+	all_references = false,
+})
+
 -- nvim-dap: keymap
 vim.keymap.set("n", "<Leader>5", function()
 	require("dap").continue()
