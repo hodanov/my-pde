@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"ai-bridge/internal/history"
 	"ai-bridge/internal/launcher"
 	"ai-bridge/internal/watcher"
 	"context"
@@ -139,8 +140,9 @@ func Run(ctx context.Context, cfg *Config, l launcher.Launcher) error {
 		return fmt.Errorf("start watcher: %w", watchErr)
 	}
 
+	historyPath := history.Path(cfg.BridgeDir)
 	for consumedPath := range ch {
-		if processErr := processRequest(consumedPath, cfg.CLI, l); processErr != nil {
+		if processErr := processRequest(consumedPath, cfg.CLI, historyPath, l); processErr != nil {
 			slog.Warn("request failed", "error", processErr)
 		}
 	}
@@ -148,11 +150,21 @@ func Run(ctx context.Context, cfg *Config, l launcher.Launcher) error {
 	return nil
 }
 
-func processRequest(consumedPath, cli string, l launcher.Launcher) error {
+func processRequest(consumedPath, cli, historyPath string, l launcher.Launcher) error {
 	req, parseErr := parseRequest(consumedPath)
 	_ = os.Remove(consumedPath)
 	if parseErr != nil {
 		return fmt.Errorf("invalid request: %w", parseErr)
+	}
+
+	// Persist the request before launching. A history failure must not block
+	// the launch, so log and continue.
+	if appendErr := history.Append(historyPath, history.Record{
+		Prompt:    req.Prompt,
+		CWD:       req.CWD,
+		Timestamp: req.Timestamp,
+	}); appendErr != nil {
+		slog.Warn("history append failed", "error", appendErr)
 	}
 
 	info, statErr := os.Stat(req.CWD)
