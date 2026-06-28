@@ -101,11 +101,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.lsp.codelens.enable(true, { bufnr = ev.buf })
 		end
 
-		-- Inlay hint (vim.lsp.inlay_hint) を対応サーバーで常時有効化する。
-		-- 変数の推論型・関数の引数名などをソースを書き換えずに仮想テキストで補足表示する。
-		-- ノイズに感じる場合は下の <space>h でバッファ単位にトグルできる。
+		-- Inlay hint (vim.lsp.inlay_hint) を対応サーバーで使えるようにする。
+		-- 変数の推論型・関数の引数名などをソースを書き換えずに仮想テキストで補足表示するが、
+		-- 常時表示は視覚的ノイズが大きいためデフォルトは OFF とし、
+		-- 必要なときだけ <space>h でバッファ単位に ON/OFF をトグルする。
 		if client and client:supports_method("textDocument/inlayHint") then
-			vim.lsp.inlay_hint.enable(true, { bufnr = ev.buf })
 			vim.keymap.set("n", "<space>h", function()
 				vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = 0 }), { bufnr = 0 })
 			end, opts)
