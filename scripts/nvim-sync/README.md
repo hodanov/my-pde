@@ -47,4 +47,4 @@ go test ./...
 
 `docker` 実行は `syncer.Runner` 注入でスタブ化しており、実 Docker・ネットワークに依存しない。相対パス算出・コピー先パス組み立て・デバウンス束ねをテーブル駆動で検証する。
 
-> 注: 既存の Go CI（`.github/workflows/lint_ai_bridge.yml` / `test_ai_bridge.yml`）は `paths: scripts/ai-bridge/**` 限定のため、本モジュールは現状 CI 対象外。CI へ載せる場合は両ワークフローの path を一般化するか、本モジュール用の同等ワークフローを追加する（本モジュールのスコープ外）。
+本モジュール専用の CI として `.github/workflows/lint_nvim_sync.yml`（goimports / golangci-lint）と `.github/workflows/test_nvim_sync.yml`（`go test` + カバレッジ PR コメント）を用意しており、いずれも `paths: scripts/nvim-sync/**` の変更で起動する。

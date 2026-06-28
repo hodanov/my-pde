@@ -1,0 +1,79 @@
+name: Test nvim-sync
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+    paths:
+      - "scripts/nvim-sync/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scripts/nvim-sync
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: scripts/nvim-sync/go.mod
+
+      - name: Run tests with coverage
+        run: go test ./... -v -count=1 -coverprofile=coverage.out
+
+      - name: Generate coverage report
+        id: coverage
+        run: |
+          COVER_OUTPUT=$(go tool cover -func=coverage.out)
+          TOTAL=$(echo "$COVER_OUTPUT" | grep '^total:' | awk '{print $NF}')
+
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          {
+            echo "report<<${EOF}"
+            echo "$COVER_OUTPUT"
+            echo "${EOF}"
+            echo "total=${TOTAL}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post coverage comment on PR
+        if: github.event_name == 'pull_request'
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          MARKER="<!-- coverage-nvim-sync -->"
+          BODY="${MARKER}
+          ## 📊 Go Test Coverage: nvim-sync
+
+          **Total coverage: ${{ steps.coverage.outputs.total }}**
+
+          <details>
+          <summary>Per-package / per-function breakdown</summary>
+
+          \`\`\`
+          ${{ steps.coverage.outputs.report }}
+          \`\`\`
+
+          </details>"
+
+          EXISTING_COMMENT_ID=$(gh api \
+            "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq ".[] | select(.body | startswith(\"${MARKER}\")) | .id" \
+          )
+
+          if [ -n "$EXISTING_COMMENT_ID" ]; then
+            gh api \
+              --method PATCH \
+              "repos/${{ github.repository }}/issues/comments/${EXISTING_COMMENT_ID}" \
+              -f body="${BODY}"
+          else
+            gh api \
+              --method POST \
+              "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+              -f body="${BODY}"
+          fi
