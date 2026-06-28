@@ -18,11 +18,29 @@ CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // ""')
 
 [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ] || exit 0
 
-# Locate the repository and its skills directory.
+# Resolve where observations live. Prefer SKILL_OBSERVE_HOME (the my-pde checkout)
+# so skill usage in ANY repo is captured into the git-tracked observations tree;
+# fall back to the current repo when the env var is unset (e.g. working in my-pde).
 [ -n "$CWD" ] || CWD=$(pwd)
-ROOT=$(git -C "$CWD" rev-parse --show-toplevel 2>/dev/null) || exit 0
-SKILLS_DIR="$ROOT/ai-agents/skills"
-[ -d "$SKILLS_DIR" ] || exit 0
+OBS_HOME=""
+# Expand a leading ~ ourselves; settings.json env values are not shell-expanded,
+# so SKILL_OBSERVE_HOME="~/workspace/my-pde" stays portable across machines.
+observe_home="${SKILL_OBSERVE_HOME:-}"
+# shellcheck disable=SC2088  # intentionally matching/stripping a literal ~, not expanding
+case "$observe_home" in
+"~") observe_home="$HOME" ;;
+"~/"*) observe_home="$HOME/${observe_home#"~/"}" ;;
+esac
+if [ -n "$observe_home" ] && [ -d "$observe_home/ai-agents/skills" ]; then
+	OBS_HOME="$observe_home"
+else
+	ROOT=$(git -C "$CWD" rev-parse --show-toplevel 2>/dev/null || true)
+	if [ -n "$ROOT" ] && [ -d "$ROOT/ai-agents/skills" ]; then
+		OBS_HOME="$ROOT"
+	fi
+fi
+[ -n "$OBS_HOME" ] || exit 0
+SKILLS_DIR="$OBS_HOME/ai-agents/skills"
 
 # Skills extracted from this session's transcript (Skill tool invocations).
 used=$(
@@ -68,10 +86,12 @@ reason=$(
 今セッションで次のリポジトリスキルを使用したが observation が未記録です: ${list}
 
 各スキルについて、直近の使用結果を会話文脈から success / partial / failure で判定し、
-ai-agents/skills/<スキル名>/observations/$(date +%Y-%m-%d)_NNN_obs.md を作成してください。
+${SKILLS_DIR}/<スキル名>/observations/$(date +%Y-%m-%d)_NNN_obs.md を作成してください
+（上記は絶対パス。現在の作業リポジトリと異なっても必ずこのパスに書く）。
 
-- 形式は ai-agents/skills/skill-observe/SKILL.md の6フィールド（タスク / スキル / 結果 /
+- 形式は ${SKILLS_DIR}/skill-observe/SKILL.md の6フィールド（タスク / スキル / 結果 /
   問題 / フィードバック / コンテキスト）に従う。
+- 「コンテキスト」には実際の作業リポジトリ（cwd: ${CWD}）を必ず記録する。
 - NNN は当日連番。同日の既存ファイルと重複しないよう採番する。
 - 当日同スキルの observation が既にあればスキップしてよい。
 - ユーザーへの確認は不要。淡々と記録し、作成したファイルを1行で報告して終了する。
