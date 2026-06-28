@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
 
 	"ai-bridge/internal/daemon"
+	"ai-bridge/internal/doctor"
 	"ai-bridge/internal/launchd"
 	"ai-bridge/internal/launcher"
 )
@@ -28,6 +30,8 @@ func main() {
 		err = runDaemon()
 	case "install-launchd":
 		err = runInstallLaunchd()
+	case "doctor":
+		err = runDoctor()
 	default:
 		usage()
 		os.Exit(1)
@@ -44,6 +48,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  daemon            Start the ai-bridge daemon")
 	fmt.Fprintln(os.Stderr, "  install-launchd   Install and load the launchd agent")
+	fmt.Fprintln(os.Stderr, "  doctor            Diagnose the ai-bridge environment")
 }
 
 func runDaemon() error {
@@ -61,6 +66,20 @@ func runDaemon() error {
 	defer cancel()
 
 	return daemon.Run(ctx, cfg, l)
+}
+
+func runDoctor() error {
+	cfg, loadConfigErr := daemon.LoadConfig()
+	if loadConfigErr != nil {
+		return loadConfigErr
+	}
+
+	checks := doctor.Run(cfg, exec.LookPath)
+	fmt.Print(doctor.Format(checks))
+	if doctor.HasFailure(checks) {
+		os.Exit(1)
+	}
+	return nil
 }
 
 func runInstallLaunchd() error {
