@@ -96,12 +96,12 @@ func TestInstallTo(t *testing.T) {
 		{
 			name:        "success: writes plist and calls unload then load",
 			binaryPath:  "/path/to/ai-bridge",
-			setupDstDir: func(t *testing.T) string { return t.TempDir() },
+			setupDstDir: func(t *testing.T) string { t.Helper(); return t.TempDir() },
 		},
 		{
 			name:        "launchctl load error is returned",
 			binaryPath:  "/path/to/ai-bridge",
-			setupDstDir: func(t *testing.T) string { return t.TempDir() },
+			setupDstDir: func(t *testing.T) string { t.Helper(); return t.TempDir() },
 			ctlErrOnN:   2,
 			wantErr:     true,
 			wantErrMsg:  "launchctl load",
@@ -109,6 +109,7 @@ func TestInstallTo(t *testing.T) {
 		{
 			name: "MkdirAll error when dstDir is under a file",
 			setupDstDir: func(t *testing.T) string {
+				t.Helper()
 				blocker := filepath.Join(t.TempDir(), "blocker")
 				if writeErr := os.WriteFile(blocker, []byte("x"), 0o644); writeErr != nil {
 					t.Fatal(writeErr)
@@ -120,6 +121,7 @@ func TestInstallTo(t *testing.T) {
 		{
 			name: "WriteFile error on read-only directory",
 			setupDstDir: func(t *testing.T) string {
+				t.Helper()
 				dir := filepath.Join(t.TempDir(), "readonly")
 				if mkdirErr := os.MkdirAll(dir, 0o755); mkdirErr != nil {
 					t.Fatal(mkdirErr)

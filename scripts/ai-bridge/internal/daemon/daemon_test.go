@@ -314,6 +314,7 @@ func TestRun(t *testing.T) {
 		{
 			name: "MkdirAll error returns error immediately",
 			setupBridgeDir: func(t *testing.T) string {
+				t.Helper()
 				blocker := filepath.Join(t.TempDir(), "blocker")
 				if writeErr := os.WriteFile(blocker, []byte("x"), 0o644); writeErr != nil {
 					t.Fatal(writeErr)

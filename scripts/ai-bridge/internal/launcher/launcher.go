@@ -1,3 +1,4 @@
+// Package launcher opens a new terminal tab and runs a script in it.
 package launcher
 
 import (

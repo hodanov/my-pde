@@ -1,0 +1,58 @@
+# golangci-lint 設定（v2 フォーマット）
+#
+# scripts/ 配下の Go モジュール（nvim-sync / ai-bridge）共通の設定。
+# golangci-lint は実行ディレクトリから上位を探索するため、リポジトリ直下に
+# 1ファイル置くことで両モジュール・CI・Stop フック（lint-changed.sh）すべてが参照する。
+#
+# 目的: AI 駆動開発のハーネス強化。バグ検出系リンターで「動くが壊れている」コードを
+# 早期に止め、AGENTS.md の規約を機械的に担保する。
+version: "2"
+
+linters:
+  # 標準セット（errcheck / govet / ineffassign / staticcheck / unused）を維持して追加有効化する。
+  default: standard
+  enable:
+    # --- バグ検出（correctness） ---
+    - errorlint # %w ラップ / errors.Is/As の誤用検出
+    - nilerr # err != nil チェック後に nil を返すバグ
+    - nilnil # nil, nil の同時返却
+    - bodyclose # レスポンスボディ閉じ忘れ
+    - contextcheck # context の伝播漏れ
+    - makezero # make + append の初期長バグ
+    - wastedassign # 使われない代入
+    # --- 規約・品質（maintainability） ---
+    - gocritic # 高シグナルな診断群
+    - revive # golint 後継
+    - unconvert # 不要な型変換
+    - unparam # 使われない関数引数
+    - misspell # スペルミス
+    # --- テスト品質（AGENTS.md 規約に直結） ---
+    - tparallel # t.Parallel() の誤用検出
+    - thelper # ヘルパーでの t.Helper() 呼び出し漏れ
+
+  settings:
+    govet:
+      enable:
+        - shadow # err などのシャドーイング検出（規約「err を使い回さない」を部分的に担保）
+    errcheck:
+      check-type-assertions: true # 型アサーションのエラー無視を検出
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+
+  exclusions:
+    rules:
+      # テストコードでは可読性を優先し、一部リンターを緩和する。
+      # revive: ドレインループ（for range ch {}）など、テスト特有の慣用句を許容する。
+      - path: _test.go
+        linters:
+          - errcheck
+          - unparam
+          - revive
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

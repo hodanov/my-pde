@@ -1,3 +1,4 @@
+// Package launchd generates and installs the launchd plist that runs ai-bridge.
 package launchd
 
 import (
