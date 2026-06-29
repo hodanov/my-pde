@@ -94,66 +94,82 @@ func TestDefaultRunner(t *testing.T) {
 }
 
 func TestNewSyncer(t *testing.T) {
-	t.Run("env overrides resolve to absolute src", func(t *testing.T) {
-		dir := t.TempDir()
-		t.Setenv("NVIM_SYNC_SRC", dir)
-		t.Setenv("NVIM_SYNC_CONTAINER", "custom-box")
-		t.Setenv("NVIM_SYNC_DEST", "/custom/dest")
+	// srcKind selects how the NVIM_SYNC_SRC path is materialised per case.
+	tests := []struct {
+		name          string
+		srcKind       string // "dir", "file", or "missing"
+		container     string
+		dest          string
+		wantErr       bool
+		wantContainer string
+		wantDest      string
+	}{
+		{
+			name:          "env overrides resolve to absolute src",
+			srcKind:       "dir",
+			container:     "custom-box",
+			dest:          "/custom/dest",
+			wantContainer: "custom-box",
+			wantDest:      "/custom/dest",
+		},
+		{
+			name:          "defaults apply when env unset",
+			srcKind:       "dir",
+			container:     "",
+			dest:          "",
+			wantContainer: defaultContainer,
+			wantDest:      defaultDest,
+		},
+		{
+			name:    "non-directory src is rejected",
+			srcKind: "file",
+			wantErr: true,
+		},
+		{
+			name:    "missing src is rejected",
+			srcKind: "missing",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var src string
+			switch tt.srcKind {
+			case "dir":
+				src = t.TempDir()
+			case "file":
+				src = filepath.Join(t.TempDir(), "not-a-dir")
+				if err := os.WriteFile(src, []byte("x"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			case "missing":
+				src = filepath.Join(t.TempDir(), "does-not-exist")
+			}
+			t.Setenv("NVIM_SYNC_SRC", src)
+			t.Setenv("NVIM_SYNC_CONTAINER", tt.container)
+			t.Setenv("NVIM_SYNC_DEST", tt.dest)
 
-		s, err := newSyncer()
-		if err != nil {
-			t.Fatalf("newSyncer() error = %v", err)
-		}
-		if s.Container != "custom-box" {
-			t.Errorf("Container = %q, want %q", s.Container, "custom-box")
-		}
-		if s.DestRoot != "/custom/dest" {
-			t.Errorf("DestRoot = %q, want %q", s.DestRoot, "/custom/dest")
-		}
-		if !filepath.IsAbs(s.SrcRoot) {
-			t.Errorf("SrcRoot = %q, want absolute", s.SrcRoot)
-		}
-		if s.Run == nil {
-			t.Error("Run is nil, want defaultRunner")
-		}
-	})
-
-	t.Run("defaults apply when env unset", func(t *testing.T) {
-		dir := t.TempDir()
-		t.Setenv("NVIM_SYNC_SRC", dir)
-		t.Setenv("NVIM_SYNC_CONTAINER", "")
-		t.Setenv("NVIM_SYNC_DEST", "")
-
-		s, err := newSyncer()
-		if err != nil {
-			t.Fatalf("newSyncer() error = %v", err)
-		}
-		if s.Container != defaultContainer {
-			t.Errorf("Container = %q, want %q", s.Container, defaultContainer)
-		}
-		if s.DestRoot != defaultDest {
-			t.Errorf("DestRoot = %q, want %q", s.DestRoot, defaultDest)
-		}
-	})
-
-	t.Run("non-directory src is rejected", func(t *testing.T) {
-		file := filepath.Join(t.TempDir(), "not-a-dir")
-		if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		t.Setenv("NVIM_SYNC_SRC", file)
-
-		if _, err := newSyncer(); err == nil {
-			t.Error("newSyncer() = nil error, want error for non-directory src")
-		}
-	})
-
-	t.Run("missing src is rejected", func(t *testing.T) {
-		t.Setenv("NVIM_SYNC_SRC", filepath.Join(t.TempDir(), "does-not-exist"))
-		if _, err := newSyncer(); err == nil {
-			t.Error("newSyncer() = nil error, want error for missing src")
-		}
-	})
+			s, err := newSyncer()
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("newSyncer() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if s.Container != tt.wantContainer {
+				t.Errorf("Container = %q, want %q", s.Container, tt.wantContainer)
+			}
+			if s.DestRoot != tt.wantDest {
+				t.Errorf("DestRoot = %q, want %q", s.DestRoot, tt.wantDest)
+			}
+			if !filepath.IsAbs(s.SrcRoot) {
+				t.Errorf("SrcRoot = %q, want absolute", s.SrcRoot)
+			}
+			if s.Run == nil {
+				t.Error("Run is nil, want defaultRunner")
+			}
+		})
+	}
 }
 
 func TestSyncBatch(t *testing.T) {
@@ -181,41 +197,57 @@ func TestSyncBatch(t *testing.T) {
 
 func TestRunSync(t *testing.T) {
 	t.Parallel()
-	t.Run("copies only lua files recursively", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		mustWrite(t, filepath.Join(root, "init.lua"))
-		mustWrite(t, filepath.Join(root, "notes.txt"))
-		mustWrite(t, filepath.Join(root, "lua", "ai_bridge.lua"))
-
-		rec := &recordingRunner{}
-		s := &syncer.Syncer{Container: "nvim-dev", SrcRoot: root, DestRoot: "/dest", Run: rec.run}
-		if err := runSync(s); err != nil {
-			t.Fatalf("runSync() error = %v", err)
-		}
-		want := []string{filepath.Join(root, "init.lua"), filepath.Join(root, "lua", "ai_bridge.lua")}
-		sort.Strings(want)
-		got := rec.sources()
-		if len(got) != len(want) {
-			t.Fatalf("copied %v, want %v", got, want)
-		}
-		for i := range want {
-			if got[i] != want[i] {
-				t.Errorf("copied[%d] = %q, want %q", i, got[i], want[i])
+	tests := []struct {
+		name        string
+		files       []string // empty files created under the temp root
+		runErr      error
+		wantErr     bool
+		wantSources []string // paths relative to root; checked only when wantErr is false
+	}{
+		{
+			name:        "copies only lua files recursively",
+			files:       []string{"init.lua", "notes.txt", filepath.Join("lua", "ai_bridge.lua")},
+			wantSources: []string{"init.lua", filepath.Join("lua", "ai_bridge.lua")},
+		},
+		{
+			name:    "propagates copy failure",
+			files:   []string{"init.lua"},
+			runErr:  errors.New("boom"),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			for _, f := range tt.files {
+				mustWrite(t, filepath.Join(root, f))
 			}
-		}
-	})
-
-	t.Run("propagates copy failure", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		mustWrite(t, filepath.Join(root, "init.lua"))
-		rec := &recordingRunner{err: errors.New("boom")}
-		s := &syncer.Syncer{Container: "nvim-dev", SrcRoot: root, DestRoot: "/dest", Run: rec.run}
-		if err := runSync(s); err == nil {
-			t.Error("runSync() = nil, want error when copy fails")
-		}
-	})
+			rec := &recordingRunner{err: tt.runErr}
+			s := &syncer.Syncer{Container: "nvim-dev", SrcRoot: root, DestRoot: "/dest", Run: rec.run}
+			err := runSync(s)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("runSync() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			want := make([]string, len(tt.wantSources))
+			for i, src := range tt.wantSources {
+				want[i] = filepath.Join(root, src)
+			}
+			sort.Strings(want)
+			got := rec.sources()
+			if len(got) != len(want) {
+				t.Fatalf("copied %v, want %v", got, want)
+			}
+			for i := range want {
+				if got[i] != want[i] {
+					t.Errorf("copied[%d] = %q, want %q", i, got[i], want[i])
+				}
+			}
+		})
+	}
 }
 
 func TestWatchLoop(t *testing.T) {
