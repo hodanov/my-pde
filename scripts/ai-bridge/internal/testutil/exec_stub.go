@@ -1,3 +1,4 @@
+// Package testutil provides shared helpers for ai-bridge tests.
 package testutil
 
 import "sync"

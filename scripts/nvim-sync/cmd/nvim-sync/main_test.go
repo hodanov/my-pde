@@ -335,12 +335,12 @@ func TestRun(t *testing.T) {
 			name: "sync over empty dir succeeds without docker",
 			args: []string{"sync"},
 			// Empty dir => no .lua files => runSync makes no docker calls.
-			src: func(t *testing.T) string { return t.TempDir() },
+			src: func(t *testing.T) string { t.Helper(); return t.TempDir() },
 		},
 		{
 			name:    "sync with invalid src errors",
 			args:    []string{"sync"},
-			src:     func(t *testing.T) string { return filepath.Join(t.TempDir(), "missing") },
+			src:     func(t *testing.T) string { t.Helper(); return filepath.Join(t.TempDir(), "missing") },
 			wantErr: true,
 		},
 	}

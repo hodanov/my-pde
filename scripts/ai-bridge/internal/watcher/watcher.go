@@ -1,3 +1,4 @@
+// Package watcher watches the bridge directory for incoming request files.
 package watcher
 
 import (
