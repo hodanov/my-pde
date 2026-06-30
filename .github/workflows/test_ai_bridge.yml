@@ -23,7 +23,7 @@ jobs:
           go-version-file: scripts/ai-bridge/go.mod
 
       - name: Run tests with coverage
-        run: go test ./... -v -count=1 -coverprofile=coverage.out
+        run: go test $(go list ./... | grep -Ev '/mock$|/cmd/') -v -count=1 -coverprofile=coverage.out
 
       - name: Generate coverage report
         id: coverage

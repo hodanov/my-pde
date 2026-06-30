@@ -21,12 +21,17 @@ jobs:
         with:
           go-version-file: scripts/ai-bridge/go.mod
 
+      - name: Verify generated mocks are up to date
+        run: |
+          go generate ./...
+          git diff --exit-code -- .
+
       - name: Install goimports
         run: go install golang.org/x/tools/cmd/goimports@latest
 
       - name: Check goimports formatting
         run: |
-          diff=$(find . -name '*.go' -exec goimports -d {} +)
+          diff=$(find . -name '*.go' -not -path './internal/usecase/port/mock/*' -exec goimports -d {} +)
           if [ -n "$diff" ]; then
             echo "$diff"
             exit 1

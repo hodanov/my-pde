@@ -90,29 +90,6 @@ func TestTmux_Launch(t *testing.T) {
 	}
 }
 
-func TestShellQuote(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"/tmp/simple.sh", "'/tmp/simple.sh'"},
-		{"/tmp/it's.sh", "'/tmp/it'\"'\"'s.sh'"},
-		{"hello world", "'hello world'"},
-		{"", "''"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			t.Parallel()
-			got := shellQuote(tt.input)
-			if got != tt.want {
-				t.Errorf("shellQuote(%q) = %q, want %q", tt.input, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestNew(t *testing.T) {
 	t.Parallel()
 	noop := func(string, ...string) error { return nil }

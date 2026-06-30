@@ -1,4 +1,7 @@
 // Command ai-bridge bridges AI agent requests to local terminal launches.
+//
+// main is the composition root: it parses the subcommand, loads configuration,
+// constructs the infrastructure adapters and injects them into the use cases.
 package main
 
 import (
@@ -6,15 +9,17 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 
-	"ai-bridge/internal/daemon"
-	"ai-bridge/internal/doctor"
-	"ai-bridge/internal/launchd"
-	"ai-bridge/internal/launcher"
+	"ai-bridge/internal/domain"
+	"ai-bridge/internal/infra/config"
+	"ai-bridge/internal/infra/fsrepo"
+	"ai-bridge/internal/infra/launchd"
+	"ai-bridge/internal/infra/launcher"
+	"ai-bridge/internal/infra/system"
+	"ai-bridge/internal/infra/watcher"
+	"ai-bridge/internal/usecase"
 )
 
 func main() {
@@ -25,14 +30,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	cfg, loadConfigErr := config.Load()
+	if loadConfigErr != nil {
+		slog.Error("fatal", "error", loadConfigErr)
+		os.Exit(1)
+	}
+
 	var err error
 	switch os.Args[1] {
 	case "daemon":
-		err = runDaemon()
+		err = runDaemon(cfg)
 	case "install-launchd":
-		err = runInstallLaunchd()
+		err = runInstallLaunchd(cfg)
 	case "doctor":
-		err = runDoctor()
+		runDoctor(cfg)
 	default:
 		usage()
 		os.Exit(1)
@@ -52,55 +63,30 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  doctor            Diagnose the ai-bridge environment")
 }
 
-func runDaemon() error {
-	cfg, loadConfigErr := daemon.LoadConfig()
-	if loadConfigErr != nil {
-		return loadConfigErr
-	}
-
+func runDaemon(cfg *domain.Config) error {
 	l, newLauncherErr := launcher.New(cfg.Launcher, launcher.DefaultRunner)
 	if newLauncherErr != nil {
 		return newLauncherErr
 	}
 
+	dir := fsrepo.Dir{}
+	process := usecase.NewProcessRequest(fsrepo.RequestRepository{}, dir, fsrepo.ScriptStore{}, l, cfg.CLI)
+	daemon := usecase.NewRunDaemon(dir, watcher.New(cfg.BridgeDir), process, cfg)
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	return daemon.Run(ctx, cfg, l)
+	return daemon.Run(ctx)
 }
 
-func runDoctor() error {
-	cfg, loadConfigErr := daemon.LoadConfig()
-	if loadConfigErr != nil {
-		return loadConfigErr
-	}
-
-	checks := doctor.Run(cfg, exec.LookPath)
-	fmt.Print(doctor.Format(checks))
-	if doctor.HasFailure(checks) {
+func runDoctor(cfg *domain.Config) {
+	checks := usecase.NewDiagnose(fsrepo.Dir{}, system.CommandLocator{}, cfg).Run()
+	fmt.Print(domain.FormatChecks(checks))
+	if domain.HasFailure(checks) {
 		os.Exit(1)
 	}
-	return nil
 }
 
-func runInstallLaunchd() error {
-	exe, executableErr := os.Executable()
-	if executableErr != nil {
-		return fmt.Errorf("cannot determine executable path: %w", executableErr)
-	}
-	binaryPath, absErr := filepath.Abs(exe)
-	if absErr != nil {
-		return fmt.Errorf("cannot resolve absolute path: %w", absErr)
-	}
-
-	cli := os.Getenv("AI_BRIDGE_CLI")
-	if cli == "" {
-		cli = "claude"
-	}
-	launcherName := os.Getenv("AI_BRIDGE_LAUNCHER")
-	if launcherName == "" {
-		launcherName = "wezterm"
-	}
-
-	return launchd.Install(binaryPath, cli, launcherName)
+func runInstallLaunchd(cfg *domain.Config) error {
+	return usecase.NewInstallAgent(system.Executable{}, launchd.Installer{}, cfg).Run()
 }

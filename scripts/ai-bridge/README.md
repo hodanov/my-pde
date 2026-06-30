@@ -5,7 +5,7 @@ Dockerコンテナ内のNeovimで選択したコードを、ホスト側のAI CL
 ## 前提条件
 
 - ホスト側に以下がインストール済みであること
-  - [Go](https://go.dev/) 1.22 以上（ビルド時のみ）
+  - [Go](https://go.dev/) 1.26 以上（ビルド時のみ）
   - AI CLI（例: `claude`、`cursor`）
 - WezTermを使用する場合: `wezterm cli` コマンドが使えること
 - tmuxを使用する場合: アクティブなtmuxセッションがあること
@@ -114,10 +114,10 @@ AI_BRIDGE_LAUNCHER=tmux ./scripts/ai-bridge/ai-bridge daemon
 
 **新しいランチャーを追加する:**
 
-`scripts/ai-bridge/internal/launcher/` に Go ファイルを追加し、`Launcher` インターフェースを実装する。
+`scripts/ai-bridge/internal/infra/launcher/` に Go ファイルを追加し、`port.Launcher` ポート（インターフェース）を実装する。
 
 ```go
-// Launcher opens a new terminal tab and runs a script.
+// port.Launcher（internal/usecase/port/port.go で定義）
 type Launcher interface {
     Launch(cwd, scriptPath string) error
 }
@@ -154,6 +154,28 @@ type Launcher interface {
 
 通信はホストとコンテナで共有する `~/.ai-bridge/` ディレクトリ上のJSONファイルを介して行われる。
 `${HOME}/workspace:/${HOME}/workspace` のボリュームマウントにより、ファイルパスはコンテナ・ホスト間で一致するため、AI CLIがホスト側からそのままファイルを参照できる。
+
+### コード構成（レイヤ）
+
+ホスト側デーモンは DDD + クリーンアーキテクチャで構成している。依存方向は外→内（`cmd → infra → usecase → domain`）の一方向で、副作用はすべてポート（interface）で抽象化されている。
+
+```text
+internal/
+├── domain/    純粋なビジネスルール（I/O ゼロ）: Config / Request / BuildScript / 診断結果
+├── usecase/   アプリケーションルール: ProcessRequest / RunDaemon / Diagnose / InstallAgent
+│   └── port/          層をまたぐ処理のポート（interface）を集約。型を port.* で参照することで境界越しの呼び出しと明示する
+│       ├── port.go    ポート定義
+│       └── mock/      port.go から go generate で自動生成するモック（編集禁止）
+└── infra/     ポートを実装するアダプタ
+    ├── fsrepo/   request 読込・スクリプト生成・ディレクトリ検証
+    ├── watcher/  fsnotify による監視
+    ├── launcher/ wezterm / tmux 起動
+    ├── launchd/  plist 生成・インストール
+    ├── config/   環境変数 → domain.Config（AI_BRIDGE_* デフォルトの単一情報源）
+    └── system/   実行ファイルパス解決・PATH ルックアップ
+```
+
+ポート（`port.RequestRepository` 等）を追加・変更したら `make generate`（= `go generate ./...`）でモックを再生成する。モックは `go.uber.org/mock`（mockgen、`go tool` として go.mod に固定）で生成し、各ユースケースはモックを使ってテストする。CI はモックが最新であることを `git diff --exit-code` で検証する。
 
 ## トラブルシューティング
 

@@ -1,15 +1,10 @@
 package launcher
 
-import "strings"
+import "ai-bridge/internal/domain"
 
 // Tmux launches a script in a new tmux window.
 type Tmux struct {
 	run CommandRunner
-}
-
-// shellQuote returns a POSIX shell-safe single-quoted string.
-func shellQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
 // args returns the command-line arguments for tmux new-window.
@@ -17,7 +12,7 @@ func shellQuote(s string) string {
 // AI CLIs (e.g. cursor-agent) detect the login-shell context and refuse to
 // enter their TUI mode, causing the spawned window to exit immediately.
 func (t *Tmux) args(cwd, scriptPath string) []string {
-	shellCmd := "bash " + shellQuote(scriptPath)
+	shellCmd := "bash " + domain.ShellQuote(scriptPath)
 	return []string{"new-window", "-c", cwd, shellCmd}
 }
 
