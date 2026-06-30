@@ -1,14 +1,13 @@
 // Package launcher opens a new terminal tab and runs a script in it.
 //
 // It is an infrastructure adapter: WezTerm and Tmux implement the
-// usecase.Launcher port over os/exec.
+// port.Launcher interface over os/exec.
 package launcher
 
 import (
+	"ai-bridge/internal/usecase/port"
 	"fmt"
 	"os/exec"
-
-	"ai-bridge/internal/usecase"
 )
 
 // CommandRunner executes an external command.
@@ -20,7 +19,7 @@ func DefaultRunner(name string, args ...string) error {
 }
 
 // New creates a launcher implementing usecase.Launcher for the given name.
-func New(name string, runner CommandRunner) (usecase.Launcher, error) {
+func New(name string, runner CommandRunner) (port.Launcher, error) {
 	switch name {
 	case "wezterm":
 		return &WezTerm{run: runner}, nil

@@ -63,6 +63,6 @@ MUST keep functions/methods unexported (lowercase) unless called from another pa
 
 ## Architecture & Mock Generation
 
-The daemon follows DDD + clean architecture: `cmd → infra → usecase → domain` (dependency points inward only). Layer-crossing side effects MUST go through a port (interface) declared in `internal/usecase/port.go`; the implementation lives in `internal/infra/`. Keep `internal/domain/` pure (no filesystem, env, process, clock, or third-party I/O).
+The daemon follows DDD + clean architecture: `cmd → infra → usecase → domain` (dependency points inward only). Layer-crossing side effects MUST go through a port (interface) declared in the `internal/usecase/port` package (`port.go`); the implementation lives in `internal/infra/`. Referencing ports via the `port.*` qualifier (e.g. a `port.RequestRepository` field) makes boundary-crossing calls explicit at the call site. Keep `internal/domain/` pure (no filesystem, env, process, clock, or third-party I/O).
 
-Mocks for the ports are generated with `go.uber.org/mock` (mockgen), pinned as a `go tool` in `go.mod`. After adding or changing a port, regenerate with `make generate` (`go generate ./...`) and commit the result. Use the generated mocks (`internal/usecase/mock`) to unit-test use cases; do not hand-write test doubles for ports.
+Mocks for the ports are generated with `go.uber.org/mock` (mockgen), pinned as a `go tool` in `go.mod`. After adding or changing a port, regenerate with `make generate` (`go generate ./...`) and commit the result. Use the generated mocks (`internal/usecase/port/mock`) to unit-test use cases; do not hand-write test doubles for ports.

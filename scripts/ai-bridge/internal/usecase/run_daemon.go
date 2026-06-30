@@ -7,20 +7,21 @@ import (
 	"path/filepath"
 
 	"ai-bridge/internal/domain"
+	"ai-bridge/internal/usecase/port"
 )
 
 // RunDaemon is the daemon main loop: it ensures the bridge directory exists,
 // watches it for requests, and dispatches each consumed request to the
 // request-processing use case.
 type RunDaemon struct {
-	dirs    BridgeDirEnsurer
-	watcher Watcher
+	dirs    port.BridgeDirEnsurer
+	watcher port.Watcher
 	process *ProcessRequest
 	cfg     *domain.Config
 }
 
 // NewRunDaemon wires the dependencies of the daemon loop.
-func NewRunDaemon(dirs BridgeDirEnsurer, watcher Watcher, process *ProcessRequest, cfg *domain.Config) *RunDaemon {
+func NewRunDaemon(dirs port.BridgeDirEnsurer, watcher port.Watcher, process *ProcessRequest, cfg *domain.Config) *RunDaemon {
 	return &RunDaemon{dirs: dirs, watcher: watcher, process: process, cfg: cfg}
 }
 

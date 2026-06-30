@@ -4,18 +4,19 @@ import (
 	"fmt"
 
 	"ai-bridge/internal/domain"
+	"ai-bridge/internal/usecase/port"
 )
 
 // Diagnose verifies the prerequisites of the bridge: the bridge directory and
 // the configured CLI and launcher executables.
 type Diagnose struct {
-	dirs    DirInspector
-	locator CommandLocator
+	dirs    port.DirInspector
+	locator port.CommandLocator
 	cfg     *domain.Config
 }
 
 // NewDiagnose wires the dependencies of the diagnostics use case.
-func NewDiagnose(dirs DirInspector, locator CommandLocator, cfg *domain.Config) *Diagnose {
+func NewDiagnose(dirs port.DirInspector, locator port.CommandLocator, cfg *domain.Config) *Diagnose {
 	return &Diagnose{dirs: dirs, locator: locator, cfg: cfg}
 }
 

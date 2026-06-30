@@ -1,3 +1,6 @@
+// Package usecase holds the application business rules of ai-bridge. It
+// orchestrates the domain layer and depends only on domain types and the
+// interfaces declared in the port subpackage.
 package usecase
 
 import (
@@ -5,20 +8,21 @@ import (
 	"log/slog"
 
 	"ai-bridge/internal/domain"
+	"ai-bridge/internal/usecase/port"
 )
 
 // ProcessRequest handles a single consumed request file end to end: load and
 // validate it, generate a launch script, and launch it in a terminal.
 type ProcessRequest struct {
-	requests RequestRepository
-	dirs     DirVerifier
-	scripts  ScriptStore
-	launcher Launcher
+	requests port.RequestRepository
+	dirs     port.DirVerifier
+	scripts  port.ScriptStore
+	launcher port.Launcher
 	cli      string
 }
 
 // NewProcessRequest wires the dependencies of the request-processing use case.
-func NewProcessRequest(requests RequestRepository, dirs DirVerifier, scripts ScriptStore, launcher Launcher, cli string) *ProcessRequest {
+func NewProcessRequest(requests port.RequestRepository, dirs port.DirVerifier, scripts port.ScriptStore, launcher port.Launcher, cli string) *ProcessRequest {
 	return &ProcessRequest{requests: requests, dirs: dirs, scripts: scripts, launcher: launcher, cli: cli}
 }
 

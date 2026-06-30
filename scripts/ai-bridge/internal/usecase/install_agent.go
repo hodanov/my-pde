@@ -4,18 +4,19 @@ import (
 	"fmt"
 
 	"ai-bridge/internal/domain"
+	"ai-bridge/internal/usecase/port"
 )
 
 // InstallAgent resolves the running binary and installs the launchd agent that
 // runs it as a daemon with the configured CLI and launcher.
 type InstallAgent struct {
-	exe       Executable
-	installer AgentInstaller
+	exe       port.Executable
+	installer port.AgentInstaller
 	cfg       *domain.Config
 }
 
 // NewInstallAgent wires the dependencies of the install use case.
-func NewInstallAgent(exe Executable, installer AgentInstaller, cfg *domain.Config) *InstallAgent {
+func NewInstallAgent(exe port.Executable, installer port.AgentInstaller, cfg *domain.Config) *InstallAgent {
 	return &InstallAgent{exe: exe, installer: installer, cfg: cfg}
 }
 

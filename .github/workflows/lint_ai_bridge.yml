@@ -31,7 +31,7 @@ jobs:
 
       - name: Check goimports formatting
         run: |
-          diff=$(find . -name '*.go' -not -path './internal/usecase/mock/*' -exec goimports -d {} +)
+          diff=$(find . -name '*.go' -not -path './internal/usecase/port/mock/*' -exec goimports -d {} +)
           if [ -n "$diff" ]; then
             echo "$diff"
             exit 1

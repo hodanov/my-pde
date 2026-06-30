@@ -9,7 +9,7 @@ import (
 
 	"ai-bridge/internal/domain"
 	"ai-bridge/internal/usecase"
-	"ai-bridge/internal/usecase/mock"
+	"ai-bridge/internal/usecase/port/mock"
 )
 
 func TestProcessRequestHandle(t *testing.T) {

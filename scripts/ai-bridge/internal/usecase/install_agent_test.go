@@ -8,7 +8,7 @@ import (
 
 	"ai-bridge/internal/domain"
 	"ai-bridge/internal/usecase"
-	"ai-bridge/internal/usecase/mock"
+	"ai-bridge/internal/usecase/port/mock"
 )
 
 func TestInstallAgentRun(t *testing.T) {

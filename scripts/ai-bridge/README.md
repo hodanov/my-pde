@@ -114,10 +114,10 @@ AI_BRIDGE_LAUNCHER=tmux ./scripts/ai-bridge/ai-bridge daemon
 
 **新しいランチャーを追加する:**
 
-`scripts/ai-bridge/internal/infra/launcher/` に Go ファイルを追加し、`usecase.Launcher` ポート（インターフェース）を実装する。
+`scripts/ai-bridge/internal/infra/launcher/` に Go ファイルを追加し、`port.Launcher` ポート（インターフェース）を実装する。
 
 ```go
-// usecase.Launcher（internal/usecase/port.go で定義）
+// port.Launcher（internal/usecase/port/port.go で定義）
 type Launcher interface {
     Launch(cwd, scriptPath string) error
 }
@@ -163,8 +163,9 @@ type Launcher interface {
 internal/
 ├── domain/    純粋なビジネスルール（I/O ゼロ）: Config / Request / BuildScript / 診断結果
 ├── usecase/   アプリケーションルール: ProcessRequest / RunDaemon / Diagnose / InstallAgent
-│   ├── port.go        層をまたぐ処理のポート（interface）を集約定義
-│   └── mock/          port.go から go generate で自動生成するモック（編集禁止）
+│   └── port/          層をまたぐ処理のポート（interface）を集約。型を port.* で参照することで境界越しの呼び出しと明示する
+│       ├── port.go    ポート定義
+│       └── mock/      port.go から go generate で自動生成するモック（編集禁止）
 └── infra/     ポートを実装するアダプタ
     ├── fsrepo/   request 読込・スクリプト生成・ディレクトリ検証
     ├── watcher/  fsnotify による監視
@@ -174,7 +175,7 @@ internal/
     └── system/   実行ファイルパス解決・PATH ルックアップ
 ```
 
-ポート（`usecase.RequestRepository` 等）を追加・変更したら `make generate`（= `go generate ./...`）でモックを再生成する。モックは `go.uber.org/mock`（mockgen、`go tool` として go.mod に固定）で生成し、各ユースケースはモックを使ってテストする。CI はモックが最新であることを `git diff --exit-code` で検証する。
+ポート（`port.RequestRepository` 等）を追加・変更したら `make generate`（= `go generate ./...`）でモックを再生成する。モックは `go.uber.org/mock`（mockgen、`go tool` として go.mod に固定）で生成し、各ユースケースはモックを使ってテストする。CI はモックが最新であることを `git diff --exit-code` で検証する。
 
 ## トラブルシューティング
 
