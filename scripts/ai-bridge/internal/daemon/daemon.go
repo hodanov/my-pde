@@ -1,3 +1,4 @@
+// Package daemon runs the ai-bridge background loop that watches for and handles requests.
 package daemon
 
 import (

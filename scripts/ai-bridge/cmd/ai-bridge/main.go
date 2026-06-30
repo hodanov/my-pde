@@ -1,3 +1,4 @@
+// Command ai-bridge bridges AI agent requests to local terminal launches.
 package main
 
 import (
