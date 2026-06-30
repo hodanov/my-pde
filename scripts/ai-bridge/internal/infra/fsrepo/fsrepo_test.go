@@ -1,6 +1,7 @@
 package fsrepo
 
 import (
+	"ai-bridge/internal/domain"
 	"os"
 	"path/filepath"
 	"strings"
@@ -131,6 +132,102 @@ func TestScriptStoreSave(t *testing.T) {
 				t.Error("script should be executable")
 			}
 		})
+	}
+}
+
+func TestHistoryRepositoryAppendAndLoad(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	records := []*domain.Request{
+		{Prompt: "first", CWD: "/a", Timestamp: 1},
+		{Prompt: "second", CWD: "/b", Timestamp: 2},
+		{Prompt: "third", CWD: "/c", Timestamp: 3},
+	}
+	for _, rec := range records {
+		if appendErr := (HistoryRepository{}).Append(dir, rec); appendErr != nil {
+			t.Fatalf("Append(%q): %v", rec.Prompt, appendErr)
+		}
+	}
+
+	got, loadErr := HistoryRepository{}.Load(dir)
+	if loadErr != nil {
+		t.Fatalf("Load: %v", loadErr)
+	}
+	if len(got) != len(records) {
+		t.Fatalf("got %d records, want %d", len(got), len(records))
+	}
+	if got[0].Prompt != "third" || got[2].Prompt != "first" {
+		t.Errorf("not newest-first: %q ... %q", got[0].Prompt, got[2].Prompt)
+	}
+}
+
+func TestHistoryRepositoryLoad(t *testing.T) {
+	t.Parallel()
+	valid := `{"prompt":"ok","cwd":"/x","timestamp":1}`
+	tests := []struct {
+		name    string
+		content string
+		write   bool
+		wantLen int
+	}{
+		{name: "missing file yields empty", write: false, wantLen: 0},
+		{name: "empty file yields empty", write: true, content: "", wantLen: 0},
+		{name: "blank lines skipped", write: true, content: "\n\n", wantLen: 0},
+		{
+			name:    "corrupt and invalid lines skipped",
+			write:   true,
+			content: valid + "\nnot json\n" + `{"cwd":"/y","timestamp":2}` + "\n" + `{"prompt":"ok2","cwd":"/z","timestamp":3}` + "\n",
+			wantLen: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			if tt.write {
+				if writeErr := os.WriteFile(filepath.Join(dir, historyFileName), []byte(tt.content), 0o600); writeErr != nil {
+					t.Fatalf("setup: %v", writeErr)
+				}
+			}
+			got, loadErr := HistoryRepository{}.Load(dir)
+			if loadErr != nil {
+				t.Fatalf("Load: %v", loadErr)
+			}
+			if len(got) != tt.wantLen {
+				t.Errorf("got %d records, want %d", len(got), tt.wantLen)
+			}
+		})
+	}
+}
+
+func TestRequestWriterSave(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	req := &domain.Request{Prompt: "replay me", CWD: "/work", Timestamp: 42}
+
+	if saveErr := (RequestWriter{}).Save(dir, req); saveErr != nil {
+		t.Fatalf("Save: %v", saveErr)
+	}
+
+	// request.json is readable back through the request repository round-trip.
+	got, loadErr := RequestRepository{}.Load(filepath.Join(dir, requestFileName))
+	if loadErr != nil {
+		t.Fatalf("Load back: %v", loadErr)
+	}
+	if got.Prompt != req.Prompt || got.CWD != req.CWD || got.Timestamp != req.Timestamp {
+		t.Errorf("round-trip = %+v, want %+v", got, req)
+	}
+
+	// No temp residue is left behind.
+	entries, readErr := os.ReadDir(dir)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".request-") {
+			t.Errorf("temp residue left: %s", e.Name())
+		}
 	}
 }
 

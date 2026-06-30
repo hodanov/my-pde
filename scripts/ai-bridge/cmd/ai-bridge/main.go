@@ -6,11 +6,13 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"ai-bridge/internal/domain"
 	"ai-bridge/internal/infra/config"
@@ -44,6 +46,10 @@ func main() {
 		err = runInstallLaunchd(cfg)
 	case "doctor":
 		runDoctor(cfg)
+	case "history":
+		err = runHistory(cfg)
+	case "replay":
+		err = runReplay(cfg)
 	default:
 		usage()
 		os.Exit(1)
@@ -61,6 +67,8 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  daemon            Start the ai-bridge daemon")
 	fmt.Fprintln(os.Stderr, "  install-launchd   Install and load the launchd agent")
 	fmt.Fprintln(os.Stderr, "  doctor            Diagnose the ai-bridge environment")
+	fmt.Fprintln(os.Stderr, "  history [-n N]    List recent requests (default 20)")
+	fmt.Fprintln(os.Stderr, "  replay [--last]   Re-send the most recent request")
 }
 
 func runDaemon(cfg *domain.Config) error {
@@ -70,7 +78,7 @@ func runDaemon(cfg *domain.Config) error {
 	}
 
 	dir := fsrepo.Dir{}
-	process := usecase.NewProcessRequest(fsrepo.RequestRepository{}, dir, fsrepo.ScriptStore{}, l, cfg.CLI)
+	process := usecase.NewProcessRequest(fsrepo.RequestRepository{}, dir, fsrepo.ScriptStore{}, l, fsrepo.HistoryRepository{}, cfg.BridgeDir, cfg.CLI)
 	daemon := usecase.NewRunDaemon(dir, watcher.New(cfg.BridgeDir), process, cfg)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
@@ -89,4 +97,31 @@ func runDoctor(cfg *domain.Config) {
 
 func runInstallLaunchd(cfg *domain.Config) error {
 	return usecase.NewInstallAgent(system.Executable{}, launchd.Installer{}, cfg).Run()
+}
+
+func runHistory(cfg *domain.Config) error {
+	fs := flag.NewFlagSet("history", flag.ContinueOnError)
+	n := fs.Int("n", 20, "number of recent entries to show")
+	if parseErr := fs.Parse(os.Args[2:]); parseErr != nil {
+		return parseErr
+	}
+
+	records, runErr := usecase.NewListHistory(fsrepo.HistoryRepository{}, cfg.BridgeDir).Run()
+	if runErr != nil {
+		return runErr
+	}
+	fmt.Print(domain.FormatHistory(records, *n))
+	return nil
+}
+
+func runReplay(cfg *domain.Config) error {
+	fs := flag.NewFlagSet("replay", flag.ContinueOnError)
+	// --last is accepted for explicitness; the most recent request is replayed.
+	_ = fs.Bool("last", false, "replay the most recent request")
+	if parseErr := fs.Parse(os.Args[2:]); parseErr != nil {
+		return parseErr
+	}
+
+	now := func() int64 { return time.Now().Unix() }
+	return usecase.NewReplayRequest(fsrepo.HistoryRepository{}, fsrepo.RequestWriter{}, cfg.BridgeDir, now).Run()
 }

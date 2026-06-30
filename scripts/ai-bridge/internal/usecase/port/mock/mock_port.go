@@ -68,6 +68,97 @@ func (mr *MockRequestRepositoryMockRecorder) Remove(path any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockRequestRepository)(nil).Remove), path)
 }
 
+// MockRequestWriter is a mock of RequestWriter interface.
+type MockRequestWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MockRequestWriterMockRecorder
+	isgomock struct{}
+}
+
+// MockRequestWriterMockRecorder is the mock recorder for MockRequestWriter.
+type MockRequestWriterMockRecorder struct {
+	mock *MockRequestWriter
+}
+
+// NewMockRequestWriter creates a new mock instance.
+func NewMockRequestWriter(ctrl *gomock.Controller) *MockRequestWriter {
+	mock := &MockRequestWriter{ctrl: ctrl}
+	mock.recorder = &MockRequestWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockRequestWriter) EXPECT() *MockRequestWriterMockRecorder {
+	return m.recorder
+}
+
+// Save mocks base method.
+func (m *MockRequestWriter) Save(bridgeDir string, req *domain.Request) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Save", bridgeDir, req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Save indicates an expected call of Save.
+func (mr *MockRequestWriterMockRecorder) Save(bridgeDir, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockRequestWriter)(nil).Save), bridgeDir, req)
+}
+
+// MockHistoryRepository is a mock of HistoryRepository interface.
+type MockHistoryRepository struct {
+	ctrl     *gomock.Controller
+	recorder *MockHistoryRepositoryMockRecorder
+	isgomock struct{}
+}
+
+// MockHistoryRepositoryMockRecorder is the mock recorder for MockHistoryRepository.
+type MockHistoryRepositoryMockRecorder struct {
+	mock *MockHistoryRepository
+}
+
+// NewMockHistoryRepository creates a new mock instance.
+func NewMockHistoryRepository(ctrl *gomock.Controller) *MockHistoryRepository {
+	mock := &MockHistoryRepository{ctrl: ctrl}
+	mock.recorder = &MockHistoryRepositoryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockHistoryRepository) EXPECT() *MockHistoryRepositoryMockRecorder {
+	return m.recorder
+}
+
+// Append mocks base method.
+func (m *MockHistoryRepository) Append(bridgeDir string, req *domain.Request) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Append", bridgeDir, req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Append indicates an expected call of Append.
+func (mr *MockHistoryRepositoryMockRecorder) Append(bridgeDir, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Append", reflect.TypeOf((*MockHistoryRepository)(nil).Append), bridgeDir, req)
+}
+
+// Load mocks base method.
+func (m *MockHistoryRepository) Load(bridgeDir string) ([]*domain.Request, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Load", bridgeDir)
+	ret0, _ := ret[0].([]*domain.Request)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Load indicates an expected call of Load.
+func (mr *MockHistoryRepositoryMockRecorder) Load(bridgeDir any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockHistoryRepository)(nil).Load), bridgeDir)
+}
+
 // MockScriptStore is a mock of ScriptStore interface.
 type MockScriptStore struct {
 	ctrl     *gomock.Controller

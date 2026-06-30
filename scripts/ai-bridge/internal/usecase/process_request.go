@@ -14,16 +14,18 @@ import (
 // ProcessRequest handles a single consumed request file end to end: load and
 // validate it, generate a launch script, and launch it in a terminal.
 type ProcessRequest struct {
-	requests port.RequestRepository
-	dirs     port.DirVerifier
-	scripts  port.ScriptStore
-	launcher port.Launcher
-	cli      string
+	requests  port.RequestRepository
+	dirs      port.DirVerifier
+	scripts   port.ScriptStore
+	launcher  port.Launcher
+	history   port.HistoryRepository
+	bridgeDir string
+	cli       string
 }
 
 // NewProcessRequest wires the dependencies of the request-processing use case.
-func NewProcessRequest(requests port.RequestRepository, dirs port.DirVerifier, scripts port.ScriptStore, launcher port.Launcher, cli string) *ProcessRequest {
-	return &ProcessRequest{requests: requests, dirs: dirs, scripts: scripts, launcher: launcher, cli: cli}
+func NewProcessRequest(requests port.RequestRepository, dirs port.DirVerifier, scripts port.ScriptStore, launcher port.Launcher, history port.HistoryRepository, bridgeDir, cli string) *ProcessRequest {
+	return &ProcessRequest{requests: requests, dirs: dirs, scripts: scripts, launcher: launcher, history: history, bridgeDir: bridgeDir, cli: cli}
 }
 
 // Handle processes the request at consumedPath. The consumed file is always
@@ -33,6 +35,12 @@ func (uc *ProcessRequest) Handle(consumedPath string) error {
 	uc.requests.Remove(consumedPath)
 	if loadErr != nil {
 		return fmt.Errorf("invalid request: %w", loadErr)
+	}
+
+	// Persist the request before launching. History is a secondary concern, so a
+	// failure here must not block the launch: log and continue.
+	if appendErr := uc.history.Append(uc.bridgeDir, req); appendErr != nil {
+		slog.Warn("history append failed", "error", appendErr)
 	}
 
 	if !uc.dirs.IsDir(req.CWD) {
