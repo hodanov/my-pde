@@ -19,19 +19,19 @@ func TestRunDaemonRun(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		setup   func(ensurer *mock.MockBridgeDirEnsurer, watcher *mock.MockWatcher, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher)
+		setup   func(ensurer *mock.MockBridgeDirEnsurer, watcher *mock.MockWatcher, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher, history *mock.MockHistoryRepository)
 		wantErr bool
 	}{
 		{
 			name: "ensure error returns immediately",
-			setup: func(ensurer *mock.MockBridgeDirEnsurer, _ *mock.MockWatcher, _ *mock.MockRequestRepository, _ *mock.MockDirVerifier, _ *mock.MockScriptStore, _ *mock.MockLauncher) {
+			setup: func(ensurer *mock.MockBridgeDirEnsurer, _ *mock.MockWatcher, _ *mock.MockRequestRepository, _ *mock.MockDirVerifier, _ *mock.MockScriptStore, _ *mock.MockLauncher, _ *mock.MockHistoryRepository) {
 				ensurer.EXPECT().Ensure("/bridge").Return(errors.New("permission denied"))
 			},
 			wantErr: true,
 		},
 		{
 			name: "watch error returns error",
-			setup: func(ensurer *mock.MockBridgeDirEnsurer, watcher *mock.MockWatcher, _ *mock.MockRequestRepository, _ *mock.MockDirVerifier, _ *mock.MockScriptStore, _ *mock.MockLauncher) {
+			setup: func(ensurer *mock.MockBridgeDirEnsurer, watcher *mock.MockWatcher, _ *mock.MockRequestRepository, _ *mock.MockDirVerifier, _ *mock.MockScriptStore, _ *mock.MockLauncher, _ *mock.MockHistoryRepository) {
 				ensurer.EXPECT().Ensure("/bridge").Return(nil)
 				watcher.EXPECT().Watch(gomock.Any()).Return(nil, errors.New("fsnotify failed"))
 			},
@@ -39,7 +39,7 @@ func TestRunDaemonRun(t *testing.T) {
 		},
 		{
 			name: "consumed request is dispatched then channel closes",
-			setup: func(ensurer *mock.MockBridgeDirEnsurer, watcher *mock.MockWatcher, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher) {
+			setup: func(ensurer *mock.MockBridgeDirEnsurer, watcher *mock.MockWatcher, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher, history *mock.MockHistoryRepository) {
 				ensurer.EXPECT().Ensure("/bridge").Return(nil)
 				ch := make(chan string, 1)
 				ch <- "/bridge/request.json.consumed"
@@ -48,6 +48,7 @@ func TestRunDaemonRun(t *testing.T) {
 				watcher.EXPECT().Watch(gomock.Any()).Return(recv, nil)
 				reqs.EXPECT().Load("/bridge/request.json.consumed").Return(validReq, nil)
 				reqs.EXPECT().Remove("/bridge/request.json.consumed")
+				history.EXPECT().Append("/bridge", validReq).Return(nil)
 				dirs.EXPECT().IsDir("/work").Return(true)
 				scripts.EXPECT().Save(gomock.Any()).Return("/tmp/s.sh", nil)
 				launcher.EXPECT().Launch("/work", "/tmp/s.sh").Return(nil)
@@ -55,7 +56,7 @@ func TestRunDaemonRun(t *testing.T) {
 		},
 		{
 			name: "failing request is logged but loop continues to close",
-			setup: func(ensurer *mock.MockBridgeDirEnsurer, watcher *mock.MockWatcher, reqs *mock.MockRequestRepository, _ *mock.MockDirVerifier, _ *mock.MockScriptStore, _ *mock.MockLauncher) {
+			setup: func(ensurer *mock.MockBridgeDirEnsurer, watcher *mock.MockWatcher, reqs *mock.MockRequestRepository, _ *mock.MockDirVerifier, _ *mock.MockScriptStore, _ *mock.MockLauncher, _ *mock.MockHistoryRepository) {
 				ensurer.EXPECT().Ensure("/bridge").Return(nil)
 				ch := make(chan string, 1)
 				ch <- "/bridge/request.json.consumed"
@@ -78,9 +79,10 @@ func TestRunDaemonRun(t *testing.T) {
 			dirs := mock.NewMockDirVerifier(ctrl)
 			scripts := mock.NewMockScriptStore(ctrl)
 			launcher := mock.NewMockLauncher(ctrl)
-			tt.setup(ensurer, watcher, reqs, dirs, scripts, launcher)
+			history := mock.NewMockHistoryRepository(ctrl)
+			tt.setup(ensurer, watcher, reqs, dirs, scripts, launcher, history)
 
-			process := usecase.NewProcessRequest(reqs, dirs, scripts, launcher, cfg.CLI)
+			process := usecase.NewProcessRequest(reqs, dirs, scripts, launcher, history, cfg.BridgeDir, cfg.CLI)
 			uc := usecase.NewRunDaemon(ensurer, watcher, process, cfg)
 			err := uc.Run(context.Background())
 

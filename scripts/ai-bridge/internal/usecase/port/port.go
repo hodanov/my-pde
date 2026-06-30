@@ -25,6 +25,21 @@ type RequestRepository interface {
 	Remove(path string)
 }
 
+// RequestWriter writes a request back into the bridge directory so the running
+// daemon consumes it through its existing watcher/launcher path (used by replay).
+type RequestWriter interface {
+	// Save atomically writes req as request.json inside bridgeDir.
+	Save(bridgeDir string, req *domain.Request) error
+}
+
+// HistoryRepository persists and reads the append-only request history.
+type HistoryRepository interface {
+	// Append records req as a new entry in the history under bridgeDir.
+	Append(bridgeDir string, req *domain.Request) error
+	// Load reads all history entries under bridgeDir, newest first.
+	Load(bridgeDir string) ([]*domain.Request, error)
+}
+
 // ScriptStore persists a generated launch script to a runnable location.
 type ScriptStore interface {
 	// Save creates the script file, then calls build with the final path to

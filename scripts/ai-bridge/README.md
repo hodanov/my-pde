@@ -72,6 +72,21 @@ docker cp nvim/config/lua/ai_bridge.lua nvim-dev:/root/.config/nvim/lua/ai_bridg
 4. プロンプトを確認・編集する
 5. `<CR>`（Enter）で送信 → ホスト側のターミナルタブでAI CLIが起動する
 
+### 履歴と再送（history / replay）
+
+デーモンは正常に受理したリクエスト（プロンプト・cwd・タイムスタンプ）を `~/.ai-bridge/history.jsonl` に追記する。Neovim を開かずホスト側だけで過去のプロンプトを確認・再送できる。
+
+```bash
+# 直近の履歴を一覧（既定 20 件、-n で件数指定）
+./scripts/ai-bridge/ai-bridge history
+./scripts/ai-bridge/ai-bridge history -n 5
+
+# 直前のプロンプトを再送（request.json を書き出し、稼働中のデーモンが起動する）
+./scripts/ai-bridge/ai-bridge replay --last
+```
+
+`replay` は稼働中のデーモンが既存の watcher → launcher 経路で consume するため、デーモンが起動している必要がある。プロンプト全文が平文で `history.jsonl` に残る点に注意する（`~/.ai-bridge/` 配下に閉じる）。
+
 ### フローティングウィンドウのキーマップ
 
 | キー    | 動作                                               |

@@ -19,15 +19,16 @@ func TestProcessRequestHandle(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		setup   func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher)
+		setup   func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher, history *mock.MockHistoryRepository)
 		wantErr bool
 	}{
 		{
-			name: "valid request builds script and launches",
-			setup: func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher) {
+			name: "valid request appends history, builds script and launches",
+			setup: func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher, history *mock.MockHistoryRepository) {
 				t.Helper()
 				reqs.EXPECT().Load(consumed).Return(validReq, nil)
 				reqs.EXPECT().Remove(consumed)
+				history.EXPECT().Append("/bridge", validReq).Return(nil)
 				dirs.EXPECT().IsDir("/work").Return(true)
 				scripts.EXPECT().Save(gomock.Any()).DoAndReturn(func(build func(string) string) (string, error) {
 					content := build("/tmp/ai-bridge-x.sh")
@@ -40,8 +41,20 @@ func TestProcessRequestHandle(t *testing.T) {
 			},
 		},
 		{
+			name: "history append failure does not block launch",
+			setup: func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher, history *mock.MockHistoryRepository) {
+				t.Helper()
+				reqs.EXPECT().Load(consumed).Return(validReq, nil)
+				reqs.EXPECT().Remove(consumed)
+				history.EXPECT().Append("/bridge", validReq).Return(errors.New("disk full"))
+				dirs.EXPECT().IsDir("/work").Return(true)
+				scripts.EXPECT().Save(gomock.Any()).Return("/tmp/s.sh", nil)
+				launcher.EXPECT().Launch("/work", "/tmp/s.sh").Return(nil)
+			},
+		},
+		{
 			name: "load error removes file and returns error",
-			setup: func(t *testing.T, reqs *mock.MockRequestRepository, _ *mock.MockDirVerifier, _ *mock.MockScriptStore, _ *mock.MockLauncher) {
+			setup: func(t *testing.T, reqs *mock.MockRequestRepository, _ *mock.MockDirVerifier, _ *mock.MockScriptStore, _ *mock.MockLauncher, _ *mock.MockHistoryRepository) {
 				t.Helper()
 				reqs.EXPECT().Load(consumed).Return(nil, errors.New("bad json"))
 				reqs.EXPECT().Remove(consumed)
@@ -50,20 +63,22 @@ func TestProcessRequestHandle(t *testing.T) {
 		},
 		{
 			name: "invalid cwd returns error before script generation",
-			setup: func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, _ *mock.MockScriptStore, _ *mock.MockLauncher) {
+			setup: func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, _ *mock.MockScriptStore, _ *mock.MockLauncher, history *mock.MockHistoryRepository) {
 				t.Helper()
 				reqs.EXPECT().Load(consumed).Return(validReq, nil)
 				reqs.EXPECT().Remove(consumed)
+				history.EXPECT().Append("/bridge", validReq).Return(nil)
 				dirs.EXPECT().IsDir("/work").Return(false)
 			},
 			wantErr: true,
 		},
 		{
 			name: "save error returns error before launch",
-			setup: func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, _ *mock.MockLauncher) {
+			setup: func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, _ *mock.MockLauncher, history *mock.MockHistoryRepository) {
 				t.Helper()
 				reqs.EXPECT().Load(consumed).Return(validReq, nil)
 				reqs.EXPECT().Remove(consumed)
+				history.EXPECT().Append("/bridge", validReq).Return(nil)
 				dirs.EXPECT().IsDir("/work").Return(true)
 				scripts.EXPECT().Save(gomock.Any()).Return("", errors.New("disk full"))
 			},
@@ -71,10 +86,11 @@ func TestProcessRequestHandle(t *testing.T) {
 		},
 		{
 			name: "launch error removes script and returns error",
-			setup: func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher) {
+			setup: func(t *testing.T, reqs *mock.MockRequestRepository, dirs *mock.MockDirVerifier, scripts *mock.MockScriptStore, launcher *mock.MockLauncher, history *mock.MockHistoryRepository) {
 				t.Helper()
 				reqs.EXPECT().Load(consumed).Return(validReq, nil)
 				reqs.EXPECT().Remove(consumed)
+				history.EXPECT().Append("/bridge", validReq).Return(nil)
 				dirs.EXPECT().IsDir("/work").Return(true)
 				scripts.EXPECT().Save(gomock.Any()).Return("/tmp/s.sh", nil)
 				launcher.EXPECT().Launch("/work", "/tmp/s.sh").Return(errors.New("no terminal"))
@@ -92,9 +108,10 @@ func TestProcessRequestHandle(t *testing.T) {
 			dirs := mock.NewMockDirVerifier(ctrl)
 			scripts := mock.NewMockScriptStore(ctrl)
 			launcher := mock.NewMockLauncher(ctrl)
-			tt.setup(t, reqs, dirs, scripts, launcher)
+			history := mock.NewMockHistoryRepository(ctrl)
+			tt.setup(t, reqs, dirs, scripts, launcher, history)
 
-			uc := usecase.NewProcessRequest(reqs, dirs, scripts, launcher, "claude")
+			uc := usecase.NewProcessRequest(reqs, dirs, scripts, launcher, history, "/bridge", "claude")
 			err := uc.Handle(consumed)
 
 			if gotErr := err != nil; gotErr != tt.wantErr {
