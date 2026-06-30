@@ -18,7 +18,7 @@ func TestGeneratePlist(t *testing.T) {
 		if genPlistErr != nil {
 			t.Fatal(genPlistErr)
 		}
-		expected, readErr := os.ReadFile(filepath.Join("..", "..", "testdata", "plist", "expected.plist"))
+		expected, readErr := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "plist", "expected.plist"))
 		if readErr != nil {
 			t.Fatal(readErr)
 		}

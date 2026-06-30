@@ -60,3 +60,9 @@ This applies to `if` scopes too — `if chmodErr := f.Chmod(0o755); chmodErr != 
 ## Package Scope
 
 MUST keep functions/methods unexported (lowercase) unless called from another package or required by an interface. Same-package test files (`_test.go`) do not count as "another package."
+
+## Architecture & Mock Generation
+
+The daemon follows DDD + clean architecture: `cmd → infra → usecase → domain` (dependency points inward only). Layer-crossing side effects MUST go through a port (interface) declared in `internal/usecase/port.go`; the implementation lives in `internal/infra/`. Keep `internal/domain/` pure (no filesystem, env, process, clock, or third-party I/O).
+
+Mocks for the ports are generated with `go.uber.org/mock` (mockgen), pinned as a `go tool` in `go.mod`. After adding or changing a port, regenerate with `make generate` (`go generate ./...`) and commit the result. Use the generated mocks (`internal/usecase/mock`) to unit-test use cases; do not hand-write test doubles for ports.

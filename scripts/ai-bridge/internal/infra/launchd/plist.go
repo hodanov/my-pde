@@ -87,8 +87,11 @@ func defaultLaunchctl(args ...string) error {
 	return exec.Command("launchctl", args...).Run()
 }
 
+// Installer implements the usecase.AgentInstaller port using launchd.
+type Installer struct{}
+
 // Install writes the plist to ~/Library/LaunchAgents/ and loads it via launchctl.
-func Install(binaryPath, cli, launcherName string) error {
+func (Installer) Install(binaryPath, cli, launcherName string) error {
 	home, homeDirErr := os.UserHomeDir()
 	if homeDirErr != nil {
 		return fmt.Errorf("cannot determine home directory: %w", homeDirErr)
