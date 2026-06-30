@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FILE_PATH=$(printf '%s' "$INPUT" | python3 "$SCRIPT_DIR/get_file_path.py")
 
 case "$FILE_PATH" in
-*.html | *.css | *.js | *.ts | *.json | *.yaml | *.yml)
+*.html | *.css | *.js | *.mjs | *.ts | *.json | *.yaml | *.yml)
 	if ! prettier --write "$FILE_PATH" 2>&1; then
 		echo "[prettier] fail: $FILE_PATH" >&2
 		exit 1

@@ -9,7 +9,7 @@ print(data.get('tool_input', {}).get('file_path', ''))
 ")
 
 case "$FILE_PATH" in
-*.html | *.css | *.js | *.ts | *.json | *.yaml | *.yml)
+*.html | *.css | *.js | *.mjs | *.ts | *.json | *.yaml | *.yml)
 	if ! prettier --write "$FILE_PATH" 2>&1; then
 		echo "[prettier] fail: $FILE_PATH" >&2
 		exit 1
