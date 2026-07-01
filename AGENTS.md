@@ -37,6 +37,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 - `make skills-copy` — copy skills to all CLIs.
 - `make agents-copy` — copy agent definitions to Claude/Cursor.
 - `make settings-copy` — copy settings and hooks to Claude/Cursor.
+- Claude Code: the `deploy-ai-config` skill wraps this flow (which target for which edit, plus verification).
 
 ### Dotfiles
 
@@ -50,16 +51,15 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 ## Coding Style
 
 - Per-language lint/format conventions load on demand from path-scoped rules in `.claude/rules/` (and personal rules in `~/.claude/rules/`) when you touch matching files.
-- Dockerfile/toolchain version constraints live in `.claude/rules/dockerfile-versions.md`; tool versions are pinned and updated via workflows or scripts, not manual edits.
-- For sub-directory conventions, see each directory's `AGENTS.md`.
+- Dockerfile/toolchain version constraints live in `.claude/rules/dockerfile-versions.md`; tool versions are pinned and updated via workflows or scripts, not manual edits. For Claude this is enforced by the `guard-version-pins.sh` PreToolUse hook.
+- For sub-directory conventions, see each directory's `AGENTS.md`. (`scripts/ai-bridge/` also has a `CLAUDE.md` importing its `AGENTS.md` so the Go conventions auto-load for Claude.)
 
 ## Testing & Linting
 
-- Per-language lint/format commands load on demand as path-scoped rules (`.claude/rules/`, `~/.claude/rules/`): Go, Lua, Markdown, TOML, JSON/YAML, Shell.
-- Not covered by rules: Dockerfile (`hadolint environment/docker/nvim.dockerfile`), Terraform (`tflint`, `terraform fmt`).
+- Per-language lint/format commands load on demand as path-scoped rules (`.claude/rules/`, `~/.claude/rules/`): Go, Lua, Markdown, TOML, JSON/YAML, Shell, Terraform.
+- Not covered by rules: Dockerfile lint (`hadolint environment/docker/nvim.dockerfile`).
 - AI Bridge has Go unit tests: `make ai-bridge-test`.
 - No repository-level test suite beyond per-directory checks.
-- Terraform definition jump/completion is provided by `terraform-ls`. `tflint`'s AWS ruleset (`tflint-ruleset-aws`) is not bundled here; install it per Terraform project via `.tflint.hcl` + `tflint --init`.
 
 ## Commit & PR Guidelines
 
