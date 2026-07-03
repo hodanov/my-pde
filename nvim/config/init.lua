@@ -66,6 +66,23 @@ elseif vim.fn.has("clipboard") == 1 then
 end
 
 -- ----------------------------------------
+-- Highlight yanked text (ヤンク範囲を一瞬フラッシュして視覚フィードバックする)
+-- ----------------------------------------
+local hl_yank_group = vim.api.nvim_create_augroup("highlight_yank", { clear = true })
+vim.api.nvim_create_autocmd("TextYankPost", {
+	group = hl_yank_group,
+	callback = function()
+		-- 0.12 では vim.hl.on_yank が現行 API。将来 (0.13+) は hl_op へ移行し
+		-- on_yank が deprecated 化するため、存在すれば hl_op を優先する。
+		if vim.hl and vim.hl.hl_op then
+			vim.hl.hl_op({ higroup = "IncSearch", timeout = 200 })
+		else
+			vim.hl.on_yank({ higroup = "IncSearch", timeout = 200 })
+		end
+	end,
+})
+
+-- ----------------------------------------
 -- Remember a history of undo/redo.
 -- ----------------------------------------
 if vim.fn.has("persistent_undo") == 1 then
