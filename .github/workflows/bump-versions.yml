@@ -1,4 +1,4 @@
-name: Bump tool versions (Node/Go/Rust/Neovim/npm)
+name: Bump tool versions
 
 on:
   schedule:
@@ -16,25 +16,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Setup mise
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Resolve latest versions
+      - name: Resolve latest versions (policy-pinned tools)
         id: resolve
         shell: bash
         run: |
           set -euo pipefail
-          # Node LTS latest
+          # Node LTS latest (mise upgrade --bump would jump to non-LTS majors)
           NODE_VERSION=$(curl -s https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | max_by(.version | ltrimstr("v") | split(".") | map(tonumber)) | .version | ltrimstr("v")')
 
           ## Go latest stable
-          GO_VERSION=$(curl -s https://go.dev/dl/?mode=json | jq -r '[.[] | select(.stable==true)][0].version | ltrimstr("go")')
+          GO_VERSION=$(curl -s 'https://go.dev/dl/?mode=json' | jq -r '[.[] | select(.stable==true)][0].version | ltrimstr("go")')
 
           # Neovim latest release version
           NEOVIM_VERSION=$(curl -s https://api.github.com/repos/neovim/neovim/releases/latest | jq -r '.tag_name | ltrimstr("v")')
-
-          # Rust toolchain (keep stable)
-          RUST_TOOLCHAIN="stable"
 
           # npm cli latest
           NPM_VERSION=$(curl -s https://registry.npmjs.org/npm/latest | jq -r '.version')
@@ -45,21 +44,34 @@ jobs:
           echo "node=$NODE_VERSION" >> $GITHUB_OUTPUT
           echo "go=$GO_VERSION" >> $GITHUB_OUTPUT
           echo "neovim=$NEOVIM_VERSION" >> $GITHUB_OUTPUT
-          echo "rust=$RUST_TOOLCHAIN" >> $GITHUB_OUTPUT
           echo "npm=$NPM_VERSION" >> $GITHUB_OUTPUT
           echo "terraform=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Update Dockerfile ARGs
+      - name: Update mise.toml pins
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          sed -i.bak -E "s/^ARG NODE_VERSION(=.*)?$/ARG NODE_VERSION=${{ steps.resolve.outputs.node }}/" environment/docker/nvim.dockerfile
-          sed -i.bak -E "s/^ARG GO_VERSION(=.*)?$/ARG GO_VERSION=${{ steps.resolve.outputs.go }}/" environment/docker/nvim.dockerfile
-          sed -i.bak -E "s/^ARG RUST_TOOLCHAIN(=.*)?$/ARG RUST_TOOLCHAIN=${{ steps.resolve.outputs.rust }}/" environment/docker/nvim.dockerfile
-          sed -i.bak -E "s/^ARG NEOVIM_VERSION(=.*)?$/ARG NEOVIM_VERSION=${{ steps.resolve.outputs.neovim }}/" environment/docker/nvim.dockerfile
-          sed -i.bak -E "s/^ARG NPM_VERSION(=.*)?$/ARG NPM_VERSION=${{ steps.resolve.outputs.npm }}/" environment/docker/nvim.dockerfile
-          sed -i.bak -E "s/^ARG TERRAFORM_VERSION(=.*)?$/ARG TERRAFORM_VERSION=${{ steps.resolve.outputs.terraform }}/" environment/docker/nvim.dockerfile
-          rm -f environment/docker/nvim.dockerfile.bak
+          # Policy-pinned toolchains ([tools]) and Docker-only versions ([env])
+          mise use --pin \
+            go@${{ steps.resolve.outputs.go }} \
+            node@${{ steps.resolve.outputs.node }}
+          mise set \
+            NEOVIM_VERSION=${{ steps.resolve.outputs.neovim }} \
+            NPM_VERSION=${{ steps.resolve.outputs.npm }} \
+            TERRAFORM_VERSION=${{ steps.resolve.outputs.terraform }}
+          # Everything else in [tools] goes to latest (go/node excluded above)
+          mise upgrade --bump \
+            shfmt shellcheck stylua hadolint golangci-lint \
+            'go:golang.org/x/tools/cmd/goimports' \
+            'go:golang.org/x/tools/gopls' \
+            'go:github.com/go-delve/delve/cmd/dlv' \
+            'go:github.com/nametake/golangci-lint-langserver' \
+            terraform-ls tflint
+
+      - name: Regenerate pinned artifacts
+        run: mise run pins:sync
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
@@ -70,19 +82,21 @@ jobs:
             - Node: ${{ steps.resolve.outputs.node }}
             - Go: ${{ steps.resolve.outputs.go }}
             - Neovim: ${{ steps.resolve.outputs.neovim }}
-            - Rust: ${{ steps.resolve.outputs.rust }}
             - npm: ${{ steps.resolve.outputs.npm }}
             - Terraform: ${{ steps.resolve.outputs.terraform }}
+            - mise-managed tools: latest (see mise.toml diff)
           title: "chore: bump tool versions"
           body: |-
-            This PR bumps toolchain versions used in `environment/docker/nvim.dockerfile`.
+            This PR bumps tool versions pinned in `mise.toml` and regenerates the
+            derived artifacts (`environment/tools/go/go-tools.txt` and the ARG
+            defaults in `environment/docker/nvim.dockerfile`).
 
-            - Node: `${{ steps.resolve.outputs.node }}`
-            - Go: `${{ steps.resolve.outputs.go }}`
+            - Node: `${{ steps.resolve.outputs.node }}` (latest LTS)
+            - Go: `${{ steps.resolve.outputs.go }}` (latest stable)
             - Neovim: `${{ steps.resolve.outputs.neovim }}`
-            - Rust toolchain: `${{ steps.resolve.outputs.rust }}`
             - npm CLI: `${{ steps.resolve.outputs.npm }}`
             - Terraform: `${{ steps.resolve.outputs.terraform }}`
+            - Other mise-managed tools: bumped to latest (see `mise.toml` diff)
 
             Automated by scheduled workflow.
           branch: chore/bump-tool-versions

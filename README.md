@@ -56,7 +56,7 @@ mise install    # run at the repo root
 - **Debugger**: nvim-dap
 - **Plugin Manager**: lazy.nvim
 
-Versions for Neovim, Go, Python, Node.js, Rust are pinned as `ARG`s in `environment/docker/nvim.dockerfile`. Tool versions are automatically updated via GitHub Actions and Dependabot.
+Tool versions are pinned in `mise.toml` at the repo root; the `ARG` defaults in `environment/docker/nvim.dockerfile` are generated from it (`mise run pins:sync`). Versions are automatically updated via GitHub Actions and Dependabot.
 
 ## AI Bridge
 
@@ -102,4 +102,4 @@ CLI tools (eslint, typescript-language-server, textlint, etc.) are managed via `
 
 ### Go
 
-Go-based tools (gopls, dlv, golangci-lint, etc.) are managed via `environment/tools/go/go-tools.txt` and installed during the image build. Versions are automatically updated weekly by GitHub Actions.
+Go-based tools (gopls, dlv, golangci-lint, etc.) are installed during the image build from `environment/tools/go/go-tools.txt`, which is generated from the pins in `mise.toml` (`mise run pins:sync`). Versions are automatically updated weekly by GitHub Actions.
