@@ -37,6 +37,16 @@ The `--login` option is required to read the `.bash_profile` file.
 
 The Neovim dotfiles work in any environment. You can find [the dotfiles here](./nvim/config).
 
+### Host toolchain (mise)
+
+Host-side tool versions (Go, Node.js, linters) are pinned in `mise.toml` at the repo root and managed by [mise](https://mise.jdx.dev):
+
+```sh
+brew install mise
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
+mise install    # run at the repo root
+```
+
 ## Features
 
 - **LSP / Linter / Formatter**: Go (gopls, golangci-lint), Python (pyright, ruff), JavaScript (eslint, prettier), Lua (stylua), Terraform (terraform-ls, tflint, terraform fmt), YAML, TOML, Markdown, etc.
