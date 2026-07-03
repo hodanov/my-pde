@@ -51,6 +51,16 @@ return {
 		"neovim/nvim-lspconfig",
 		lazy = false,
 	},
+	{ -- Neovim 設定 (Lua) 編集用に lua_ls を構成する
+		"folke/lazydev.nvim",
+		ft = "lua",
+		opts = {
+			library = {
+				-- vim.uv.* を使うとき luv の型を読み込む (lazy_nvim.lua で vim.uv を使用済み)
+				{ path = "${3rd}/luv/library", words = { "vim%.uv" } },
+			},
+		},
+	},
 	{ -- Formatt runner
 		"stevearc/conform.nvim",
 		lazy = true,
