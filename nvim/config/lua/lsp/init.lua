@@ -91,9 +91,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		vim.keymap.set("n", "<space>wl", function()
 			print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
 		end, opts)
-		vim.keymap.set("n", "<space>f", function()
-			vim.lsp.buf.format({ async = true })
-		end, opts)
+		-- 手動フォーマット (<space>f) は conform 側 (conform_nvim.lua) に一本化した。
+		-- 保存時 (format_on_save) と同じチェーンを通し、conform 未定義の filetype は
+		-- lsp_format = "fallback" で LSP 整形へ委譲する。
 
 		-- Code lens を全 LSP で常時有効化する。
 		-- vim.lsp.codelens.enable は内部で BufEnter/InsertLeave 等の refresh まで面倒を見るので、
