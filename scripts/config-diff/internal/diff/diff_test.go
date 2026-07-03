@@ -112,6 +112,28 @@ func TestClassifySkills(t *testing.T) {
 	}
 }
 
+func TestClassifySettingsSkipsSymlinks(t *testing.T) {
+	t.Parallel()
+	src := t.TempDir()
+	dest := t.TempDir()
+	// A regular file plus a symlink to it. copy-entries.sh `find -type f` never
+	// enumerates the symlink, so config-diff must not report it either.
+	writeFile(t, filepath.Join(src, "real.txt"), "content")
+	if err := os.Symlink(filepath.Join(src, "real.txt"), filepath.Join(src, "link.txt")); err != nil {
+		t.Fatalf("Symlink: %v", err)
+	}
+
+	entries, err := Classify("settings", src, dest)
+	if err != nil {
+		t.Fatalf("Classify: %v", err)
+	}
+	got := stateByLabel(entries)
+	want := map[string]State{"real.txt": StateMissing}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Classify settings = %v, want %v (symlink link.txt must be excluded)", got, want)
+	}
+}
+
 func TestClassifyUnknownMode(t *testing.T) {
 	t.Parallel()
 	src := t.TempDir()

@@ -103,7 +103,8 @@ func enumerate(mode, src string) ([]item, error) {
 		return topLevel(src, func(d fs.DirEntry) bool { return d.IsDir() }, true)
 	case "agents":
 		return topLevel(src, func(d fs.DirEntry) bool {
-			return !d.IsDir() && strings.HasSuffix(d.Name(), ".md")
+			// find -type f matches regular files only, so symlinked *.md are skipped.
+			return d.Type().IsRegular() && strings.HasSuffix(d.Name(), ".md")
 		}, false)
 	case "settings":
 		return settingsFiles(src)
@@ -139,7 +140,9 @@ func settingsFiles(src string) ([]item, error) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() {
+		// Mirror copy-entries.sh `find -type f`: descend into directories but only
+		// enumerate regular files, skipping symlinks and other special entries.
+		if !d.Type().IsRegular() {
 			return nil
 		}
 		rel, relErr := filepath.Rel(src, path)
@@ -241,7 +244,8 @@ func relFiles(dir string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() {
+		// Regular files only, matching the copy enumeration; skip symlinks.
+		if !d.Type().IsRegular() {
 			return nil
 		}
 		rel, relErr := filepath.Rel(dir, path)

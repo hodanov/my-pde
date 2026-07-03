@@ -47,8 +47,9 @@ config-diff agents   ai-agents/agents          ~/.claude/agents
 
 ## 比較の意味論
 
-- 内容比較は **sha256**（バイト一致）。ファイルモード（実行ビット、`cp -p` の time 保存）や
-  改行差は v1 では drift とみなさない（内容のみ）。
+- 内容比較は **sha256**（バイト一致）。バイト列そのものを比較するため、改行コードの違い
+  （LF / CRLF）も drift になる。一方、sha256 に含まれないファイルモード（実行ビット）や
+  `cp -p` が保存する mtime は drift とみなさない。
 - シンボリックリンク（`codex` の `AGENTS.md` は Makefile で `ln -sf`）は copy 対象外なので
   check でも対象外。
 
