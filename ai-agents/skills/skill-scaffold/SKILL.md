@@ -66,12 +66,12 @@ metadata:
 
 `ai-agents/skills/SKILL_NAME/SKILL.md` に書き出し、内容をユーザーに表示して確認する。
 
-- デプロイは自動実行せず、`make skills-copy` で 4 エージェント（codex / claude / cursor / copilot）へ配布される旨を案内するに留める。
+- デプロイは自動実行せず、`mise run skills-copy` で 4 エージェント（codex / claude / cursor / copilot）へ配布される旨を案内するに留める。
 
 ## Notes
 
 - **既存スキルの上書き防止が最重要**。Step 3 の非存在確認を必ず先に行い、衝突時は作成せず中断する。
 - 本スキルは「新規作成（Create）」専任。既存スキルの改善（Inspect / Amend）には踏み込まず、`/skill-improve` と役割を分担する。
 - skills は 4 エージェントへ配布されるため、特定エディタ依存の機能やスクリプトは使わず、モデル駆動の純 Markdown 手順に留める（移植性確保）。
-- 新規 skill のため hook 配線（settings.json / 3 エディタ分の `.sh`）は不要。`scripts/copy-entries.sh` の skills モードが `skills/` 直下を総当りでコピーするため、ディレクトリを置くだけで `make skills-copy` にそのまま乗る。
+- 新規 skill のため hook 配線（settings.json / 3 エディタ分の `.sh`）は不要。`scripts/copy-entries.sh` の skills モードが `skills/` 直下を総当りでコピーするため、ディレクトリを置くだけで `mise run skills-copy` にそのまま乗る。
 - 雛形は最小限に留め、過剰生成を避ける。スコープを「スキル作成」に絞り、hook 雛形生成などへ広げない。

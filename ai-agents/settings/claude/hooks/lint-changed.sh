@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# mise-managed tools (non-interactive contexts do not run mise activate)
+export PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$PATH"
 # Stop hook: lint files changed in the working tree and surface issues.
 # Non-blocking — it only reports; it never fails the turn.
 set -u

@@ -64,13 +64,13 @@ Neovim (Docker container) from selected code to host-side AI CLI (Claude Code, C
 
 ## AI Agents
 
-Agent definitions, skills, and settings for Claude Code, Codex CLI, and Cursor are managed under `ai-agents/`. A root Makefile delegates to `ai-agents/Makefile` for deployment:
+Agent definitions, skills, and settings for Claude Code, Codex CLI, and Cursor are managed under `ai-agents/`. Deployment is done via mise tasks (run at the repo root):
 
 ```sh
-make claude-link         # Symlink agents.xml -> ~/.claude/CLAUDE.md
-make skills-copy         # Copy skills to ~/.claude/, ~/.codex/, ~/.cursor/
-make agents-copy         # Copy agent definitions
-make settings-copy       # Copy settings and hooks
+mise run claude-link      # Symlink agents.xml -> ~/.claude/CLAUDE.md
+mise run skills-copy      # Copy skills to ~/.claude/, ~/.codex/, ~/.cursor/
+mise run agents-copy      # Copy agent definitions
+mise run settings-copy    # Copy settings and hooks
 ```
 
 See `ai-agents/` for the full list of available agents and skills.

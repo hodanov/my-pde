@@ -1,4 +1,6 @@
 #!/bin/bash
+# mise-managed tools (non-interactive contexts do not run mise activate)
+export PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$PATH"
 # stdin から JSON を読み込む
 INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
