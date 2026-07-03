@@ -51,8 +51,8 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 
 ### Tool version updates
 
-- `./environment/tools/go/update-go-tools.sh` — refresh Go tool pins.
-- Weekly CI (`bump-tool-versions.yml`) auto-bumps Node, Go, Neovim, Rust, npm.
+- `mise.toml` is the single source of truth for tool versions. Weekly CI (`bump-versions.yml`) bumps the pins and regenerates the derived artifacts.
+- `mise run pins:sync` — regenerate `environment/tools/go/go-tools.txt` and the Dockerfile ARG defaults from `mise.toml` (CI verifies sync via `pins:check`).
 
 ## Coding Style
 

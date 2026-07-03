@@ -12,8 +12,7 @@ jobs:
   auto-merge:
     if: |
       github.actor == 'dependabot[bot]' ||
-      startsWith(github.head_ref, 'chore/bump-tool-versions') ||
-      startsWith(github.head_ref, 'update/go-tools')
+      startsWith(github.head_ref, 'chore/bump-tool-versions')
     runs-on: ubuntu-latest
     steps:
       - name: Enable auto-merge

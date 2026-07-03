@@ -1,0 +1,25 @@
+name: Check pinned artifacts
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - mise.toml
+      - environment/tools/go/go-tools.txt
+      - environment/tools/sync-pins.sh
+      - environment/docker/nvim.dockerfile
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup mise
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify go-tools.txt and Dockerfile ARGs are in sync with mise.toml
+        run: mise run pins:check
