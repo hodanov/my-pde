@@ -28,6 +28,7 @@ vim.opt.conceallevel = 0 -- Show double quotations in json file and so on.
 vim.g.mapleader = " " -- Set a space key to a leader.
 vim.opt.mouse = "" -- Don't use a mouse.
 vim.opt.signcolumn = "yes" -- Always show signcolumn to prevent rattling.
+vim.opt.foldlevelstart = 99 -- Open files fully expanded; folds (treesitter foldexpr) are closed manually when needed.
 vim.opt.updatetime = 300 -- Fire CursorHold sooner (default 4000ms) for LSP document highlight. Kept >250ms to avoid frequent swap writes.
 
 -- ----------------------------------------
@@ -63,6 +64,23 @@ if has_osc52 then
 elseif vim.fn.has("clipboard") == 1 then
 	vim.opt.clipboard = "unnamedplus"
 end
+
+-- ----------------------------------------
+-- Highlight yanked text (ヤンク範囲を一瞬フラッシュして視覚フィードバックする)
+-- ----------------------------------------
+local hl_yank_group = vim.api.nvim_create_augroup("highlight_yank", { clear = true })
+vim.api.nvim_create_autocmd("TextYankPost", {
+	group = hl_yank_group,
+	callback = function()
+		-- 0.12 では vim.hl.on_yank が現行 API。将来 (0.13+) は hl_op へ移行し
+		-- on_yank が deprecated 化するため、存在すれば hl_op を優先する。
+		if vim.hl and vim.hl.hl_op then
+			vim.hl.hl_op({ higroup = "IncSearch", timeout = 200 })
+		else
+			vim.hl.on_yank({ higroup = "IncSearch", timeout = 200 })
+		end
+	end,
+})
 
 -- ----------------------------------------
 -- Remember a history of undo/redo.
