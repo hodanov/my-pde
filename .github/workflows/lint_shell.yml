@@ -7,6 +7,7 @@ on:
     paths:
       - "**/*.sh"
       - .github/workflows/lint_shell.yml
+      - mise.toml
 
 jobs:
   shell-lint:
@@ -14,15 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Install shfmt
-        run: |
-          go install mvdan.cc/sh/v3/cmd/shfmt@latest
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Setup mise
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run shfmt
-        run: shfmt -d .
-
-      - name: Run shellcheck
-        run: |
-          shopt -s globstar
-          shellcheck ./**/*.sh
+      - name: Run shfmt and shellcheck
+        run: mise run lint:shell
