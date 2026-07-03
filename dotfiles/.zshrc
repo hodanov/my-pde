@@ -123,3 +123,7 @@ export BLOG_IDEA_DRAFT_EXPORT_DIR="$HOME/workspace/hodalog-hugo/docs/idea"
 # codex
 eval "$(codex completion zsh)"
 
+####################
+# mise
+####################
+eval "$(mise activate zsh)"
