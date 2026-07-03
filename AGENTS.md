@@ -12,7 +12,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
   - `ai-agents/agents/`: subagent definitions (review, investigation).
   - `ai-agents/skills/`: reusable skills (commit, review, blog, log export, etc.).
   - `ai-agents/settings/`: Claude/Cursor settings, hooks, and shared rules.
-  - `ai-agents/Makefile`: link/copy targets for deploying to each CLI (Claude, Cursor, Codex, Copilot).
+  - Deployment to each CLI (Claude, Cursor, Codex, Copilot) is done via mise tasks (`mise.toml` at the repo root).
 - `dotfiles/`: Shell and terminal configs (`.zshrc`, `wezterm/`).
 - `docs/plan/`: implementation plans. `docs/log/`: work logs.
 - `assets/`: screenshots and static media.
@@ -25,23 +25,29 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 - `docker compose -f environment/docker/docker-compose.yml up -d` — build and start.
 - `docker container exec -it nvim-dev bash --login` — enter the container.
 
-### AI Bridge (Go)
+### Task runner (mise)
 
-- `make ai-bridge-build` — build the binary.
-- `make ai-bridge-test` — run Go tests (`go test ./...`).
-- `make ai-bridge-install` — sign and register with launchd.
+Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mise.toml` at the repo root. Run `mise tasks ls` for the full list.
+
+### Go apps under `scripts/` (ai-bridge, nvim-sync, config-diff, go-verify)
+
+- `mise run <app>:build` — build the binary (e.g. `mise run ai-bridge:build`).
+- `mise run <app>:test` — run Go tests; `mise run go:test` runs all apps.
+- `mise run <app>:lint` — golangci-lint + goimports check; `mise run go:lint` runs all apps.
+- `mise run ai-bridge:install` — sign and register with launchd (local only).
+- `mise run ai-bridge:generate` — regenerate mocks.
 
 ### AI Agents / Skills deployment
 
-- `make claude-link` — symlink `agents.xml` to `~/.claude/CLAUDE.md`.
-- `make skills-copy` — copy skills to all CLIs.
-- `make agents-copy` — copy agent definitions to Claude/Cursor.
-- `make settings-copy` — copy settings and hooks to Claude/Cursor.
-- Claude Code: the `deploy-ai-config` skill wraps this flow (which target for which edit, plus verification).
+- `mise run claude-link` — symlink `agents.xml` to `~/.claude/CLAUDE.md`.
+- `mise run skills-copy` — copy skills to all CLIs.
+- `mise run agents-copy` — copy agent definitions to Claude/Cursor.
+- `mise run settings-copy` — copy settings and hooks to Claude/Cursor.
+- Claude Code: the `deploy-ai-config` skill wraps this flow (which task for which edit, plus verification).
 
 ### Dotfiles
 
-- `make dotfiles-link` — symlink WezTerm config to `~/.config/wezterm`.
+- `mise run dotfiles-link` — symlink WezTerm config to `~/.config/wezterm`.
 
 ### Tool version updates
 
@@ -58,7 +64,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 
 - Per-language lint/format commands load on demand as path-scoped rules (`.claude/rules/`, `~/.claude/rules/`): Go, Lua, Markdown, TOML, JSON/YAML, Shell, Terraform.
 - Not covered by rules: Dockerfile lint (`hadolint environment/docker/nvim.dockerfile`).
-- AI Bridge has Go unit tests: `make ai-bridge-test`.
+- AI Bridge has Go unit tests: `mise run ai-bridge:test`.
 - No repository-level test suite beyond per-directory checks.
 
 ## Commit & PR Guidelines

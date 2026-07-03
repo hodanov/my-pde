@@ -2,10 +2,17 @@
 set -eu
 
 usage() {
-	echo "Usage: $0 <mode> <src> <dest>"
+	echo "Usage: $0 [--force] <mode> <src> <dest>"
+	echo "  --force: overwrite existing entries without prompting"
 	echo "  mode: skills | agents | settings"
 	exit 1
 }
+
+force=0
+if [ "${1:-}" = "--force" ]; then
+	force=1
+	shift
+fi
 
 [ $# -eq 3 ] || usage
 
@@ -64,8 +71,8 @@ while IFS= read -r -d '' entry; do
 	fi
 done <"$tmp"
 
-overwrite=0
-if [ "$dup_found" -eq 1 ]; then
+overwrite=$force
+if [ "$dup_found" -eq 1 ] && [ "$force" -ne 1 ]; then
 	echo "The following entries already exist in $dest:"
 	printf "%s" "$dup_list"
 	printf "Overwrite? [y/N] "

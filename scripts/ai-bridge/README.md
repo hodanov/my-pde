@@ -190,7 +190,7 @@ internal/
     └── system/   実行ファイルパス解決・PATH ルックアップ
 ```
 
-ポート（`port.RequestRepository` 等）を追加・変更したら `make generate`（= `go generate ./...`）でモックを再生成する。モックは `go.uber.org/mock`（mockgen、`go tool` として go.mod に固定）で生成し、各ユースケースはモックを使ってテストする。CI はモックが最新であることを `git diff --exit-code` で検証する。
+ポート（`port.RequestRepository` 等）を追加・変更したら `mise run ai-bridge:generate`（= `go generate ./...`）でモックを再生成する。モックは `go.uber.org/mock`（mockgen、`go tool` として go.mod に固定）で生成し、各ユースケースはモックを使ってテストする。CI はモックが最新であることを `git diff --exit-code` で検証する。
 
 ## トラブルシューティング
 

@@ -10,4 +10,4 @@ mock generation) load automatically from `scripts/ai-bridge/CLAUDE.md` → `@AGE
 these files. Claude-specific workflow additions:
 
 - Bug fixes are test-first: add a failing test that reproduces the issue before changing code.
-- Verify with `make ai-bridge-test`, `go vet ./...`, and `golangci-lint run`; format with `goimports`.
+- Verify with `mise run ai-bridge:test`, `go vet ./...`, and `golangci-lint run`; format with `goimports`.

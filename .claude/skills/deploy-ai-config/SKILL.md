@@ -8,26 +8,28 @@ metadata:
 # Deploy AI config
 
 このリポジトリ（my-pde）が AI CLI 設定とドットファイルの source of truth。`ai-agents/` や `dotfiles/`
-を編集したら、このスキルで配布物を各ツールへ反映する。全 make ターゲットはリポジトリルートから実行する
-（ルート Makefile が `ai-agents/Makefile` へ委譲している）。
+を編集したら、このスキルで配布物を各ツールへ反映する。全 mise タスクはリポジトリルートの `mise.toml` に
+定義されており、リポジトリ内ならどこからでも `mise run <task>` で実行できる。
 
-## 何をどのターゲットで配るか
+## 何をどのタスクで配るか
 
-| 編集した場所                                         | 反映ターゲット                                         | 配布先                                       |
-| ---------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------- |
-| `ai-agents/agents.xml`                               | `make claude-link`（Cursor/Codex/Copilot は `*-link`） | `~/.claude/CLAUDE.md`（symlink）             |
-| `ai-agents/skills/**`                                | `make skills-copy`                                     | 各 CLI の `skills/`（全 CLI 一括）           |
-| `ai-agents/agents/**`                                | `make agents-copy`                                     | 各 CLI の `agents/`（Claude/Cursor/Copilot） |
-| `ai-agents/settings/**`（hooks/rules/settings.json） | `make settings-copy`                                   | 各 CLI のルート（Claude/Cursor/Copilot）     |
-| `dotfiles/wezterm/**`                                | `make dotfiles-link`                                   | `~/.config/wezterm`（symlink）               |
+| 編集した場所                                         | 反映タスク                                                 | 配布先                                       |
+| ---------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------- |
+| `ai-agents/agents.xml`                               | `mise run claude-link`（Cursor/Codex/Copilot は `*-link`） | `~/.claude/CLAUDE.md`（symlink）             |
+| `ai-agents/skills/**`                                | `mise run skills-copy`                                     | 各 CLI の `skills/`（全 CLI 一括）           |
+| `ai-agents/agents/**`                                | `mise run agents-copy`                                     | 各 CLI の `agents/`（Claude/Cursor/Copilot） |
+| `ai-agents/settings/**`（hooks/rules/settings.json） | `mise run settings-copy`                                   | 各 CLI のルート（Claude/Cursor/Copilot）     |
+| `dotfiles/wezterm/**`                                | `mise run dotfiles-link`                                   | `~/.config/wezterm`（symlink）               |
 
-`*-copy` は実体コピー（編集ごとに再実行が必要）。`*-link` / `dotfiles-link` は symlink（一度貼れば追従）。
+`*-copy` は実体コピー（編集ごとに再実行が必要、既存エントリは上書き）。`*-link` / `dotfiles-link` は
+symlink（一度貼れば追従）。
 
 ## 手順
 
-1. `git status` で何を編集したかを確認し、上表から必要なターゲットだけ選ぶ。
-2. ドライランで配布先を確認: `make -n skills-copy` 等（特に初回や配布先を確認したいとき）。
-3. 実行: 該当ターゲットを `make <target>` で実行。複数同時なら `make skills-copy agents-copy settings-copy`。
+1. `git status` で何を編集したかを確認し、上表から必要なタスクだけ選ぶ。
+2. 実行内容を事前確認: `mise tasks info skills-copy` 等（特に初回や配布先を確認したいとき）。
+3. 実行: 該当タスクを `mise run <task>` で実行。複数同時なら `mise run skills-copy ::: agents-copy ::: settings-copy`
+   （`:::` 区切り。スペース区切りだと2つ目以降がタスク引数扱いになる）。
 4. Claude 設定（hooks/rules/settings.json）を変えた場合は、反映を効かせるため Claude Code セッションの
    再読み込みが必要（`/memory` でルール、`/hooks` 相当でフック状態を確認）。
 

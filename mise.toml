@@ -1,13 +1,325 @@
-# mise.toml — single source of truth for tool versions (and tasks, later phases).
+# mise.toml — single source of truth for tool versions and tasks.
 # Setup: `brew install mise` and add `eval "$(mise activate zsh)"` to ~/.zshrc,
 # then run `mise install` at the repo root.
 
 [tools]
 go = "1.26.4"
-golangci-lint = "2.3.1"
+golangci-lint = "2.12.2"
 node = "24.18.0"
 shfmt = "3.13.1"
 shellcheck = "0.11.0"
 stylua = "2.5.2"
 hadolint = "2.14.0"
 "go:golang.org/x/tools/cmd/goimports" = "0.36.0"
+
+# ---- ai-bridge (Go) ----
+
+[tasks."ai-bridge:build"]
+description = "Build the ai-bridge binary"
+dir = "scripts/ai-bridge"
+run = "go build -o ai-bridge ./cmd/ai-bridge"
+
+[tasks."ai-bridge:generate"]
+description = "Regenerate mocks (go generate)"
+dir = "scripts/ai-bridge"
+run = "go generate ./..."
+
+[tasks."ai-bridge:sign"]
+description = "Ad-hoc codesign the ai-bridge binary"
+dir = "scripts/ai-bridge"
+depends = ["ai-bridge:build"]
+run = "codesign --sign - --force ai-bridge"
+
+[tasks."ai-bridge:install"]
+description = "Sign and register ai-bridge with launchd (local only)"
+dir = "scripts/ai-bridge"
+depends = ["ai-bridge:sign"]
+run = "./ai-bridge install-launchd"
+
+[tasks."ai-bridge:test"]
+description = "Run ai-bridge Go tests"
+dir = "scripts/ai-bridge"
+run = "go test ./..."
+
+[tasks."ai-bridge:lint"]
+description = "Run golangci-lint and goimports check for ai-bridge"
+dir = "scripts/ai-bridge"
+run = [
+  "golangci-lint run --allow-parallel-runners",
+  '''
+diff=$(find . -name '*.go' -not -path './internal/usecase/port/mock/*' -exec goimports -d {} +)
+if [ -n "$diff" ]; then
+  echo "$diff"
+  exit 1
+fi
+''',
+]
+
+[tasks."ai-bridge:clean"]
+description = "Remove ai-bridge build artifacts"
+dir = "scripts/ai-bridge"
+run = "rm -f ai-bridge coverage.out"
+
+# ---- nvim-sync (Go) ----
+
+[tasks."nvim-sync:build"]
+description = "Build the nvim-sync binary"
+dir = "scripts/nvim-sync"
+run = "go build -o nvim-sync ./cmd/nvim-sync"
+
+[tasks."nvim-sync:test"]
+description = "Run nvim-sync Go tests"
+dir = "scripts/nvim-sync"
+run = "go test ./..."
+
+[tasks."nvim-sync:lint"]
+description = "Run golangci-lint and goimports check for nvim-sync"
+dir = "scripts/nvim-sync"
+run = [
+  "golangci-lint run --allow-parallel-runners",
+  '''
+diff=$(find . -name '*.go' -exec goimports -d {} +)
+if [ -n "$diff" ]; then
+  echo "$diff"
+  exit 1
+fi
+''',
+]
+
+[tasks."nvim-sync:clean"]
+description = "Remove nvim-sync build artifacts"
+dir = "scripts/nvim-sync"
+run = "rm -f nvim-sync coverage.out"
+
+# ---- config-diff (Go) ----
+
+[tasks."config-diff:build"]
+description = "Build the config-diff binary"
+dir = "scripts/config-diff"
+run = "go build -o config-diff ./cmd/config-diff"
+
+[tasks."config-diff:test"]
+description = "Run config-diff Go tests"
+dir = "scripts/config-diff"
+run = "go test ./..."
+
+[tasks."config-diff:lint"]
+description = "Run golangci-lint and goimports check for config-diff"
+dir = "scripts/config-diff"
+run = [
+  "golangci-lint run --allow-parallel-runners",
+  '''
+diff=$(find . -name '*.go' -exec goimports -d {} +)
+if [ -n "$diff" ]; then
+  echo "$diff"
+  exit 1
+fi
+''',
+]
+
+[tasks."config-diff:clean"]
+description = "Remove config-diff build artifacts"
+dir = "scripts/config-diff"
+run = "rm -f config-diff coverage.out"
+
+# ---- go-verify (Go) ----
+
+[tasks."go-verify:build"]
+description = "Build the go-verify binary"
+dir = "scripts/go-verify"
+run = "go build -o go-verify ./cmd/go-verify"
+
+[tasks."go-verify:test"]
+description = "Run go-verify Go tests"
+dir = "scripts/go-verify"
+run = "go test ./..."
+
+[tasks."go-verify:lint"]
+description = "Run golangci-lint and goimports check for go-verify"
+dir = "scripts/go-verify"
+run = [
+  "golangci-lint run --allow-parallel-runners",
+  '''
+diff=$(find . -name '*.go' -exec goimports -d {} +)
+if [ -n "$diff" ]; then
+  echo "$diff"
+  exit 1
+fi
+''',
+]
+
+[tasks."go-verify:clean"]
+description = "Remove go-verify build artifacts"
+dir = "scripts/go-verify"
+run = "rm -f go-verify coverage.out"
+
+# ---- Aggregates ----
+
+[tasks."go:test"]
+description = "Run tests for all Go apps under scripts/"
+depends = [
+  "ai-bridge:test",
+  "nvim-sync:test",
+  "config-diff:test",
+  "go-verify:test"
+]
+
+[tasks."go:lint"]
+description = "Run lint for all Go apps under scripts/"
+depends = [
+  "ai-bridge:lint",
+  "nvim-sync:lint",
+  "config-diff:lint",
+  "go-verify:lint"
+]
+
+# ---- AI agents deploy: agents.xml symlinks ----
+
+[tasks.codex-link]
+description = "Symlink agents.xml -> ~/.codex/AGENTS.md"
+run = '''
+ln -sf "{{config_root}}/ai-agents/agents.xml" "$HOME/.codex/AGENTS.md"
+echo "Linked $HOME/.codex/AGENTS.md -> {{config_root}}/ai-agents/agents.xml"
+'''
+
+[tasks.codex-unlink]
+description = "Remove the ~/.codex/AGENTS.md symlink"
+run = '''
+if [ -L "$HOME/.codex/AGENTS.md" ]; then
+  rm -f "$HOME/.codex/AGENTS.md"
+  echo "Removed symlink $HOME/.codex/AGENTS.md"
+else
+  echo "$HOME/.codex/AGENTS.md is not a symlink or does not exist."
+fi
+'''
+
+[tasks.claude-link]
+description = "Symlink agents.xml -> ~/.claude/CLAUDE.md"
+run = '''
+ln -sf "{{config_root}}/ai-agents/agents.xml" "$HOME/.claude/CLAUDE.md"
+echo "Linked $HOME/.claude/CLAUDE.md -> {{config_root}}/ai-agents/agents.xml"
+'''
+
+[tasks.claude-unlink]
+description = "Remove the ~/.claude/CLAUDE.md symlink"
+run = '''
+if [ -L "$HOME/.claude/CLAUDE.md" ]; then
+  rm -f "$HOME/.claude/CLAUDE.md"
+  echo "Removed symlink $HOME/.claude/CLAUDE.md"
+else
+  echo "$HOME/.claude/CLAUDE.md is not a symlink or does not exist."
+fi
+'''
+
+[tasks.cursor-link]
+description = "Symlink agents.xml -> ~/.cursor/AGENTS.md"
+run = '''
+ln -sf "{{config_root}}/ai-agents/agents.xml" "$HOME/.cursor/AGENTS.md"
+echo "Linked $HOME/.cursor/AGENTS.md -> {{config_root}}/ai-agents/agents.xml"
+'''
+
+[tasks.cursor-unlink]
+description = "Remove the ~/.cursor/AGENTS.md symlink"
+run = '''
+if [ -L "$HOME/.cursor/AGENTS.md" ]; then
+  rm -f "$HOME/.cursor/AGENTS.md"
+  echo "Removed symlink $HOME/.cursor/AGENTS.md"
+else
+  echo "$HOME/.cursor/AGENTS.md is not a symlink or does not exist."
+fi
+'''
+
+[tasks.copilot-link]
+description = "Symlink agents.xml -> ~/.copilot/copilot-instructions.md"
+run = '''
+ln -sf "{{config_root}}/ai-agents/agents.xml" "$HOME/.copilot/copilot-instructions.md"
+echo "Linked $HOME/.copilot/copilot-instructions.md -> {{config_root}}/ai-agents/agents.xml"
+'''
+
+[tasks.copilot-unlink]
+description = "Remove the ~/.copilot/copilot-instructions.md symlink"
+run = '''
+if [ -L "$HOME/.copilot/copilot-instructions.md" ]; then
+  rm -f "$HOME/.copilot/copilot-instructions.md"
+  echo "Removed symlink $HOME/.copilot/copilot-instructions.md"
+else
+  echo "$HOME/.copilot/copilot-instructions.md is not a symlink or does not exist."
+fi
+'''
+
+# ---- AI agents deploy: skills / agents / settings copy ----
+
+[tasks.codex-skills-copy]
+description = "Copy skills to ~/.codex/skills"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.codex/skills"'
+
+[tasks.claude-skills-copy]
+description = "Copy skills to ~/.claude/skills"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.claude/skills"'
+
+[tasks.cursor-skills-copy]
+description = "Copy skills to ~/.cursor/skills"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.cursor/skills"'
+
+[tasks.copilot-skills-copy]
+description = "Copy skills to ~/.copilot/skills"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.copilot/skills"'
+
+[tasks.skills-copy]
+description = "Copy skills to all AI CLIs"
+depends = [
+  "codex-skills-copy",
+  "claude-skills-copy",
+  "cursor-skills-copy",
+  "copilot-skills-copy"
+]
+
+[tasks.claude-agents-copy]
+description = "Copy agent definitions to ~/.claude/agents"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force agents "{{config_root}}/ai-agents/agents" "$HOME/.claude/agents"'
+
+[tasks.cursor-agents-copy]
+description = "Copy agent definitions to ~/.cursor/agents"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force agents "{{config_root}}/ai-agents/agents" "$HOME/.cursor/agents"'
+
+[tasks.copilot-agents-copy]
+description = "Copy agent definitions to ~/.copilot/agents"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force agents "{{config_root}}/ai-agents/agents" "$HOME/.copilot/agents"'
+
+[tasks.agents-copy]
+description = "Copy agent definitions to all AI CLIs"
+depends = ["claude-agents-copy", "cursor-agents-copy", "copilot-agents-copy"]
+
+[tasks.claude-settings-copy]
+description = "Copy settings and hooks to ~/.claude"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/settings/claude" "$HOME/.claude"'
+
+[tasks.cursor-settings-copy]
+description = "Copy settings and hooks to ~/.cursor"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/settings/cursor" "$HOME/.cursor"'
+
+[tasks.copilot-hooks-copy]
+description = "Copy hooks to ~/.copilot/hooks"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/settings/copilot/hooks" "$HOME/.copilot/hooks"'
+
+[tasks.settings-copy]
+description = "Copy settings and hooks to all AI CLIs"
+depends = ["claude-settings-copy", "cursor-settings-copy", "copilot-hooks-copy"]
+
+# ---- Dotfiles ----
+
+[tasks.dotfiles-link]
+description = "Symlink dotfiles/wezterm -> ~/.config/wezterm"
+run = '''
+mkdir -p "$HOME/.config"
+rm -f "$HOME/.wezterm.lua"
+ln -sfn "{{config_root}}/dotfiles/wezterm" "$HOME/.config/wezterm"
+echo "Linked {{config_root}}/dotfiles/wezterm -> $HOME/.config/wezterm"
+'''
+
+[tasks.dotfiles-unlink]
+description = "Remove the ~/.config/wezterm symlink"
+run = '''
+rm -f "$HOME/.config/wezterm"
+echo "Unlinked $HOME/.config/wezterm"
+'''
