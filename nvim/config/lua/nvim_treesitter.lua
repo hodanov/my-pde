@@ -10,10 +10,38 @@ ts.setup({
 -- nvim-treesitter 新 main では `incremental_selection` モジュールが廃止されているため、
 -- ここでプラグイン側のキー (gnn / grn / grm / grc 等) を再現する設定は入れない。
 
-ts.install({ "go", "python", "markdown", "markdown_inline", "terraform", "hcl" })
+ts.install({
+	"go",
+	"python",
+	"markdown",
+	"markdown_inline",
+	"terraform",
+	"hcl",
+	"lua",
+	"yaml",
+	"json",
+	"bash",
+	"dockerfile",
+	"gitcommit",
+})
 
 vim.api.nvim_create_autocmd("FileType", {
-	pattern = { "go", "python", "markdown", "markdown_inline", "terraform", "hcl" },
+	-- 注意: bash スクリプトの filetype は "sh"。parser 名 "bash" とは異なるため
+	-- pattern には filetype 名の "sh" を書く (コアが sh->bash のマッピングを持つ)。
+	pattern = {
+		"go",
+		"python",
+		"markdown",
+		"markdown_inline",
+		"terraform",
+		"hcl",
+		"lua",
+		"yaml",
+		"json",
+		"sh",
+		"dockerfile",
+		"gitcommit",
+	},
 	callback = function()
 		-- highlight
 		vim.treesitter.start()
