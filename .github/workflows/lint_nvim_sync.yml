@@ -6,33 +6,18 @@ on:
   pull_request:
     paths:
       - "scripts/nvim-sync/**"
+      - mise.toml
 
 jobs:
   lint:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: scripts/nvim-sync
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Setup Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version-file: scripts/nvim-sync/go.mod
+      - name: Setup mise
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install goimports
-        run: go install golang.org/x/tools/cmd/goimports@latest
-
-      - name: Check goimports formatting
-        run: |
-          diff=$(find . -name '*.go' -exec goimports -d {} +)
-          if [ -n "$diff" ]; then
-            echo "$diff"
-            exit 1
-          fi
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
-        with:
-          working-directory: scripts/nvim-sync
+      - name: Run lint
+        run: mise run nvim-sync:lint

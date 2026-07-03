@@ -12,6 +12,13 @@ stylua = "2.5.2"
 hadolint = "2.14.0"
 "go:golang.org/x/tools/cmd/goimports" = "0.36.0"
 
+# Docker-only versions, injected as --build-arg by `mise run docker:build`.
+[env]
+NEOVIM_VERSION = "0.12.3"
+NPM_VERSION = "11.17.0"
+RUST_TOOLCHAIN = "stable"
+TERRAFORM_VERSION = "1.15.7"
+
 # ---- ai-bridge (Go) ----
 
 [tasks."ai-bridge:build"]
@@ -322,4 +329,50 @@ description = "Remove the ~/.config/wezterm symlink"
 run = '''
 rm -f "$HOME/.config/wezterm"
 echo "Unlinked $HOME/.config/wezterm"
+'''
+
+# ---- Repo-wide lint (CI parity) ----
+
+[tasks."lint:shell"]
+description = "Run shfmt and shellcheck on all shell scripts"
+run = [
+  "find . -name '*.sh' -not -path './.git/*' -not -path '*/node_modules/*' -exec shfmt -d {} +",
+  "find . -name '*.sh' -not -path './.git/*' -not -path '*/node_modules/*' -exec shellcheck {} +",
+]
+
+[tasks."lint:stylua"]
+description = "Run stylua check on all Lua files"
+run = "stylua --check ."
+
+[tasks."lint:docker"]
+description = "Run hadolint on the nvim Dockerfile"
+run = "hadolint environment/docker/nvim.dockerfile"
+
+[tasks."lint:format"]
+description = "Run tombi, prettier, and markdownlint via environment/tools/node"
+dir = "{{config_root}}"
+run = '''
+npm --prefix environment/tools/node install
+export PATH="$PWD/environment/tools/node/node_modules/.bin:$PATH"
+tombi lint
+prettier --check .
+markdownlint-cli2 "**/*.md"
+'''
+
+# ---- Docker ----
+
+[tasks."docker:build"]
+description = "Build the nvim image with versions injected from mise.toml"
+run = '''
+GO_VERSION="$(go env GOVERSION | sed 's/^go//')"
+NODE_VERSION="$(node --version | sed 's/^v//')"
+docker build \
+  --file environment/docker/nvim.dockerfile \
+  --build-arg GO_VERSION="$GO_VERSION" \
+  --build-arg NODE_VERSION="$NODE_VERSION" \
+  --build-arg NEOVIM_VERSION="$NEOVIM_VERSION" \
+  --build-arg NPM_VERSION="$NPM_VERSION" \
+  --build-arg RUST_TOOLCHAIN="$RUST_TOOLCHAIN" \
+  --build-arg TERRAFORM_VERSION="$TERRAFORM_VERSION" \
+  --progress=plain .
 '''

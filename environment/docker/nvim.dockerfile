@@ -1,4 +1,8 @@
 ####################
+# Version pins: mise.toml at the repo root is the source of truth.
+# `mise run docker:build` injects every *_VERSION/*_TOOLCHAIN value via
+# --build-arg; the ARG defaults below are frozen fallbacks for direct builds.
+####################
 # Base image with common dependencies and Japanese fonts
 FROM ubuntu:26.04 AS base
 
