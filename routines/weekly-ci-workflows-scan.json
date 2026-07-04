@@ -1,6 +1,6 @@
 {
   "name": "Weekly CI Workflows Scan",
-  "trigger_id": "",
+  "trigger_id": "trig_01D9FCTUdUx8VzfjpG8NS2xb",
   "enabled": true,
   "cron_expression": "0 22 * * 4",
   "schedule_note": "木 22:00 UTC = 毎週金曜 7:00 JST",

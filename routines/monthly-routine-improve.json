@@ -1,6 +1,6 @@
 {
   "name": "Monthly Routine Improve",
-  "trigger_id": "",
+  "trigger_id": "trig_01HPk66tMrv1uK3XXgjrmyZr",
   "enabled": true,
   "cron_expression": "0 22 1 * *",
   "schedule_note": "毎月1日 22:00 UTC = 毎月2日 7:00 JST",

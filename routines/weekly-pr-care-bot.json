@@ -1,6 +1,6 @@
 {
   "name": "Weekly PR Care Bot",
-  "trigger_id": "",
+  "trigger_id": "trig_018RFwYM3spUcNjyCdy6NXLG",
   "enabled": true,
   "cron_expression": "0 22 * * 0",
   "schedule_note": "日 22:00 UTC = 毎週月曜 7:00 JST（日曜朝の PR Bot の翌朝）",

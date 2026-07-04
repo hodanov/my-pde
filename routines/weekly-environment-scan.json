@@ -1,6 +1,6 @@
 {
   "name": "Weekly Environment Scan",
-  "trigger_id": "",
+  "trigger_id": "trig_01JKqQsoHr3ZwUoeFq4fqWWd",
   "enabled": true,
   "cron_expression": "0 22 * * 2",
   "schedule_note": "火 22:00 UTC = 毎週水曜 7:00 JST",
