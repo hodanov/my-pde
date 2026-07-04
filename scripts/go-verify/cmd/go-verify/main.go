@@ -23,12 +23,13 @@ func main() {
 	mod := flag.String("mod", "", "only verify modules whose path contains this substring")
 	flag.Parse()
 
-	os.Exit(execute(*root, *only, *mod, os.Stdout))
+	os.Exit(execute(*root, *only, *mod, defaultRunner, os.Stdout))
 }
 
 // execute runs the verification and writes a summary to out, returning the
 // process exit code (0 = all passed, 1 = a check failed, 2 = usage/setup error).
-func execute(root, only, mod string, out io.Writer) int {
+// Commands are executed through run so tests can stub the toolchain.
+func execute(root, only, mod string, run runner.Runner, out io.Writer) int {
 	names, selErr := runner.SelectChecks(only)
 	if selErr != nil {
 		_, _ = fmt.Fprintln(out, "go-verify:", selErr)
@@ -40,7 +41,7 @@ func execute(root, only, mod string, out io.Writer) int {
 		filter = []string{mod}
 	}
 
-	checks, verifyErr := runner.VerifyAll(root, defaultRunner, names, filter)
+	checks, verifyErr := runner.VerifyAll(root, run, names, filter)
 	if verifyErr != nil {
 		_, _ = fmt.Fprintln(out, "go-verify:", verifyErr)
 		return 2
