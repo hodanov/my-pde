@@ -81,7 +81,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends xz-utils \
   && rm -rf /var/lib/apt/lists/*
 
 COPY ./environment/tools/node/ /opt/npm-tools/
-RUN cd /opt/npm-tools && npm install --omit=dev --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+  cd /opt/npm-tools && npm install --omit=dev --no-audit --no-fund
 
 ####################
 # Stage 3: Build Go toolchain and tools
@@ -108,7 +109,9 @@ RUN ARCH="$(dpkg --print-architecture)" \
 
 ENV PATH="/usr/local/go/bin:${PATH}"
 COPY ./environment/tools/go/go-tools.txt /tmp/go-tools.txt
-RUN while read -r pkg; do \
+RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
+    --mount=type=cache,target=/root/go/pkg/mod,sharing=locked \
+    while read -r pkg; do \
       CGO_ENABLED=0 go install "$pkg" || exit 1; \
     done < /tmp/go-tools.txt
 
@@ -124,7 +127,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get clean -y \
   && rm -rf /var/lib/apt/lists/*
 ENV PATH="/root/.cargo/bin:${PATH}"
-RUN cargo install stylua tree-sitter-cli
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
+    cargo install stylua tree-sitter-cli
 
 ####################
 # Stage 5: Build Python venv with uv
