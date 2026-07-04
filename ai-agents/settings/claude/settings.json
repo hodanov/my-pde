@@ -1,5 +1,10 @@
 {
+  "model": "claude-fable-5[1m]",
+  "env": {
+    "SKILL_OBSERVE_HOME": "~/workspace/my-pde"
+  },
   "permissions": {
+    "defaultMode": "acceptEdits",
     "allow": [
       "Bash(actionlint:*)",
       "Bash(docker compose:*)",
@@ -17,6 +22,7 @@
       "Bash(ls:*)",
       "Bash(make:*)",
       "Bash(markdownlint-cli2:*)",
+      "Bash(mise:*)",
       "Bash(npm run lint)",
       "Bash(npm run test *)",
       "Bash(npx markdownlint-cli2:*)",
@@ -53,10 +59,6 @@
       "Read(**/*.key)",
       "Read(**/*.pem)"
     ]
-  },
-  "model": "opus",
-  "env": {
-    "SKILL_OBSERVE_HOME": "~/workspace/my-pde"
   },
   "hooks": {
     "PreToolUse": [
@@ -130,6 +132,20 @@
       }
     ]
   },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "*.githubusercontent.com",
+        "proxy.golang.org",
+        "sum.golang.org",
+        "registry.npmjs.org"
+      ]
+    }
+  },
+  "askUserQuestionTimeout": "5m",
   "statusLine": {
     "type": "command",
     "command": "jq -r '(.model.display_name // \"Claude\") + \" | Context: \" + (.context_window.used_percentage // 0 | tostring) + \"% used\"'"
