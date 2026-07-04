@@ -1,0 +1,81 @@
+name: Pipeline digest
+permissions:
+  contents: read
+  issues: write
+
+on:
+  schedule:
+    - cron: "0 22 * * 5" # 金 22:00 UTC = 毎週土曜 7:00 JST
+  workflow_dispatch:
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Build and publish digest issue
+        run: |
+          set -euo pipefail
+
+          open_issues=$(gh issue list --state open --limit 200 --json number,title,labels,createdAt)
+
+          triage=$(jq -r '
+            .[]
+            | select(any(.labels[].name; startswith("scan:"))
+                and all(.labels[].name; . != "adopted" and . != "rejected"))
+            | "- #\(.number) \(.title)（\((now - (.createdAt | fromdate)) / 86400 | floor) 日経過）"
+          ' <<<"$open_issues")
+
+          adopted_queue=$(jq -r '
+            .[]
+            | select(any(.labels[].name; . == "adopted")
+                and all(.labels[].name; . != "pr-created"))
+            | "- #\(.number) \(.title)"
+          ' <<<"$open_issues")
+
+          stale=$(jq -r '
+            .[]
+            | select(any(.labels[].name; startswith("scan:"))
+                and ((now - (.createdAt | fromdate)) / 86400 >= 14))
+            | "- #\(.number) \(.title)（\((now - (.createdAt | fromdate)) / 86400 | floor) 日経過）"
+          ' <<<"$open_issues")
+
+          auto_prs=$(gh pr list --state open --limit 50 --json number,title,headRefName,statusCheckRollup \
+            | jq -r '
+              .[]
+              | select(.headRefName | startswith("auto/"))
+              | ([.statusCheckRollup[]? | select(.conclusion == "FAILURE" or .state == "FAILURE")] | length) as $fails
+              | "- #\(.number) \(.title)" + (if $fails > 0 then "（CI 失敗 \($fails) 件）" else "" end)
+            ')
+
+          {
+            echo "自律改善パイプラインの週次ダイジェスト（$(date -u +%Y-%m-%d) UTC 時点）。\`pipeline-digest.yml\` がこの Issue の body を毎週上書き更新する。"
+            echo
+            echo "## Triage 待ちの scan Issue（adopted / rejected 未判定）"
+            echo
+            echo "${triage:-なし}"
+            echo
+            echo "## PR 化待ちの adopted Issue（pr-created 未付与）"
+            echo
+            echo "${adopted_queue:-なし}"
+            echo
+            echo "## Open な auto/* PR"
+            echo
+            echo "${auto_prs:-なし}"
+            echo
+            echo "## 14 日以上 Open のままの scan Issue"
+            echo
+            echo "${stale:-なし}"
+          } > body.md
+
+          gh label create digest --description "Auto-updated pipeline digest" --color BFD4F2 || true
+
+          num=$(gh issue list --state open --label digest --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$num" ]; then
+            gh issue edit "$num" --body-file body.md
+          else
+            gh issue create --title "Pipeline digest" --label digest --body-file body.md
+          fi

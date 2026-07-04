@@ -1,9 +1,9 @@
 {
-  "name": "Daily Neovim Trend Scan",
-  "trigger_id": "trig_01UdqdcQV6FGQkkbTvp3BJ3S",
+  "name": "Weekly CI Workflows Scan",
+  "trigger_id": "trig_01D9FCTUdUx8VzfjpG8NS2xb",
   "enabled": true,
-  "cron_expression": "0 23 * * *",
-  "schedule_note": "毎日 23:00 UTC = 毎日 8:00 JST",
+  "cron_expression": "0 22 * * 4",
+  "schedule_note": "木 22:00 UTC = 毎週金曜 7:00 JST",
   "job_config": {
     "model": "claude-opus-4-8",
     "repository": "https://github.com/hodanov/my-pde",
@@ -11,7 +11,7 @@
     "allowed_tools": ["Bash", "Read", "Grep", "Glob", "WebSearch", "WebFetch"]
   },
   "prompt": [
-    "チェックアウト済みリポジトリの routines/prompts/daily-neovim-trend-scan.md を読み、その指示に従って実行せよ。",
+    "チェックアウト済みリポジトリの routines/prompts/weekly-ci-workflows-scan.md を読み、その指示に従って実行せよ。",
     "そのファイルが存在しない・読めない場合は、何もせず終了せよ。"
   ]
 }

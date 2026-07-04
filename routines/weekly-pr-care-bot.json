@@ -1,9 +1,9 @@
 {
-  "name": "Weekly Adopted-Issue PR Bot",
-  "trigger_id": "trig_01GMx9Ye659J9dSa7D9LZoMV",
+  "name": "Weekly PR Care Bot",
+  "trigger_id": "trig_018RFwYM3spUcNjyCdy6NXLG",
   "enabled": true,
-  "cron_expression": "0 23 * * 6",
-  "schedule_note": "土 23:00 UTC = 毎週日曜 8:00 JST",
+  "cron_expression": "0 22 * * 0",
+  "schedule_note": "日 22:00 UTC = 毎週月曜 7:00 JST（日曜朝の PR Bot の翌朝）",
   "job_config": {
     "model": "claude-opus-4-8",
     "repository": "https://github.com/hodanov/my-pde",
@@ -11,7 +11,7 @@
     "allowed_tools": ["Bash", "Read", "Write", "Edit", "Grep", "Glob"]
   },
   "prompt": [
-    "チェックアウト済みリポジトリの routines/prompts/weekly-adopted-issue-pr-bot.md を読み、その指示に従って実行せよ。",
+    "チェックアウト済みリポジトリの routines/prompts/weekly-pr-care-bot.md を読み、その指示に従って実行せよ。",
     "そのファイルが存在しない・読めない場合は、何もせず終了せよ。"
   ]
 }
