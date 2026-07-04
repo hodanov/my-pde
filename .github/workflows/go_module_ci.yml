@@ -1,19 +1,51 @@
-name: Test ai-bridge
+name: Go module CI
 permissions:
   contents: read
   pull-requests: write
 
 on:
-  pull_request:
-    paths:
-      - "scripts/ai-bridge/**"
+  workflow_call:
+    inputs:
+      module:
+        description: "Module name under scripts/ (e.g. config-diff)"
+        required: true
+        type: string
+      generate-check:
+        description: "Verify generated code is up to date before lint"
+        required: false
+        type: boolean
+        default: false
+      test-exclude-pattern:
+        description: "grep -Ev pattern to exclude packages from go test"
+        required: false
+        type: string
+        default: ""
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup mise
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify generated code is up to date
+        if: inputs.generate-check
+        run: |
+          mise run ${{ inputs.module }}:generate
+          git diff --exit-code -- scripts/${{ inputs.module }}
+
+      - name: Run lint
+        run: mise run ${{ inputs.module }}:lint
+
   test:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: scripts/ai-bridge
+        working-directory: scripts/${{ inputs.module }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -23,7 +55,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tests with coverage
-        run: go test $(go list ./... | grep -Ev '/mock$|/cmd/') -v -count=1 -coverprofile=coverage.out
+        env:
+          EXCLUDE_PATTERN: ${{ inputs.test-exclude-pattern }}
+        run: |
+          if [ -n "$EXCLUDE_PATTERN" ]; then
+            go test $(go list ./... | grep -Ev "$EXCLUDE_PATTERN") -v -count=1 -coverprofile=coverage.out
+          else
+            go test ./... -v -count=1 -coverprofile=coverage.out
+          fi
 
       - name: Generate coverage report
         id: coverage
@@ -46,9 +85,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          MARKER="<!-- coverage-ai-bridge -->"
+          MARKER="<!-- coverage-${{ inputs.module }} -->"
           BODY="${MARKER}
-          ## 📊 Go Test Coverage: ai-bridge
+          ## 📊 Go Test Coverage: ${{ inputs.module }}
 
           **Total coverage: ${{ steps.coverage.outputs.total }}**
 

@@ -1,0 +1,16 @@
+name: CI config-diff
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+    paths:
+      - "scripts/config-diff/**"
+      - mise.toml
+
+jobs:
+  ci:
+    uses: ./.github/workflows/go_module_ci.yml
+    with:
+      module: config-diff
