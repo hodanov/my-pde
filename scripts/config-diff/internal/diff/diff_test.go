@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -147,6 +148,148 @@ func TestClassifyMissingSource(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "does-not-exist")
 	if _, err := Classify("agents", missing, t.TempDir()); err == nil {
 		t.Fatal("Classify with missing source: want error, got nil")
+	}
+}
+
+func TestClassifyTargetIsDirectory(t *testing.T) {
+	t.Parallel()
+	// Deployed target is a directory where a file is expected: comparing the
+	// content must surface a read error instead of misclassifying the entry.
+	src := t.TempDir()
+	dest := t.TempDir()
+	writeFile(t, filepath.Join(src, "a.md"), "alpha")
+	if mkErr := os.MkdirAll(filepath.Join(dest, "a.md"), 0o755); mkErr != nil {
+		t.Fatalf("MkdirAll: %v", mkErr)
+	}
+
+	if _, err := Classify("agents", src, dest); err == nil {
+		t.Fatal("Classify with directory target: want error, got nil")
+	}
+}
+
+func TestClassifySkillsDestFileIsDirectory(t *testing.T) {
+	t.Parallel()
+	// Inside a deployed skill, a path that is a file in src but a directory in
+	// dest must surface a read error from the per-file comparison.
+	src := t.TempDir()
+	dest := t.TempDir()
+	writeFile(t, filepath.Join(src, "skill", "SKILL.md"), "v1")
+	if mkErr := os.MkdirAll(filepath.Join(dest, "skill", "SKILL.md"), 0o755); mkErr != nil {
+		t.Fatalf("MkdirAll: %v", mkErr)
+	}
+
+	if _, err := Classify("skills", src, dest); err == nil {
+		t.Fatal("Classify with directory in place of a skill file: want error, got nil")
+	}
+}
+
+func TestClassifySourceIsFile(t *testing.T) {
+	t.Parallel()
+	// src exists but is a regular file, so enumerating its children must fail.
+	src := filepath.Join(t.TempDir(), "not-a-dir")
+	writeFile(t, src, "content")
+
+	if _, err := Classify("agents", src, t.TempDir()); err == nil {
+		t.Fatal("Classify with file source: want error, got nil")
+	}
+}
+
+func TestEnumerateErrors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		fn   func(dir string) error
+	}{
+		{name: "topLevel missing dir", fn: func(dir string) error {
+			_, err := topLevel(dir, func(fs.DirEntry) bool { return true }, false)
+			return err
+		}},
+		{name: "settingsFiles missing dir", fn: func(dir string) error {
+			_, err := settingsFiles(dir)
+			return err
+		}},
+		{name: "relFiles missing dir", fn: func(dir string) error {
+			_, err := relFiles(dir)
+			return err
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			missing := filepath.Join(t.TempDir(), "does-not-exist")
+			if err := tt.fn(missing); err == nil {
+				t.Fatal("want error for missing directory, got nil")
+			}
+		})
+	}
+}
+
+func TestCompareDirErrors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		missingSrc  bool
+		missingDest bool
+	}{
+		{name: "missing src", missingSrc: true},
+		{name: "missing dest", missingDest: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			src := t.TempDir()
+			if tt.missingSrc {
+				src = filepath.Join(src, "does-not-exist")
+			}
+			dest := t.TempDir()
+			if tt.missingDest {
+				dest = filepath.Join(dest, "does-not-exist")
+			}
+
+			if _, err := compareDir(src, dest); err == nil {
+				t.Fatal("compareDir: want error, got nil")
+			}
+		})
+	}
+}
+
+func TestSameFile(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		contentA string
+		contentB string
+		missingA bool
+		missingB bool
+		want     bool
+		wantErr  bool
+	}{
+		{name: "identical", contentA: "same", contentB: "same", want: true},
+		{name: "different", contentA: "one", contentB: "two", want: false},
+		{name: "first missing", missingA: true, contentB: "b", wantErr: true},
+		{name: "second missing", contentA: "a", missingB: true, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			pathA := filepath.Join(dir, "a")
+			pathB := filepath.Join(dir, "b")
+			if !tt.missingA {
+				writeFile(t, pathA, tt.contentA)
+			}
+			if !tt.missingB {
+				writeFile(t, pathB, tt.contentB)
+			}
+
+			got, err := sameFile(pathA, pathB)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("sameFile err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && got != tt.want {
+				t.Fatalf("sameFile = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 

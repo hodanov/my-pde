@@ -63,6 +63,14 @@ func TestDiscover(t *testing.T) {
 	}
 }
 
+func TestDiscoverMissingRoot(t *testing.T) {
+	t.Parallel()
+	missing := filepath.Join(t.TempDir(), "does-not-exist")
+	if _, err := Discover(missing); err == nil {
+		t.Fatal("Discover with missing root: want error, got nil")
+	}
+}
+
 func TestRunCheck(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -146,6 +154,81 @@ func TestVerifyAllModFilter(t *testing.T) {
 	}
 	if checks[0].Mod != "b" {
 		t.Fatalf("filtered check Mod = %q, want %q", checks[0].Mod, "b")
+	}
+}
+
+func TestVerifyAllMissingRoot(t *testing.T) {
+	t.Parallel()
+	missing := filepath.Join(t.TempDir(), "does-not-exist")
+	run := func(_, _ string, _ ...string) ([]byte, error) { return []byte(""), nil }
+	if _, err := VerifyAll(missing, run, []string{"goimports"}, nil); err == nil {
+		t.Fatal("VerifyAll with missing root: want error, got nil")
+	}
+}
+
+func TestAnyFailed(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		checks []Check
+		want   bool
+	}{
+		{name: "all ok", checks: []Check{{OK: true}, {OK: true}}, want: false},
+		{name: "one failed", checks: []Check{{OK: true}, {OK: false}}, want: true},
+		{name: "empty", checks: nil, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := AnyFailed(tt.checks); got != tt.want {
+				t.Fatalf("AnyFailed = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRelLabel(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		root string
+		mod  string
+		want string
+	}{
+		{name: "nested module", root: "/r", mod: "/r/a/b", want: filepath.Join("a", "b")},
+		{name: "root itself is the module", root: "/r/mod", mod: "/r/mod", want: "mod"},
+		{name: "unrelatable paths fall back to mod", root: "r", mod: "/abs/mod", want: "/abs/mod"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := relLabel(tt.root, tt.mod); got != tt.want {
+				t.Fatalf("relLabel(%q, %q) = %q, want %q", tt.root, tt.mod, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDetail(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		output string
+		cmdErr error
+		want   string
+	}{
+		{name: "output and error", output: "bad", cmdErr: errors.New("exit 1"), want: "bad\nexit 1"},
+		{name: "output only", output: "bad", want: "bad"},
+		{name: "error only", cmdErr: errors.New("exit 1"), want: "exit 1"},
+		{name: "neither", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := detail(tt.output, tt.cmdErr); got != tt.want {
+				t.Fatalf("detail(%q, %v) = %q, want %q", tt.output, tt.cmdErr, got, tt.want)
+			}
+		})
 	}
 }
 
