@@ -393,3 +393,5 @@ run = '"{{config_root}}/environment/tools/sync-pins.sh"'
 description = "Verify generated pins are in sync with mise.toml"
 depends = ["pins:sync"]
 run = "git diff --exit-code -- environment/tools/go/go-tools.txt environment/docker/nvim.dockerfile"
+
+# TEMP: CI 発火確認用（revert 予定）
