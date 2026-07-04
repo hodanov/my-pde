@@ -1,12 +1,14 @@
 ---
 name: dev-workflow
 description: >-
-  新機能開発やバグ修正を体系的に進めるための開発ワークフロー手順
+  実装タスクの規律を担保する開発ワークフロー手順
   （explore → plan → implement → verify → commit）。
-  複雑な実装に着手するとき、テスト戦略や検証手順を踏んで進めたいときに使う。
+  非自明な実装・バグ修正・リファクタリング（プロダクトコードを書く/変更するタスク全般）に
+  着手するときは必ず使う。Plan Mode 等で探索・計画が済んでいる場合も、
+  implement 以降（テスト戦略 → 検証 → コミット）の規律として適用する。
   新規プロダクト開発と既存プロダクト改修で手順が分岐する。
 metadata:
-  version: 2
+  version: 3
 ---
 
 # /dev-workflow スキル
@@ -18,6 +20,11 @@ metadata:
 ## Principle
 
 常に自分の作業を検証する。テストとリンタを通さずにタスクを完了扱いにしない。これがコード品質に対する最もレバレッジの高い実践。
+
+## 適用範囲
+
+- explore / plan がハーネス側の仕組み（Claude Code の Plan Mode 等）で既に済んでいる場合、その2フェーズは重複させず、**implement 以降（テスト戦略 → verify → commit）から適用する**。本スキルの中核価値は検証とコミットの規律にある。
+- Plan Mode を持たない CLI（Cursor / Codex / Copilot）では explore から順に全フェーズを適用する。
 
 ## 新規プロダクト開発（new product）
 

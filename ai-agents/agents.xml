@@ -17,9 +17,11 @@
       This is the single highest-leverage practice for code quality.
     </principle>
     <guidance>
-      - For non-trivial implementation, follow the explore → plan → implement → verify → commit
-        flow. The detailed playbook (new product vs. existing product, test-first) lives in the
-        `dev-workflow` skill — invoke `/dev-workflow` when you need it.
+      - For any non-trivial implementation (new feature, bug fix, refactoring), invoke the
+        `dev-workflow` skill BEFORE writing code — it is the playbook for the explore → plan →
+        implement → verify → commit flow (new product vs. existing product, test-first). This is
+        not optional. If exploration and planning already happened (e.g. in Plan Mode), still
+        invoke it when implementation starts and apply the implement → verify → commit discipline.
       - Verification is also backed deterministically by the `lint-changed.sh` Stop hook, which runs
         the relevant linters on changed files when a turn ends.
     </guidance>
