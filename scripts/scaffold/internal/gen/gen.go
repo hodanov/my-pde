@@ -8,9 +8,9 @@
 // existing "template" module (config-diff by default) by replacing the module
 // name token, so pinned SHAs and workflow structure follow the repository.
 //
-// Plan is pure: it takes reader/exists callbacks and never touches the
-// filesystem itself, so it is fully exercised from t.TempDir()-independent
-// table-driven tests.
+// NewSpec and Spec.Plan are pure: they take reader/exists callbacks and never
+// touch the filesystem themselves, so they are fully exercised from
+// t.TempDir()-independent table-driven tests.
 package gen
 
 import (
@@ -25,12 +25,37 @@ import (
 // safe path segment, Go module path, and replacement token.
 var nameRe = regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`)
 
-// Spec describes a scaffold request.
+// Spec describes a validated scaffold request. The zero value is not usable;
+// build one through NewSpec so every Spec that exists satisfies the
+// preconditions (valid names, --from present, new module absent).
 type Spec struct {
-	// Name is the new module name (e.g. "log-tail").
-	Name string
-	// From is the existing module whose CI/mise are used as the template.
-	From string
+	// name is the new module name (e.g. "log-tail").
+	name string
+	// from is the existing module whose CI/mise are used as the template.
+	from string
+}
+
+// NewSpec validates a scaffold request and returns a Spec that is guaranteed
+// to satisfy the generation preconditions: both names are lowercase
+// kebab-case, the --from module exists under scripts/ (it is the template to
+// read), and the new module does not exist yet (generation never overwrites).
+func NewSpec(name, from string, exists ExistsFunc) (Spec, error) {
+	if !nameRe.MatchString(name) {
+		return Spec{}, fmt.Errorf("invalid module name %q: want lowercase kebab-case (e.g. log-tail)", name)
+	}
+	if !nameRe.MatchString(from) {
+		return Spec{}, fmt.Errorf("invalid --from module %q: want lowercase kebab-case", from)
+	}
+	if name == from {
+		return Spec{}, errors.New("module name and --from must differ")
+	}
+	if !exists(modulePath(from, "")) {
+		return Spec{}, fmt.Errorf("--from module %q not found under scripts/", from)
+	}
+	if exists(modulePath(name, "")) {
+		return Spec{}, fmt.Errorf("%s already exists, refusing to overwrite", modulePath(name, ""))
+	}
+	return Spec{name: name, from: from}, nil
 }
 
 // File is one file to be written, with a repository-relative path.
@@ -53,16 +78,13 @@ type ReadFunc func(relPath string) ([]byte, error)
 // ExistsFunc reports whether a repository-relative path already exists.
 type ExistsFunc func(relPath string) bool
 
-// Plan assembles the files and mise block for spec, reading the template
+// Plan assembles the files and mise block for the spec, reading the template
 // module's live CI workflow and mise.toml through read. It returns an error if
-// the spec is invalid, a template cannot be read, or any target path already
-// exists (generation is additive and never overwrites).
-func Plan(spec Spec, read ReadFunc, exists ExistsFunc) (Result, error) {
-	if validateErr := validate(spec); validateErr != nil {
-		return Result{}, validateErr
-	}
-
-	ciSrcPath := workflowPath(spec.From)
+// a template cannot be read or any target path already exists (generation is
+// additive and never overwrites). Name validity is already guaranteed by
+// NewSpec.
+func (s Spec) Plan(read ReadFunc, exists ExistsFunc) (Result, error) {
+	ciSrcPath := workflowPath(s.from)
 	ciSrc, readCIErr := read(ciSrcPath)
 	if readCIErr != nil {
 		return Result{}, fmt.Errorf("read template workflow %s: %w", ciSrcPath, readCIErr)
@@ -72,17 +94,17 @@ func Plan(spec Spec, read ReadFunc, exists ExistsFunc) (Result, error) {
 	if readMiseErr != nil {
 		return Result{}, fmt.Errorf("read mise.toml: %w", readMiseErr)
 	}
-	miseSection, sectionErr := extractMiseSection(string(miseSrc), spec.From)
+	miseSection, sectionErr := extractMiseSection(string(miseSrc), s.from)
 	if sectionErr != nil {
 		return Result{}, sectionErr
 	}
 
 	files := []File{
-		{Path: modulePath(spec.Name, "go.mod"), Content: goModContent(spec.Name)},
-		{Path: modulePath(spec.Name, path.Join("cmd", spec.Name, "main.go")), Content: mainContent(spec.Name)},
-		{Path: modulePath(spec.Name, path.Join("cmd", spec.Name, "main_test.go")), Content: mainTestContent(spec.Name)},
-		{Path: modulePath(spec.Name, "README.md"), Content: readmeContent(spec.Name)},
-		{Path: workflowPath(spec.Name), Content: renderToken(string(ciSrc), spec.From, spec.Name)},
+		{Path: modulePath(s.name, "go.mod"), Content: goModContent(s.name)},
+		{Path: modulePath(s.name, path.Join("cmd", s.name, "main.go")), Content: mainContent(s.name)},
+		{Path: modulePath(s.name, path.Join("cmd", s.name, "main_test.go")), Content: mainTestContent(s.name)},
+		{Path: modulePath(s.name, "README.md"), Content: readmeContent(s.name)},
+		{Path: workflowPath(s.name), Content: renderToken(string(ciSrc), s.from, s.name)},
 	}
 
 	if collideErr := ensureNoCollisions(files, exists); collideErr != nil {
@@ -91,22 +113,8 @@ func Plan(spec Spec, read ReadFunc, exists ExistsFunc) (Result, error) {
 
 	return Result{
 		Files:     files,
-		MiseBlock: renderToken(miseSection, spec.From, spec.Name),
+		MiseBlock: renderToken(miseSection, s.from, s.name),
 	}, nil
-}
-
-// validate checks the spec's names against the kebab-case rule.
-func validate(spec Spec) error {
-	if !nameRe.MatchString(spec.Name) {
-		return fmt.Errorf("invalid module name %q: want lowercase kebab-case (e.g. log-tail)", spec.Name)
-	}
-	if !nameRe.MatchString(spec.From) {
-		return fmt.Errorf("invalid --from module %q: want lowercase kebab-case", spec.From)
-	}
-	if spec.Name == spec.From {
-		return errors.New("module name and --from must differ")
-	}
-	return nil
 }
 
 // ensureNoCollisions fails if any planned file already exists.

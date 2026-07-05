@@ -51,9 +51,82 @@ func fakeRead(rel string) ([]byte, error) {
 // noneExist reports every path as absent.
 func noneExist(string) bool { return false }
 
+// fromOnlyExists reports only the template module directory as present, the
+// valid state for NewSpec: --from exists, the new module does not.
+func fromOnlyExists(rel string) bool { return rel == "scripts/config-diff" }
+
+// mustSpec builds a valid Spec through the factory, failing the test on error.
+func mustSpec(t *testing.T, name, from string) Spec {
+	t.Helper()
+	spec, newErr := NewSpec(name, from, fromOnlyExists)
+	if newErr != nil {
+		t.Fatalf("NewSpec(%q, %q) returned error: %v", name, from, newErr)
+	}
+	return spec
+}
+
+func TestNewSpecErrors(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		modName string
+		from    string
+		exists  ExistsFunc
+		wantSub string
+	}{
+		{
+			name:    "invalid name",
+			modName: "Bad_Name",
+			from:    "config-diff",
+			exists:  fromOnlyExists,
+			wantSub: "invalid module name",
+		},
+		{
+			name:    "invalid from",
+			modName: "log-tail",
+			from:    "Bad",
+			exists:  fromOnlyExists,
+			wantSub: "invalid --from",
+		},
+		{
+			name:    "same name and from",
+			modName: "config-diff",
+			from:    "config-diff",
+			exists:  fromOnlyExists,
+			wantSub: "must differ",
+		},
+		{
+			name:    "from module missing",
+			modName: "log-tail",
+			from:    "ghost",
+			exists:  fromOnlyExists,
+			wantSub: "not found",
+		},
+		{
+			name:    "new module already exists",
+			modName: "log-tail",
+			from:    "config-diff",
+			exists:  func(string) bool { return true },
+			wantSub: "already exists",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, newErr := NewSpec(tt.modName, tt.from, tt.exists)
+			if newErr == nil {
+				t.Fatalf("NewSpec returned nil error, want error containing %q", tt.wantSub)
+			}
+			if !strings.Contains(newErr.Error(), tt.wantSub) {
+				t.Fatalf("NewSpec error = %q, want it to contain %q", newErr.Error(), tt.wantSub)
+			}
+		})
+	}
+}
+
 func TestPlan(t *testing.T) {
 	t.Parallel()
-	res, planErr := Plan(Spec{Name: "log-tail", From: "config-diff"}, fakeRead, noneExist)
+	res, planErr := mustSpec(t, "log-tail", "config-diff").Plan(fakeRead, noneExist)
 	if planErr != nil {
 		t.Fatalf("Plan returned error: %v", planErr)
 	}
@@ -102,36 +175,20 @@ func TestPlanErrors(t *testing.T) {
 		wantSub string
 	}{
 		{
-			name:    "invalid name",
-			spec:    Spec{Name: "Bad_Name", From: "config-diff"},
-			read:    fakeRead,
-			exists:  noneExist,
-			wantSub: "invalid module name",
-		},
-		{
-			name:    "invalid from",
-			spec:    Spec{Name: "log-tail", From: "Bad"},
-			read:    fakeRead,
-			exists:  noneExist,
-			wantSub: "invalid --from",
-		},
-		{
-			name:    "same name and from",
-			spec:    Spec{Name: "config-diff", From: "config-diff"},
-			read:    fakeRead,
-			exists:  noneExist,
-			wantSub: "must differ",
-		},
-		{
-			name:    "missing template workflow",
-			spec:    Spec{Name: "log-tail", From: "ghost"},
+			name: "missing template workflow",
+			spec: func() Spec {
+				spec, newErr := NewSpec("log-tail", "ghost", func(rel string) bool { return rel == "scripts/ghost" })
+				if newErr != nil {
+					panic(newErr)
+				}
+				return spec
+			}(),
 			read:    fakeRead,
 			exists:  noneExist,
 			wantSub: "read template workflow",
 		},
 		{
 			name: "missing mise section",
-			spec: Spec{Name: "log-tail", From: "config-diff"},
 			read: func(rel string) ([]byte, error) {
 				if rel == "mise.toml" {
 					return []byte("# ---- other (Go) ----\n"), nil
@@ -143,7 +200,6 @@ func TestPlanErrors(t *testing.T) {
 		},
 		{
 			name:    "collision refuses overwrite",
-			spec:    Spec{Name: "log-tail", From: "config-diff"},
 			read:    fakeRead,
 			exists:  func(rel string) bool { return rel == "scripts/log-tail/go.mod" },
 			wantSub: "already exists",
@@ -152,7 +208,11 @@ func TestPlanErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, planErr := Plan(tt.spec, tt.read, tt.exists)
+			spec := tt.spec
+			if spec == (Spec{}) {
+				spec = mustSpec(t, "log-tail", "config-diff")
+			}
+			_, planErr := spec.Plan(tt.read, tt.exists)
 			if planErr == nil {
 				t.Fatalf("Plan returned nil error, want error containing %q", tt.wantSub)
 			}

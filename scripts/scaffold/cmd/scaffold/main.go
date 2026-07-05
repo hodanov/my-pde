@@ -51,14 +51,19 @@ func run(args []string, out, errOut io.Writer) int {
 		return 2
 	}
 
-	spec := gen.Spec{Name: name, From: *from}
 	read := func(rel string) ([]byte, error) { return os.ReadFile(filepath.Join(*root, rel)) }
 	exists := func(rel string) bool {
 		_, statErr := os.Stat(filepath.Join(*root, rel))
 		return statErr == nil
 	}
 
-	result, planErr := gen.Plan(spec, read, exists)
+	spec, specErr := gen.NewSpec(name, *from, exists)
+	if specErr != nil {
+		_, _ = fmt.Fprintln(errOut, "scaffold:", specErr)
+		return 1
+	}
+
+	result, planErr := spec.Plan(read, exists)
 	if planErr != nil {
 		_, _ = fmt.Fprintln(errOut, "scaffold:", planErr)
 		return 1
