@@ -299,9 +299,22 @@ run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force agents "{{con
 description = "Copy agent definitions to ~/.copilot/agents"
 run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force agents "{{config_root}}/ai-agents/agents" "$HOME/.copilot/agents"'
 
+[tasks.verify-changed-link]
+description = "Symlink verify-changed.sh -> ~/.local/bin/verify-changed"
+run = '''
+mkdir -p "$HOME/.local/bin"
+ln -sf "{{config_root}}/ai-agents/scripts/verify-changed.sh" "$HOME/.local/bin/verify-changed"
+echo "Linked $HOME/.local/bin/verify-changed -> {{config_root}}/ai-agents/scripts/verify-changed.sh"
+'''
+
 [tasks.agents-copy]
 description = "Copy agent definitions to all AI CLIs"
-depends = ["claude-agents-copy", "cursor-agents-copy", "copilot-agents-copy"]
+depends = [
+  "claude-agents-copy",
+  "cursor-agents-copy",
+  "copilot-agents-copy",
+  "verify-changed-link"
+]
 
 [tasks.claude-settings-copy]
 description = "Copy settings and hooks to ~/.claude"
@@ -366,7 +379,8 @@ markdownlint-cli2 "**/*.md"
 '''
 
 # ---- Changed-files verification (human entry point; the verify-runner
-# subagent runs ai-agents/scripts/verify-changed.sh directly) ----
+# subagent runs the script directly — repo-local copy or the
+# ~/.local/bin/verify-changed symlink installed by agents-copy) ----
 
 [tasks."verify:changed"]
 description = "Run tests/linters mapped to changed files (pass files after --)"

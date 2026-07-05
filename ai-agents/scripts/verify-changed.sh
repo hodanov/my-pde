@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# Deterministic verification for changed files: detect the change set, map each
-# file to the repo's mise tasks / linters, run every applicable check, and print
-# a compact [PASS]/[FAIL]/[SKIP] report. Exits 1 if any check fails.
+# Deterministic verification for changed files, usable in any git repo: detect
+# the change set, map each file to verification commands — preferring the
+# repo's mise tasks when they exist — run every applicable check, and print a
+# compact [PASS]/[FAIL]/[SKIP] report. Exits 1 if any check fails.
 #
 # Usage: verify-changed.sh [file ...]
 #   No args: verify the union of unstaged, staged, and untracked files
 #   (same detection as the lint-changed.sh Stop hook).
+#   Runs against the repository containing the current working directory.
 #
-# Consumed by the verify-runner subagent via `mise run verify:changed`;
-# humans can run it the same way.
+# Missing tools degrade to SKIP, so this works without mise or the node-based
+# linters. `mise run agents-copy` symlinks it to ~/.local/bin/verify-changed;
+# the verify-runner subagent runs it from there in repos that do not ship
+# their own copy. Humans can run it via `mise run verify:changed`.
 
 # mise-managed tools (non-interactive contexts do not run mise activate)
 export PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$PATH"
@@ -16,8 +20,13 @@ set -eu
 
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
-# tombi / prettier / markdownlint-cli2 live in the node toolchain, not on PATH
-export PATH="$repo_root/environment/tools/node/node_modules/.bin:$PATH"
+# repo-local node toolchains (tombi / prettier / markdownlint-cli2, ...)
+for d in "$repo_root/environment/tools/node/node_modules/.bin" "$repo_root/node_modules/.bin"; do
+	if [ -d "$d" ]; then
+		PATH="$d:$PATH"
+	fi
+done
+export PATH
 
 if [ "$#" -gt 0 ]; then
 	files=$(printf '%s\n' "$@")
@@ -31,48 +40,81 @@ else
 	)
 fi
 
+mise_tasks=""
+if command -v mise >/dev/null 2>&1; then
+	mise_tasks=$(mise tasks ls 2>/dev/null | awk '{print $1}')
+fi
+
+has_mise_task() {
+	printf '%s\n' "$mise_tasks" | grep -qx "$1"
+}
+
 pass=0
 fail=0
 skip=0
 
-# run_check <tool-for-command-v-guard> <command...>
+# run_check [-C dir] <tool-for-command-v-guard> <command...>
 run_check() {
+	local dir=.
+	if [ "$1" = "-C" ]; then
+		dir=$2
+		shift 2
+	fi
 	local tool=$1
 	shift
+	local label="$*"
+	if [ "$dir" != "." ]; then
+		label="($dir) $*"
+	fi
 	if ! command -v "$tool" >/dev/null 2>&1; then
-		echo "[SKIP] $* ($tool not installed)"
+		echo "[SKIP] $label ($tool not installed)"
 		skip=$((skip + 1))
 		return 0
 	fi
 	local out
-	if out=$("$@" 2>&1); then
-		echo "[PASS] $*"
+	if out=$(cd "$dir" && "$@" 2>&1); then
+		echo "[PASS] $label"
 		pass=$((pass + 1))
 	else
-		echo "[FAIL] $*"
+		echo "[FAIL] $label"
 		[ -n "$out" ] && printf '%s\n' "$out"
 		fail=$((fail + 1))
 	fi
 }
 
-go_apps=""
-declare -a lua_files sh_files md_files fmt_files
+# nearest_go_mod <repo-relative path>: echo the closest ancestor dir holding
+# a go.mod, or nothing if the file is outside any Go module.
+nearest_go_mod() {
+	local d
+	d=$(dirname "$1")
+	while :; do
+		if [ -f "$d/go.mod" ]; then
+			echo "$d"
+			return 0
+		fi
+		if [ "$d" = "." ]; then
+			return 0
+		fi
+		d=$(dirname "$d")
+	done
+}
+
+go_mod_dirs=""
+declare -a lua_files sh_files md_files fmt_files docker_files
 run_tombi=0
 run_actionlint=0
-run_hadolint=0
 unmapped=""
 
 while IFS= read -r f; do
 	{ [ -n "$f" ] && [ -f "$f" ]; } || continue
 	mapped=0
 	case "$f" in
-	scripts/*/*)
-		app=${f#scripts/}
-		app=${app%%/*}
-		if [ -f "scripts/$app/go.mod" ]; then
-			case " $go_apps " in
-			*" $app "*) ;;
-			*) go_apps="$go_apps $app" ;;
+	*.go | go.mod | */go.mod | go.sum | */go.sum | *testdata/*)
+		mod_dir=$(nearest_go_mod "$f")
+		if [ -n "$mod_dir" ]; then
+			case " $go_mod_dirs " in
+			*" $mod_dir "*) ;;
+			*) go_mod_dirs="$go_mod_dirs $mod_dir" ;;
 			esac
 			mapped=1
 		fi
@@ -104,8 +146,8 @@ while IFS= read -r f; do
 		fmt_files+=("$f")
 		mapped=1
 		;;
-	environment/docker/nvim.dockerfile)
-		run_hadolint=1
+	Dockerfile | */Dockerfile | Dockerfile.* | */Dockerfile.* | *.dockerfile)
+		docker_files+=("$f")
 		mapped=1
 		;;
 	esac
@@ -116,12 +158,23 @@ done <<EOF
 $files
 EOF
 
-# Tests first, then linters.
-for app in $go_apps; do
-	run_check mise mise run "$app:test"
+# Tests first, then linters. Per Go module: prefer the repo's mise tasks
+# (named <module dir basename>:test / :lint), else plain go tooling.
+for d in $go_mod_dirs; do
+	app=$(basename "$d")
+	if has_mise_task "$app:test"; then
+		run_check mise mise run "$app:test"
+	else
+		run_check -C "$d" go go test ./...
+	fi
 done
-for app in $go_apps; do
-	run_check mise mise run "$app:lint"
+for d in $go_mod_dirs; do
+	app=$(basename "$d")
+	if has_mise_task "$app:lint"; then
+		run_check mise mise run "$app:lint"
+	else
+		run_check -C "$d" golangci-lint golangci-lint run
+	fi
 done
 if [ "${#lua_files[@]}" -gt 0 ]; then
 	run_check stylua stylua --check "${lua_files[@]}"
@@ -142,8 +195,8 @@ fi
 if [ "$run_actionlint" -eq 1 ]; then
 	run_check actionlint actionlint
 fi
-if [ "$run_hadolint" -eq 1 ]; then
-	run_check hadolint hadolint environment/docker/nvim.dockerfile
+if [ "${#docker_files[@]}" -gt 0 ]; then
+	run_check hadolint hadolint "${docker_files[@]}"
 fi
 
 echo "----"
