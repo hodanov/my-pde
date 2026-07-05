@@ -55,14 +55,14 @@ func noneExist(string) bool { return false }
 // valid state for NewSpec: --from exists, the new module does not.
 func fromOnlyExists(rel string) bool { return rel == "scripts/config-diff" }
 
-// mustSpec builds a valid Spec through the factory, failing the test on error.
-func mustSpec(t *testing.T, name, from string) Spec {
+// mustSpec builds a valid spec through the factory, failing the test on error.
+func mustSpec(t *testing.T, name, from string) spec {
 	t.Helper()
-	spec, newErr := NewSpec(name, from, fromOnlyExists)
+	s, newErr := NewSpec(name, from, fromOnlyExists)
 	if newErr != nil {
 		t.Fatalf("NewSpec(%q, %q) returned error: %v", name, from, newErr)
 	}
-	return spec
+	return s
 }
 
 func TestNewSpecErrors(t *testing.T) {
@@ -169,19 +169,19 @@ func TestPlanErrors(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name    string
-		spec    Spec
+		spec    spec
 		read    ReadFunc
 		exists  ExistsFunc
 		wantSub string
 	}{
 		{
 			name: "missing template workflow",
-			spec: func() Spec {
-				spec, newErr := NewSpec("log-tail", "ghost", func(rel string) bool { return rel == "scripts/ghost" })
+			spec: func() spec {
+				s, newErr := NewSpec("log-tail", "ghost", func(rel string) bool { return rel == "scripts/ghost" })
 				if newErr != nil {
 					panic(newErr)
 				}
-				return spec
+				return s
 			}(),
 			read:    fakeRead,
 			exists:  noneExist,
@@ -208,11 +208,11 @@ func TestPlanErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			spec := tt.spec
-			if spec == (Spec{}) {
-				spec = mustSpec(t, "log-tail", "config-diff")
+			s := tt.spec
+			if s == (spec{}) {
+				s = mustSpec(t, "log-tail", "config-diff")
 			}
-			_, planErr := spec.Plan(tt.read, tt.exists)
+			_, planErr := s.Plan(tt.read, tt.exists)
 			if planErr == nil {
 				t.Fatalf("Plan returned nil error, want error containing %q", tt.wantSub)
 			}

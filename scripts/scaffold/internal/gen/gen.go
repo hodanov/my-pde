@@ -8,8 +8,8 @@
 // existing "template" module (config-diff by default) by replacing the module
 // name token, so pinned SHAs and workflow structure follow the repository.
 //
-// NewSpec and Spec.Plan are pure: they take reader/exists callbacks and never
-// touch the filesystem themselves, so they are fully exercised from
+// NewSpec and the Plan method are pure: they take reader/exists callbacks and
+// never touch the filesystem themselves, so they are fully exercised from
 // t.TempDir()-independent table-driven tests.
 package gen
 
@@ -25,37 +25,42 @@ import (
 // safe path segment, Go module path, and replacement token.
 var nameRe = regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`)
 
-// Spec describes a validated scaffold request. The zero value is not usable;
-// build one through NewSpec so every Spec that exists satisfies the
-// preconditions (valid names, --from present, new module absent).
-type Spec struct {
+// spec describes a validated scaffold request. The type is unexported so the
+// only way for callers to obtain one is NewSpec, which means every spec in
+// existence satisfies the preconditions (valid names, --from present, new
+// module absent) — including that a zero-value bypass is impossible outside
+// this package.
+type spec struct {
 	// name is the new module name (e.g. "log-tail").
 	name string
 	// from is the existing module whose CI/mise are used as the template.
 	from string
 }
 
-// NewSpec validates a scaffold request and returns a Spec that is guaranteed
+// NewSpec validates a scaffold request and returns a spec that is guaranteed
 // to satisfy the generation preconditions: both names are lowercase
 // kebab-case, the --from module exists under scripts/ (it is the template to
 // read), and the new module does not exist yet (generation never overwrites).
-func NewSpec(name, from string, exists ExistsFunc) (Spec, error) {
+// the only way to obtain a spec, so the preconditions above always hold.
+//
+//nolint:revive // Returning the unexported type is deliberate: it makes NewSpec
+func NewSpec(name, from string, exists ExistsFunc) (spec, error) {
 	if !nameRe.MatchString(name) {
-		return Spec{}, fmt.Errorf("invalid module name %q: want lowercase kebab-case (e.g. log-tail)", name)
+		return spec{}, fmt.Errorf("invalid module name %q: want lowercase kebab-case (e.g. log-tail)", name)
 	}
 	if !nameRe.MatchString(from) {
-		return Spec{}, fmt.Errorf("invalid --from module %q: want lowercase kebab-case", from)
+		return spec{}, fmt.Errorf("invalid --from module %q: want lowercase kebab-case", from)
 	}
 	if name == from {
-		return Spec{}, errors.New("module name and --from must differ")
+		return spec{}, errors.New("module name and --from must differ")
 	}
 	if !exists(modulePath(from, "")) {
-		return Spec{}, fmt.Errorf("--from module %q not found under scripts/", from)
+		return spec{}, fmt.Errorf("--from module %q not found under scripts/", from)
 	}
 	if exists(modulePath(name, "")) {
-		return Spec{}, fmt.Errorf("%s already exists, refusing to overwrite", modulePath(name, ""))
+		return spec{}, fmt.Errorf("%s already exists, refusing to overwrite", modulePath(name, ""))
 	}
-	return Spec{name: name, from: from}, nil
+	return spec{name: name, from: from}, nil
 }
 
 // File is one file to be written, with a repository-relative path.
@@ -83,7 +88,7 @@ type ExistsFunc func(relPath string) bool
 // a template cannot be read or any target path already exists (generation is
 // additive and never overwrites). Name validity is already guaranteed by
 // NewSpec.
-func (s Spec) Plan(read ReadFunc, exists ExistsFunc) (Result, error) {
+func (s spec) Plan(read ReadFunc, exists ExistsFunc) (Result, error) {
 	ciSrcPath := workflowPath(s.from)
 	ciSrc, readCIErr := read(ciSrcPath)
 	if readCIErr != nil {
