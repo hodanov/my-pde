@@ -3,22 +3,22 @@ paths:
   - "**/*.{go,py,ts,tsx,js,jsx,rb,rs,java,kt,lua}"
 ---
 
-# Encapsulation & factory rules
+# カプセル化・ファクトリー規約
 
-When a data structure carries invariants (validated fields, preconditions):
+不変条件（バリデーション済みフィールド、事前条件）を持つデータ構造を扱うとき:
 
-- Construct it only through a factory function (`NewX` / `from_*`) that checks
-  every precondition and fails early — never as a raw literal at call sites.
-- Make invariants unbypassable: keep fields private, and hide the type itself
-  where the language allows (e.g. a Go unexported type returned by an exported
-  factory), so the factory is the only construction path — including
-  zero-value/default construction.
-- Code receiving a factory-built value must not re-validate what construction
-  already guarantees.
-- Attach behavior as methods on the structure instead of free functions that
-  take it as an argument, so related logic stays cohesive.
-- Keep factories and planning logic pure: inject side effects (filesystem,
-  clock, network) as function/interface parameters so tests stay table-driven.
-- If a linter flags the intentional shape (e.g. revive `unexported-return` in
-  Go), suppress it locally with a reasoned inline directive instead of
-  disabling the rule globally.
+- 生成は、すべての事前条件を検証して早期に失敗するファクトリー関数
+  （`NewX` / `from_*`）経由のみとする。呼び出し側で生の構造体リテラルとして
+  組み立てない。
+- 不変条件をバイパス不能にする: フィールドは非公開にし、言語が許すなら型自体も
+  隠す（例: Go で exported なファクトリーが unexported な型を返す）。これにより
+  ゼロ値・デフォルト構築を含め、ファクトリーが唯一の生成経路になる。
+- ファクトリー経由で生成された値を受け取る側は、生成時に保証済みの条件を
+  再検証しない。
+- 振る舞いは、その構造体を引数に取る自由関数ではなくメソッドとして定義し、
+  関連ロジックを凝集させる。
+- ファクトリーや計画系ロジックは純粋に保つ: 副作用（ファイルシステム・時刻・
+  ネットワーク）は関数/インターフェースの引数として注入し、テストを
+  テーブル駆動のまま維持する。
+- 意図的なこの形をリンタが咎める場合（例: Go の revive `unexported-return`）は、
+  ルールを全体で無効化せず、理由コメント付きのインライン抑制で局所対応する。
