@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"bytes"
 	"errors"
 	"strings"
 	"testing"
@@ -131,6 +132,16 @@ func TestPlan(t *testing.T) {
 		t.Fatalf("Plan returned error: %v", planErr)
 	}
 
+	// Observe the planned files through Write with a recording callback, the
+	// same way main consumes the plan.
+	written := map[string]string{}
+	if writeErr := res.Write(func(rel string, content []byte) error {
+		written[rel] = string(content)
+		return nil
+	}); writeErr != nil {
+		t.Fatalf("Write returned error: %v", writeErr)
+	}
+
 	wantPaths := map[string]bool{
 		"scripts/log-tail/go.mod":                    false,
 		"scripts/log-tail/cmd/log-tail/main.go":      false,
@@ -138,14 +149,14 @@ func TestPlan(t *testing.T) {
 		"scripts/log-tail/README.md":                 false,
 		".github/workflows/ci_log_tail.yml":          false,
 	}
-	for _, f := range res.Files {
-		if _, ok := wantPaths[f.Path]; !ok {
-			t.Errorf("unexpected file %q", f.Path)
+	for p, content := range written {
+		if _, ok := wantPaths[p]; !ok {
+			t.Errorf("unexpected file %q", p)
 			continue
 		}
-		wantPaths[f.Path] = true
-		if strings.Contains(f.Content, "config-diff") {
-			t.Errorf("file %q still contains template token config-diff", f.Path)
+		wantPaths[p] = true
+		if strings.Contains(content, "config-diff") {
+			t.Errorf("file %q still contains template token config-diff", p)
 		}
 	}
 	for p, seen := range wantPaths {
@@ -154,14 +165,36 @@ func TestPlan(t *testing.T) {
 		}
 	}
 
-	if !strings.Contains(res.MiseBlock, `[tasks."log-tail:build"]`) {
-		t.Errorf("mise block missing renamed task: %q", res.MiseBlock)
+	var report bytes.Buffer
+	res.Report(&report)
+	got := report.String()
+	if !strings.Contains(got, `[tasks."log-tail:build"]`) {
+		t.Errorf("report missing renamed mise task: %q", got)
 	}
-	if strings.Contains(res.MiseBlock, "go-verify") {
-		t.Errorf("mise block leaked the next section: %q", res.MiseBlock)
+	if strings.Contains(got, "go-verify") {
+		t.Errorf("report leaked the next mise section: %q", got)
 	}
-	if strings.Contains(res.MiseBlock, "config-diff") {
-		t.Errorf("mise block still contains template token: %q", res.MiseBlock)
+	if strings.Contains(got, "config-diff") {
+		t.Errorf("report still contains template token: %q", got)
+	}
+	if !strings.Contains(got, "Created module log-tail:") {
+		t.Errorf("report missing header: %q", got)
+	}
+}
+
+func TestWritePropagatesError(t *testing.T) {
+	t.Parallel()
+	res, planErr := mustSpec(t, "log-tail", "config-diff").Plan(fakeRead, noneExist)
+	if planErr != nil {
+		t.Fatalf("Plan returned error: %v", planErr)
+	}
+
+	writeErr := res.Write(func(string, []byte) error { return errors.New("disk full") })
+	if writeErr == nil {
+		t.Fatal("Write returned nil error, want error")
+	}
+	if !strings.Contains(writeErr.Error(), "write scripts/log-tail/go.mod") || !strings.Contains(writeErr.Error(), "disk full") {
+		t.Fatalf("Write error = %q, want it to name the file and wrap the cause", writeErr.Error())
 	}
 }
 

@@ -8,14 +8,15 @@
 // existing "template" module (config-diff by default) by replacing the module
 // name token, so pinned SHAs and workflow structure follow the repository.
 //
-// NewSpec and the Plan method are pure: they take reader/exists callbacks and
-// never touch the filesystem themselves, so they are fully exercised from
-// t.TempDir()-independent table-driven tests.
+// NewSpec, the Plan method, and the result methods are pure: they take
+// reader/exists/writer callbacks and never touch the filesystem themselves,
+// so they are fully exercised from t.TempDir()-independent table-driven tests.
 package gen
 
 import (
 	"errors"
 	"fmt"
+	"io"
 	"path"
 	"regexp"
 	"strings"
@@ -63,18 +64,22 @@ func NewSpec(name, from string, exists ExistsFunc) (spec, error) {
 	return spec{name: name, from: from}, nil
 }
 
-// File is one file to be written, with a repository-relative path.
-type File struct {
-	Path    string
-	Content string
+// file is one file to be written, with a repository-relative path.
+type file struct {
+	path    string
+	content string
 }
 
-// Result is the full plan for a scaffold request.
-type Result struct {
-	// Files is the set of files to create (never mutating existing ones).
-	Files []File
-	// MiseBlock is the mise task block to append to mise.toml by hand.
-	MiseBlock string
+// result is the full plan for a scaffold request. The type is unexported for
+// the same reason as spec: Plan is the only way to obtain one, so every
+// result in existence is collision-checked and fully rendered.
+type result struct {
+	// name is the new module name the plan was built for.
+	name string
+	// files is the set of files to create (never mutating existing ones).
+	files []file
+	// miseBlock is the mise task block to append to mise.toml by hand.
+	miseBlock string
 }
 
 // ReadFunc reads a repository-relative file, returning its bytes.
@@ -83,50 +88,77 @@ type ReadFunc func(relPath string) ([]byte, error)
 // ExistsFunc reports whether a repository-relative path already exists.
 type ExistsFunc func(relPath string) bool
 
+// WriteFunc creates a repository-relative file with the given content,
+// making any parent directories.
+type WriteFunc func(relPath string, content []byte) error
+
 // Plan assembles the files and mise block for the spec, reading the template
 // module's live CI workflow and mise.toml through read. It returns an error if
 // a template cannot be read or any target path already exists (generation is
 // additive and never overwrites). Name validity is already guaranteed by
 // NewSpec.
-func (s spec) Plan(read ReadFunc, exists ExistsFunc) (Result, error) {
+func (s spec) Plan(read ReadFunc, exists ExistsFunc) (result, error) {
 	ciSrcPath := workflowPath(s.from)
 	ciSrc, readCIErr := read(ciSrcPath)
 	if readCIErr != nil {
-		return Result{}, fmt.Errorf("read template workflow %s: %w", ciSrcPath, readCIErr)
+		return result{}, fmt.Errorf("read template workflow %s: %w", ciSrcPath, readCIErr)
 	}
 
 	miseSrc, readMiseErr := read("mise.toml")
 	if readMiseErr != nil {
-		return Result{}, fmt.Errorf("read mise.toml: %w", readMiseErr)
+		return result{}, fmt.Errorf("read mise.toml: %w", readMiseErr)
 	}
 	miseSection, sectionErr := extractMiseSection(string(miseSrc), s.from)
 	if sectionErr != nil {
-		return Result{}, sectionErr
+		return result{}, sectionErr
 	}
 
-	files := []File{
-		{Path: modulePath(s.name, "go.mod"), Content: goModContent(s.name)},
-		{Path: modulePath(s.name, path.Join("cmd", s.name, "main.go")), Content: mainContent(s.name)},
-		{Path: modulePath(s.name, path.Join("cmd", s.name, "main_test.go")), Content: mainTestContent(s.name)},
-		{Path: modulePath(s.name, "README.md"), Content: readmeContent(s.name)},
-		{Path: workflowPath(s.name), Content: renderToken(string(ciSrc), s.from, s.name)},
+	files := []file{
+		{path: modulePath(s.name, "go.mod"), content: goModContent(s.name)},
+		{path: modulePath(s.name, path.Join("cmd", s.name, "main.go")), content: mainContent(s.name)},
+		{path: modulePath(s.name, path.Join("cmd", s.name, "main_test.go")), content: mainTestContent(s.name)},
+		{path: modulePath(s.name, "README.md"), content: readmeContent(s.name)},
+		{path: workflowPath(s.name), content: renderToken(string(ciSrc), s.from, s.name)},
 	}
 
 	if collideErr := ensureNoCollisions(files, exists); collideErr != nil {
-		return Result{}, collideErr
+		return result{}, collideErr
 	}
 
-	return Result{
-		Files:     files,
-		MiseBlock: renderToken(miseSection, s.from, s.name),
+	return result{
+		name:      s.name,
+		files:     files,
+		miseBlock: renderToken(miseSection, s.from, s.name),
 	}, nil
 }
 
+// Write creates every planned file through the injected write callback, so
+// the plan stays pure and the filesystem effect lives with the caller.
+func (r result) Write(write WriteFunc) error {
+	for _, f := range r.files {
+		if writeErr := write(f.path, []byte(f.content)); writeErr != nil {
+			return fmt.Errorf("write %s: %w", f.path, writeErr)
+		}
+	}
+	return nil
+}
+
+// Report prints the created files, the mise block to paste, and next steps.
+func (r result) Report(out io.Writer) {
+	_, _ = fmt.Fprintf(out, "Created module %s:\n", r.name)
+	for _, f := range r.files {
+		_, _ = fmt.Fprintf(out, "  %s\n", f.path)
+	}
+	_, _ = fmt.Fprintln(out, "\nAppend this block to mise.toml:")
+	_, _ = fmt.Fprintln(out, r.miseBlock)
+	_, _ = fmt.Fprintf(out, "Then add %s:test / %s:lint to the go:test / go:lint depends lists.\n", r.name, r.name)
+}
+
 // ensureNoCollisions fails if any planned file already exists.
-func ensureNoCollisions(files []File, exists ExistsFunc) error {
+func ensureNoCollisions(files []file, exists ExistsFunc) error {
 	for _, f := range files {
-		if exists(f.Path) {
-			return fmt.Errorf("target already exists, refusing to overwrite: %s", f.Path)
+		if exists(f.path) {
+			return fmt.Errorf("target already exists, refusing to overwrite: %s", f.path)
 		}
 	}
 	return nil

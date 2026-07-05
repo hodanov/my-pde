@@ -56,6 +56,13 @@ func run(args []string, out, errOut io.Writer) int {
 		_, statErr := os.Stat(filepath.Join(*root, rel))
 		return statErr == nil
 	}
+	write := func(rel string, content []byte) error {
+		abs := filepath.Join(*root, rel)
+		if mkErr := os.MkdirAll(filepath.Dir(abs), 0o755); mkErr != nil {
+			return fmt.Errorf("mkdir: %w", mkErr)
+		}
+		return os.WriteFile(abs, content, 0o644)
+	}
 
 	spec, specErr := gen.NewSpec(name, *from, exists)
 	if specErr != nil {
@@ -69,38 +76,13 @@ func run(args []string, out, errOut io.Writer) int {
 		return 1
 	}
 
-	if writeErr := writeFiles(*root, result.Files); writeErr != nil {
+	if writeErr := result.Write(write); writeErr != nil {
 		_, _ = fmt.Fprintln(errOut, "scaffold:", writeErr)
 		return 1
 	}
 
-	report(out, name, result)
+	result.Report(out)
 	return 0
-}
-
-// writeFiles creates each planned file under root, making parent directories.
-func writeFiles(root string, files []gen.File) error {
-	for _, f := range files {
-		abs := filepath.Join(root, f.Path)
-		if mkErr := os.MkdirAll(filepath.Dir(abs), 0o755); mkErr != nil {
-			return fmt.Errorf("mkdir for %s: %w", f.Path, mkErr)
-		}
-		if writeErr := os.WriteFile(abs, []byte(f.Content), 0o644); writeErr != nil {
-			return fmt.Errorf("write %s: %w", f.Path, writeErr)
-		}
-	}
-	return nil
-}
-
-// report prints the created files, the mise block to paste, and next steps.
-func report(out io.Writer, name string, result gen.Result) {
-	_, _ = fmt.Fprintf(out, "Created module %s:\n", name)
-	for _, f := range result.Files {
-		_, _ = fmt.Fprintf(out, "  %s\n", f.Path)
-	}
-	_, _ = fmt.Fprintln(out, "\nAppend this block to mise.toml:")
-	_, _ = fmt.Fprintln(out, result.MiseBlock)
-	_, _ = fmt.Fprintf(out, "Then add %s:test / %s:lint to the go:test / go:lint depends lists.\n", name, name)
 }
 
 // usage prints command usage.
