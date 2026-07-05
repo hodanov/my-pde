@@ -1,0 +1,16 @@
+name: CI scaffold
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+    paths:
+      - "scripts/scaffold/**"
+      - mise.toml
+
+jobs:
+  ci:
+    uses: ./.github/workflows/go_module_ci.yml
+    with:
+      module: scaffold
