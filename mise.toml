@@ -365,6 +365,13 @@ prettier --check .
 markdownlint-cli2 "**/*.md"
 '''
 
+# ---- Changed-files verification (human entry point; the verify-runner
+# subagent runs ai-agents/scripts/verify-changed.sh directly) ----
+
+[tasks."verify:changed"]
+description = "Run tests/linters mapped to changed files (pass files after --)"
+run = '"{{config_root}}/ai-agents/scripts/verify-changed.sh"'
+
 # ---- Docker ----
 
 [tasks."docker:build"]
