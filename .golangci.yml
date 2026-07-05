@@ -20,6 +20,7 @@ linters:
     - contextcheck # context の伝播漏れ
     - makezero # make + append の初期長バグ
     - wastedassign # 使われない代入
+    - modernize # モダン API への置換提案（strings.Cut / min-max / slices 等）。gopls の指摘を CI でも担保する
     # --- 規約・品質（maintainability） ---
     - gocritic # 高シグナルな診断群
     - revive # golint 後継
