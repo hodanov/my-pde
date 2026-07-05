@@ -184,16 +184,13 @@ func renderToken(src, from, to string) string {
 // mise.toml, up to (but excluding) the next "# ---- " marker.
 func extractMiseSection(mise, from string) (string, error) {
 	marker := "# ---- " + from + " (Go) ----"
-	start := strings.Index(mise, marker)
-	if start < 0 {
+	_, rest, found := strings.Cut(mise, marker)
+	if !found {
 		return "", fmt.Errorf("mise.toml has no %q section to use as a template", marker)
 	}
-	rest := mise[start+len(marker):]
-	next := strings.Index(rest, "# ---- ")
-	section := rest
-	if next >= 0 {
-		section = rest[:next]
-	}
+	// Cut returns rest unchanged when no next marker exists, which is exactly
+	// the "section runs to end of file" case.
+	section, _, _ := strings.Cut(rest, "# ---- ")
 	return marker + strings.TrimRight(section, "\n") + "\n", nil
 }
 
