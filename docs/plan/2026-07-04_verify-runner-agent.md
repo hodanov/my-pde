@@ -19,7 +19,7 @@
 
 - **修正はしない**: verify-runner は実行と報告のみ。修正権限を持たせると自己採点ループになり、実装意図を知らないまま「テストを黙らせる修正」をするリスクがあるため、修正は実装コンテキストを持つメインエージェントの責務とする
 - **既存規約に準拠**: frontmatter・ボディ構成は `code-review-scanner.md`（Bash 持ち・`permissionMode: default`）をモデルにし、`.claude/rules/agent-authoring.md` に従う。モデルは既存エージェントと同じ sonnet
-- **マッピングは決定的スクリプトに分離**: 変更検出（lint-changed.sh と同じ unstaged + staged + untracked の union）とファイル種別 → コマンドのマッピングは LLM の判断ではなく `ai-agents/scripts/verify-changed.sh`（`mise run verify:changed`）が決定的に行う。エージェントはタスクを起動して出力を要約するだけの存在にし、遅い・高い・マッピングを間違えるという LLM 実行のコストを排除する。スクリプトは人間も同じコマンドで実行できる
+- **マッピングは決定的スクリプトに分離**: 変更検出（lint-changed.sh と同じ unstaged + staged + untracked の union）とファイル種別 → コマンドのマッピングは LLM の判断ではなく `ai-agents/scripts/verify-changed.sh` が決定的に行う。エージェントはスクリプトを起動して出力を要約するだけの存在にし、遅い・高い・マッピングを間違えるという LLM 実行のコストを排除する。エージェントは mise を経由せずスクリプトを直接実行する（mise 未導入環境でも各チェックの `command -v` ガードにより SKIP へ縮退して動く）。人間向けには `mise run verify:changed` を入り口として用意する
 - **出力は要約強制**: 成功は 1 行、失敗は file:line + エラー抜粋 10 行程度まで
 - **hook の置き換えではなく補完**: Stop hook は決定的で安い最後の砦として残し、verify-runner はオンデマンドの深い検証を担う
 
@@ -34,7 +34,7 @@
 
 - `ai-agents/scripts/verify-changed.sh`（新規）: 変更検出 → マッピング → 実行 → `[PASS]/[FAIL]/[SKIP]` レポートまでを決定的に行うスクリプト。引数でファイル指定可（`mise run verify:changed -- <file>...`）。失敗が 1 つでもあれば exit 1。マッピング対象外のファイルは `no check mapped` として列挙
 - `mise.toml`（編集）: `verify:changed` タスクを追加
-- `ai-agents/agents/verify-runner.md`（新規）: エージェント定義。`mise run verify:changed` を実行 → 出力を日本語見出しの Verification Report（判定/実行結果/失敗詳細/スキップ）に要約。タスクが存在しないリポジトリでは設定ファイルから検証コマンドを探すフォールバックあり
+- `ai-agents/agents/verify-runner.md`（新規）: エージェント定義。`./ai-agents/scripts/verify-changed.sh` を直接実行 → 出力を日本語見出しの Verification Report（判定/実行結果/失敗詳細/スキップ）に要約。スクリプトが存在しないリポジトリでは設定ファイルから検証コマンドを探すフォールバックあり
 - `ai-agents/skills/dev-workflow/SKILL.md`（編集）: 新規/既存両フローの verify ステップと検証ルール（共通）に verify-runner への委譲を追記
 
 ## Risks and mitigations
