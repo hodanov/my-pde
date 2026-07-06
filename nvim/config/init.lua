@@ -30,6 +30,8 @@ vim.opt.mouse = "" -- Don't use a mouse.
 vim.opt.signcolumn = "yes" -- Always show signcolumn to prevent rattling.
 vim.opt.foldlevelstart = 99 -- Open files fully expanded; folds (treesitter foldexpr) are closed manually when needed.
 vim.opt.updatetime = 300 -- Fire CursorHold sooner (default 4000ms) for LSP document highlight. Kept >250ms to avoid frequent swap writes.
+vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current window.
+vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
 
 -- ----------------------------------------
 -- Neovim 0.12 で追加された UI オプション
