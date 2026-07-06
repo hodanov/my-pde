@@ -85,13 +85,19 @@ export PATH="$PATH:/Applications/Docker.app/Contents/Resources/bin/"
 ####################
 zstyle ':completion:*:*:git:*' script ~/.zsh/completion/git-completion.bash
 fpath=(~/.zsh/completion $fpath)
-autoload -Uz compinit && compinit -i
 
 # The following lines have been added by Docker Desktop to enable Docker CLI completions.
 fpath=(/Users/hodanov/.docker/completions $fpath)
-autoload -Uz compinit
-compinit
 # End of Docker CLI completions
+
+# 補完初期化は1回だけ。セキュリティ監査つきの dump 再生成は「24時間より
+# 古いとき」だけ行い、それ以外はキャッシュ済み dump を -C で読んで監査を省略する。
+autoload -Uz compinit
+if [[ -n ${HOME}/.zcompdump(#qN.mh+24) ]]; then
+  compinit -i
+else
+  compinit -C
+fi
 
 ####################
 # anyenv
