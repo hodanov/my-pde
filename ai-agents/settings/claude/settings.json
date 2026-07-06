@@ -144,17 +144,27 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
-    "excludedCommands": ["mise run *", "go test *"],
+    "excludedCommands": [
+      "mise run *",
+      "go test *",
+      "git push *",
+      "git fetch *",
+      "git pull *",
+      "git clone *",
+      "gh *"
+    ],
     "filesystem": {
       "allowWrite": [
         "~/Library/Caches/go-build",
         "~/Library/Caches/golangci-lint",
-        "~/go/pkg/mod"
+        "~/go/pkg/mod",
+        "~/.npm"
       ]
     },
     "network": {
       "allowedDomains": [
         "github.com",
+        "api.github.com",
         "*.githubusercontent.com",
         "proxy.golang.org",
         "sum.golang.org",
