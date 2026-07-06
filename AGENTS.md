@@ -54,6 +54,14 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 - `mise.toml` is the single source of truth for tool versions. Weekly CI (`bump-versions.yml`) bumps the pins and regenerates the derived artifacts.
 - `mise run pins:sync` — regenerate `environment/tools/go/go-tools.txt` and the Dockerfile ARG defaults from `mise.toml` (CI verifies sync via `pins:check`).
 
+## Parallel Work (git worktrees)
+
+- Worktrees live outside the checkout: `~/workspace/.worktrees/<repo>/<name>/` (override the base with `WORKTREE_BASE`). Never create worktrees inside the repository.
+- Claude Code: `claude --worktree [<name>]` and subagent `isolation: worktree` follow this layout automatically via the `WorktreeCreate` hook (`ai-agents/settings/claude/hooks/worktree-create.sh`). `<name>` is disposable — omit it to auto-generate one.
+- The hook creates a placeholder branch named after `<name>`. Once the task is understood, rename it to a plain descriptive slug (no `wt/` or `agent/` prefix): `git branch -m <slug>`. Renaming works while checked out; the `commit-and-draft-pr` skill enforces this before push.
+- Other CLIs / manual use: `git worktree add ~/workspace/.worktrees/<repo>/<name> -b <slug> origin/main`.
+- Remove with `git worktree remove <path>`; git refuses dirty worktrees unless `--force` is given.
+
 ## Coding Style
 
 - Per-language lint/format conventions load on demand from path-scoped rules in `.claude/rules/` (and personal rules in `~/.claude/rules/`) when you touch matching files.

@@ -2,7 +2,7 @@
 name: commit-and-draft-pr
 description: 変更をコミットしてドラフトPRを作成する一連のGit/ghワークフロー。ユーザーが「コミットして」「PR作って」「draft PR」等を求めたときに使用し、status/diff確認・命令形コミット・push・gh pr create --draft（--assignee hodanov）まで実行する。
 metadata:
-  version: 1
+  version: 2
 ---
 
 # Commit and Draft PR
@@ -11,7 +11,7 @@ metadata:
 
 作業開始時にこれをコピーして進捗を管理する:
 
-- [ ] 1. 変更とブランチを確認（`main` または detached HEAD なら feature ブランチを作成）
+- [ ] 1. 変更とブランチを確認（`main` または detached HEAD なら feature ブランチを作成、worktree の仮ブランチ名ならリネーム）
 - [ ] 2. テスト/リンタ/型チェックの状態を確認（当セッションで検証済みなら再実行せずスキップ、未検証なら実行して全て通す）
 - [ ] 3. 必要な変更のみステージング
 - [ ] 4. 規約に沿ったメッセージでコミット
@@ -24,6 +24,7 @@ metadata:
 - `git log --oneline -5` で直近の履歴を把握する
 - `git branch` で現在ブランチを確認する
 - `main` または detached HEAD の場合は feature ブランチを作成する
+- ブランチ名が worktree の仮名のまま（worktree ディレクトリ名と同名、または `bright-running-fox` のような自動生成名）の場合は、作業内容を表す prefix なしの `<slug>` を命名して `git branch -m <slug>` でリネームしてから進める（AGENTS.md「Parallel Work (git worktrees)」の規約）
 - 変更が無い（diff が空）場合は中断して報告する
 
 ## 検証
