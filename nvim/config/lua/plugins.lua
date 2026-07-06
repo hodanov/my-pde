@@ -78,7 +78,7 @@ return {
 	{ -- Auto completion
 		"saghen/blink.cmp",
 		lazy = true,
-		event = { "BufRead", "BufNewFile" },
+		event = { "BufRead", "BufNewFile", "CmdlineEnter" },
 		version = "1.*",
 		config = function()
 			require("blink_cmp")
