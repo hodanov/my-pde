@@ -10,18 +10,18 @@ shfmt = "3.13.1"
 shellcheck = "0.11.0"
 stylua = "2.5.2"
 hadolint = "2.14.0"
-"go:golang.org/x/tools/cmd/goimports" = "0.36.0"
+"go:golang.org/x/tools/cmd/goimports" = "0.47.0"
 "go:golang.org/x/tools/gopls" = "0.22.0"
-"go:github.com/go-delve/delve/cmd/dlv" = "1.26.1"
+"go:github.com/go-delve/delve/cmd/dlv" = "1.27.0"
 "go:github.com/nametake/golangci-lint-langserver" = "0.0.12"
-terraform-ls = "0.38.7"
+terraform-ls = "0.38.8"
 tflint = "0.63.1"
 
 # Docker-only versions: synced into the Dockerfile ARG defaults by
 # `mise run pins:sync` and injected as --build-arg by `mise run docker:build`.
 [env]
-NEOVIM_VERSION = "0.12.3"
-NPM_VERSION = "11.17.0"
+NEOVIM_VERSION = "0.12.4"
+NPM_VERSION = "11.18.0"
 RUST_TOOLCHAIN = "stable"
 TERRAFORM_VERSION = "1.15.7"
 

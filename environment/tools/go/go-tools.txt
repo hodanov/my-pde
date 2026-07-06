@@ -1,7 +1,7 @@
-golang.org/x/tools/cmd/...@v0.36.0
+golang.org/x/tools/cmd/...@v0.47.0
 golang.org/x/tools/gopls@v0.22.0
-github.com/go-delve/delve/cmd/dlv@v1.26.1
+github.com/go-delve/delve/cmd/dlv@v1.27.0
 github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 github.com/nametake/golangci-lint-langserver@v0.0.12
-github.com/hashicorp/terraform-ls@v0.38.7
+github.com/hashicorp/terraform-ls@v0.38.8
 github.com/terraform-linters/tflint@v0.63.1
