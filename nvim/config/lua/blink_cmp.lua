@@ -45,6 +45,18 @@ require("blink.cmp").setup({
 		},
 	},
 
+	-- コマンドライン (: / 検索) 補完。既定では cmdline は有効だが auto_show が cmdwin 限定なので、
+	-- 通常の : 入力中もメニューが自動表示されるよう auto_show = true にする。
+	-- keymap preset "cmdline" は Tab で挿入/確定、単一候補は自動確定する定番マッピング。
+	cmdline = {
+		enabled = true,
+		keymap = { preset = "cmdline" },
+		sources = { "buffer", "cmdline" },
+		completion = {
+			menu = { auto_show = true },
+		},
+	},
+
 	-- (Default) Rust fuzzy matcher for typo resistance and significantly better performance
 	-- You may use a lua implementation instead by using `implementation = "lua"` or fallback to the lua implementation,
 	-- when the Rust fuzzy matcher is not available, by using `implementation = "prefer_rust"`
