@@ -61,6 +61,7 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 - The hook creates a placeholder branch named after `<name>`. Once the task is understood, rename it to a plain descriptive slug (no `wt/` or `agent/` prefix): `git branch -m <slug>`. Renaming works while checked out; the `commit-and-draft-pr` skill enforces this before push.
 - Other CLIs / manual use: `git worktree add ~/workspace/.worktrees/<repo>/<name> -b <slug> origin/main`.
 - Remove with `git worktree remove <path>`; git refuses dirty worktrees unless `--force` is given.
+- mise: worktree checkouts contain their own `mise.toml`, which mise refuses until trusted. One-time setup per machine: `mise settings add trusted_config_paths "~/workspace/.worktrees"` (trusts every config under the worktree base — same trust you would grant per repo with `mise trust`).
 
 ## Coding Style
 
