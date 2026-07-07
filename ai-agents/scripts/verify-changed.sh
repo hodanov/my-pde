@@ -70,6 +70,8 @@ unmapped=""
 while IFS= read -r f; do
 	{ [ -n "$f" ] && [ -f "$f" ]; } || continue
 	mapped=0
+	# This scripts/<app> Go pattern is mirrored in .claude/hooks/test-changed.sh
+	# (the report-only Stop hook). Keep the two in sync when the layout changes.
 	case "$f" in
 	scripts/*/*.go | scripts/*/go.mod | scripts/*/go.sum | scripts/*/testdata/*)
 		app=${f#scripts/}

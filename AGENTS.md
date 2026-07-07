@@ -75,6 +75,7 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 - Not covered by rules: Dockerfile lint (`hadolint environment/docker/nvim.dockerfile`).
 - AI Bridge has Go unit tests: `mise run ai-bridge:test`.
 - No repository-level test suite beyond per-directory checks.
+- In Claude, the repo-local Stop hook `.claude/hooks/test-changed.sh` auto-runs `go test` for changed `scripts/<app>` apps (report-only, non-blocking; opt out with `TEST_CHANGED_DISABLE=1`).
 
 ## Commit & PR Guidelines
 
