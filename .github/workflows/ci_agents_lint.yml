@@ -1,0 +1,20 @@
+name: CI agents-lint
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+    paths:
+      - "scripts/agents-lint/**"
+      - mise.toml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: ./.github/workflows/go_module_ci.yml
+    with:
+      module: agents-lint

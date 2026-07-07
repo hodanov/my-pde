@@ -197,6 +197,37 @@ description = "Remove scaffold build artifacts"
 dir = "scripts/scaffold"
 run = "rm -f scaffold coverage.out"
 
+# ---- agents-lint (Go) ----
+
+[tasks."agents-lint:build"]
+description = "Build the agents-lint binary"
+dir = "scripts/agents-lint"
+run = "go build -o agents-lint ./cmd/agents-lint"
+
+[tasks."agents-lint:test"]
+description = "Run agents-lint Go tests"
+dir = "scripts/agents-lint"
+run = "go test ./..."
+
+[tasks."agents-lint:lint"]
+description = "Run golangci-lint and goimports check for agents-lint"
+dir = "scripts/agents-lint"
+run = [
+  "golangci-lint run --allow-parallel-runners",
+  '''
+diff=$(find . -name '*.go' -exec goimports -d {} +)
+if [ -n "$diff" ]; then
+  echo "$diff"
+  exit 1
+fi
+''',
+]
+
+[tasks."agents-lint:clean"]
+description = "Remove agents-lint build artifacts"
+dir = "scripts/agents-lint"
+run = "rm -f agents-lint coverage.out"
+
 # ---- Aggregates ----
 
 [tasks."go:test"]
@@ -206,7 +237,8 @@ depends = [
   "nvim-sync:test",
   "config-diff:test",
   "go-verify:test",
-  "scaffold:test"
+  "scaffold:test",
+  "agents-lint:test"
 ]
 
 [tasks."go:lint"]
@@ -216,7 +248,8 @@ depends = [
   "nvim-sync:lint",
   "config-diff:lint",
   "go-verify:lint",
-  "scaffold:lint"
+  "scaffold:lint",
+  "agents-lint:lint"
 ]
 
 # ---- AI agents deploy: agents.xml symlinks ----
