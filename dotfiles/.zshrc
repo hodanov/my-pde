@@ -100,11 +100,6 @@ else
 fi
 
 ####################
-# anyenv
-####################
-eval "$(anyenv init -)"
-
-####################
 # cursor cli
 ####################
 export PATH="$HOME/.local/bin:$PATH"
