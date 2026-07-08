@@ -1,0 +1,4 @@
+# Rendered Marp artifacts (source of truth is the .md)
+*.pdf
+*.pptx
+*.html
