@@ -5,6 +5,10 @@ config:
 ignores:
   - ".github"
   - "assets"
+  # Marp slide decks legitimately use inline HTML and multiple H1s (lead slides),
+  # which conflict with prose-oriented rules. Exclude decks and the Marp template.
+  - "docs/slides/**"
+  - "**/marp-template.md"
   - "**/.bash_profile"
   - "**.json"
   - "**.lua"
