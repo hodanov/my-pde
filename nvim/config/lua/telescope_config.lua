@@ -23,6 +23,14 @@ end, { desc = "Live Grep (include hidden)" })
 vim.keymap.set("n", "<leader>fb", builtin.buffers, { desc = "Telescope buffers" })
 vim.keymap.set("n", "<leader>fh", builtin.help_tags, { desc = "Telescope help tags" })
 
+-- LSP シンボル / 診断ピッカー (LSP アタッチ済みバッファで有効)
+vim.keymap.set("n", "<leader>fs", builtin.lsp_document_symbols, { desc = "LSP document symbols (current file)" })
+vim.keymap.set("n", "<leader>fS", builtin.lsp_dynamic_workspace_symbols, { desc = "LSP workspace symbols (project)" })
+vim.keymap.set("n", "<leader>fd", function()
+	builtin.diagnostics({ bufnr = 0 })
+end, { desc = "Diagnostics (current buffer)" })
+vim.keymap.set("n", "<leader>fD", builtin.diagnostics, { desc = "Diagnostics (all buffers)" })
+
 -- ----------
 -- telescope-file-browser.nvim
 -- ----------
