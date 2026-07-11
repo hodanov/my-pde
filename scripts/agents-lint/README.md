@@ -39,6 +39,7 @@ Exit code: `0` = クリーン / `1` = lint 違反（error あり、または `--
 | skills | `ref-agent-exists`（`subagent_type` 参照先が `agents/<name>.md` に実在）     | error |
 | skills | `frontmatter-unknown-key`（既知キー外）                                      | warn  |
 | agents | `frontmatter-present` / `name-matches-file` / `description-required`         | error |
+| agents | `name-required` / `name-format` / `name-reserved`（skills と同じ命名規約）   | error |
 | agents | `tools-present` / `model-present`                                            | warn  |
 | agents | `frontmatter-unknown-key`                                                    | warn  |
 
@@ -53,6 +54,8 @@ Agent-Skills 仕様に直結するのは「どの frontmatter キーが既知か
 
 散文中の言及は誤検出源なので拾わず、明示的な `subagent_type` シグナルにアンカーする
 （backtick 形式・`subagent_type: name` 一体形式・Markdown テーブル列の 3 形態）。
+backtick 形式で参照として扱うのは `subagent_type` スパンの**直後のスパンのみ**で、
+同一行の他のスパンは散文として無視する。テーブルのヘッダ・セルは backtick 付きでも解決する。
 
 ## 開発
 

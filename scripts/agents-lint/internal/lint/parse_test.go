@@ -129,6 +129,18 @@ func TestExtractAgentRefs(t *testing.T) {
 			want: []string{"review-performance", "review-security"},
 		},
 		{
+			name: "unrelated backtick span on signal line is ignored",
+			body: "- `subagent_type`: `real-agent` を `medium` の深さで起動する\n",
+			want: []string{"real-agent"},
+		},
+		{
+			name: "backticked table header and cells",
+			body: "| Agent | `subagent_type` |\n" +
+				"| ----- | --------------- |\n" +
+				"| sec   | `review-security` |\n",
+			want: []string{"review-security"},
+		},
+		{
 			name: "prose mention without signal is ignored",
 			body: "investigation-scout と investigation-diver による2フェーズ調査。",
 			want: nil,

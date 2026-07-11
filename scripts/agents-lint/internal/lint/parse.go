@@ -151,6 +151,7 @@ func extractAgentRefs(body string) []string {
 	seen := map[string]bool{}
 	var refs []string
 	add := func(name string) {
+		name = stripTicks(name)
 		if name != "" && name != "subagent_type" && nameRe.MatchString(name) && !seen[name] {
 			seen[name] = true
 			refs = append(refs, name)
@@ -161,14 +162,21 @@ func extractAgentRefs(body string) []string {
 		if !strings.Contains(line, "subagent_type") {
 			continue
 		}
-		// Inline backtick forms.
-		for _, m := range backtickRe.FindAllStringSubmatch(line, -1) {
-			span := strings.TrimSpace(m[1])
-			if after, ok := strings.CutPrefix(span, "subagent_type"); ok {
-				add(strings.TrimSpace(strings.TrimLeft(after, ": ")))
+		// Inline backtick forms, anchored on a subagent_type span: the span
+		// either carries the name itself (`subagent_type: name`) or the name
+		// is the next span on the line (`subagent_type`: `name`). Other spans
+		// on the line are prose, not references.
+		spans := backtickRe.FindAllStringSubmatch(line, -1)
+		for si, m := range spans {
+			after, ok := strings.CutPrefix(strings.TrimSpace(m[1]), "subagent_type")
+			if !ok {
 				continue
 			}
-			add(span)
+			if name := strings.TrimSpace(strings.TrimLeft(after, ": ")); name != "" {
+				add(name)
+			} else if si+1 < len(spans) {
+				add(spans[si+1][1])
+			}
 		}
 		// Markdown table form: find the subagent_type column, read it in rows below.
 		if col := tableColumnIndex(line, "subagent_type"); col >= 0 {
@@ -186,6 +194,13 @@ func extractAgentRefs(body string) []string {
 	return refs
 }
 
+// stripTicks trims surrounding whitespace and backticks, so a backticked
+// table header or cell (`subagent_type`, `review-security`) compares and
+// resolves the same as its bare form.
+func stripTicks(s string) string {
+	return strings.TrimSpace(strings.Trim(strings.TrimSpace(s), "`"))
+}
+
 // tableColumnIndex returns the zero-based cell index whose header equals title
 // in a markdown table row, or -1.
 func tableColumnIndex(row, title string) int {
@@ -193,7 +208,7 @@ func tableColumnIndex(row, title string) int {
 		return -1
 	}
 	for i, cell := range splitRow(row) {
-		if strings.TrimSpace(cell) == title {
+		if stripTicks(cell) == title {
 			return i
 		}
 	}

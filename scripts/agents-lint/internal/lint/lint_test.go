@@ -141,6 +141,8 @@ func TestRunAgentRules(t *testing.T) {
 		{name: "valid", base: "foo", content: validAgent("foo"), wantRule: ""},
 		{name: "missing frontmatter", base: "foo", content: "just body\n", wantRule: "frontmatter-present", wantSev: SeverityError},
 		{name: "name mismatches file", base: "foo", content: "---\nname: bar\ndescription: d\ntools: Read\nmodel: x\n---\n", wantRule: "name-matches-file", wantSev: SeverityError},
+		{name: "bad name format", base: "foo_bar", content: "---\nname: foo_bar\ndescription: d\ntools: Read\nmodel: x\n---\n", wantRule: "name-format", wantSev: SeverityError},
+		{name: "reserved word", base: "claude-helper", content: "---\nname: claude-helper\ndescription: d\ntools: Read\nmodel: x\n---\n", wantRule: "name-reserved", wantSev: SeverityError},
 		{name: "empty description", base: "foo", content: "---\nname: foo\ndescription:\ntools: Read\nmodel: x\n---\n", wantRule: "description-required", wantSev: SeverityError},
 		{name: "tools absent", base: "foo", content: "---\nname: foo\ndescription: d\nmodel: x\n---\n", wantRule: "tools-present", wantSev: SeverityWarn},
 		{name: "model absent", base: "foo", content: "---\nname: foo\ndescription: d\ntools: Read\n---\n", wantRule: "model-present", wantSev: SeverityWarn},

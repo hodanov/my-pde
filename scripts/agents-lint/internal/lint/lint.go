@@ -180,8 +180,11 @@ func checkAgent(target, base string, fm frontmatter) []Finding {
 	name := fm.value("name")
 	if name == "" {
 		findings = append(findings, Finding{target, "name-required", SeverityError, "name is missing or empty"})
-	} else if name != base {
-		findings = append(findings, Finding{target, "name-matches-file", SeverityError, "name " + q(name) + " does not match file name " + q(base)})
+	} else {
+		findings = append(findings, checkNameFormat(target, name)...)
+		if name != base {
+			findings = append(findings, Finding{target, "name-matches-file", SeverityError, "name " + q(name) + " does not match file name " + q(base)})
+		}
 	}
 	if fm.value("description") == "" {
 		findings = append(findings, Finding{target, "description-required", SeverityError, "description is missing or empty"})
@@ -250,19 +253,26 @@ func checkSkill(target, skillDir string, fm frontmatter, agentNames map[string]b
 	return findings
 }
 
-// checkSkillName validates the name field and records it for collision
-// detection.
-func checkSkillName(target, skillDir, name string, seen map[string]string) []Finding {
+// checkNameFormat validates the naming rules shared by skills and agents:
+// kebab-case within 64 chars, no reserved vendor words.
+func checkNameFormat(target, name string) []Finding {
 	var findings []Finding
-	if name == "" {
-		return []Finding{{target, "name-required", SeverityError, "name is missing or empty"}}
-	}
 	if !nameRe.MatchString(name) || len(name) > 64 {
 		findings = append(findings, Finding{target, "name-format", SeverityError, "name " + q(name) + " must be lowercase kebab-case within 64 chars"})
 	}
 	if w := reservedHit(name); w != "" {
 		findings = append(findings, Finding{target, "name-reserved", SeverityError, "name " + q(name) + " contains reserved word " + q(w)})
 	}
+	return findings
+}
+
+// checkSkillName validates the name field and records it for collision
+// detection.
+func checkSkillName(target, skillDir, name string, seen map[string]string) []Finding {
+	if name == "" {
+		return []Finding{{target, "name-required", SeverityError, "name is missing or empty"}}
+	}
+	findings := checkNameFormat(target, name)
 	if name != skillDir {
 		findings = append(findings, Finding{target, "name-matches-dir", SeverityError, "name " + q(name) + " does not match directory " + q(skillDir)})
 	}
