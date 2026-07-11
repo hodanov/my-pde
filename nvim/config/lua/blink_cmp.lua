@@ -45,15 +45,15 @@ require("blink.cmp").setup({
 		},
 	},
 
-	-- コマンドライン (: / 検索) 補完。既定では cmdline は有効だが auto_show が cmdwin 限定なので、
-	-- 通常の : 入力中もメニューが自動表示されるよう auto_show = true にする。
+	-- コマンドライン (: / 検索) 補完。auto_show = true は打鍵ごとにメニューが出て煩わしかったので
+	-- false にし、Tab を押したときだけメニューを表示する。
 	-- keymap preset "cmdline" は Tab で挿入/確定、単一候補は自動確定する定番マッピング。
 	cmdline = {
 		enabled = true,
 		keymap = { preset = "cmdline" },
 		sources = { "buffer", "cmdline" },
 		completion = {
-			menu = { auto_show = true },
+			menu = { auto_show = false },
 		},
 	},
 
