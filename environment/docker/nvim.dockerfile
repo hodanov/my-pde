@@ -153,6 +153,7 @@ WORKDIR /
 # Stage 6: Fetch hadolint binary only
 FROM base AS hadolint-builder
 
+ARG HADOLINT_VERSION=2.14.0
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
@@ -161,7 +162,7 @@ RUN set -eux; \
     arm64) HL_ARCH="Linux-arm64" ;; \
     *) echo "Unsupported arch for hadolint: $ARCH" >&2; exit 1 ;; \
   esac; \
-  BASE_URL="https://github.com/hadolint/hadolint/releases/latest/download"; \
+  BASE_URL="https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}"; \
   TMPDIR="/tmp/hadolint"; \
   mkdir -p "$TMPDIR"; \
   BIN_PATH="$TMPDIR/hadolint"; \
