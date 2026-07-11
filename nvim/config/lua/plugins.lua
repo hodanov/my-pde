@@ -84,6 +84,14 @@ return {
 			require("blink_cmp")
 		end,
 	},
+	{ -- Auto-close brackets/quotes (入力時のペア自動クローズ)
+		"windwp/nvim-autopairs",
+		lazy = true,
+		event = "InsertEnter",
+		config = function()
+			require("nvim_autopairs")
+		end,
+	},
 	{ -- Debug Adapter Protocol
 		"mfussenegger/nvim-dap",
 		lazy = true,
