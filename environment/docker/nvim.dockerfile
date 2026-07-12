@@ -11,6 +11,10 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=Asia/Tokyo
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# Ubuntu removes superseded package versions from the archive, so =version
+# pins break builds nondeterministically. Keep apt packages unpinned in this
+# and the other apt-get RUNs below.
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
   # Common tools
   curl unzip wget ca-certificates git build-essential pkg-config \
@@ -38,13 +42,12 @@ ENV LC_CTYPE=ja_JP.UTF-8
 FROM base AS nvim-builder
 
 ARG NEOVIM_VERSION=0.12.4
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ninja-build gettext cmake \
-  && git clone https://github.com/neovim/neovim /neovim \
-  && cd /neovim \
-  && git checkout "v$NEOVIM_VERSION" \
-  && make -j"$(nproc)" CMAKE_BUILD_TYPE=RelWithDebInfo \
-  && make install DESTDIR=/neovim-install \
+  && git clone --depth 1 --branch "v$NEOVIM_VERSION" https://github.com/neovim/neovim /neovim \
+  && make -C /neovim -j"$(nproc)" CMAKE_BUILD_TYPE=RelWithDebInfo \
+  && make -C /neovim install DESTDIR=/neovim-install \
   && apt-get clean -y \
   && rm -rf /var/lib/apt/lists/*
 
@@ -58,6 +61,8 @@ ENV NODE_HOME="/opt/node"
 ENV PATH="${NODE_HOME}/bin:${PATH}"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+WORKDIR /tmp/node
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends xz-utils \
   && ARCH="$(dpkg --print-architecture)" \
   && case "$ARCH" in \
@@ -65,7 +70,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends xz-utils \
   arm64) NODE_ARCH="linux-arm64" ;; \
   *) echo "Unsupported arch: $ARCH" && exit 1 ;; \
   esac \
-  && cd /tmp \
   && NODE_TARBALL="node-v${NODE_VERSION}-${NODE_ARCH}.tar.xz" \
   && NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TARBALL}" \
   && curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$NODE_URL" -o "$NODE_TARBALL" \
@@ -74,15 +78,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends xz-utils \
   && grep " ${NODE_TARBALL}$" SHASUMS256.txt | sha256sum -c - \
   && tar -xJf "$NODE_TARBALL" \
   && mkdir -p "$NODE_HOME" \
-  && mv "/tmp/node-v${NODE_VERSION}-${NODE_ARCH}"/* "$NODE_HOME"/ \
-  && rm -rf "/tmp/node-v${NODE_VERSION}-${NODE_ARCH}" "$NODE_TARBALL" SHASUMS256.txt \
+  && mv "node-v${NODE_VERSION}-${NODE_ARCH}"/* "$NODE_HOME"/ \
+  && rm -rf "node-v${NODE_VERSION}-${NODE_ARCH}" "$NODE_TARBALL" SHASUMS256.txt \
   && npm install -g npm@"$NPM_VERSION" \
   && apt-get clean -y \
   && rm -rf /var/lib/apt/lists/*
 
 COPY ./environment/tools/node/ /opt/npm-tools/
+WORKDIR /opt/npm-tools
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-  cd /opt/npm-tools && npm install --omit=dev --no-audit --no-fund
+  npm install --omit=dev --no-audit --no-fund
 
 ####################
 # Stage 3: Build Go toolchain and tools
@@ -109,9 +114,17 @@ RUN ARCH="$(dpkg --print-architecture)" \
 
 ENV PATH="/usr/local/go/bin:${PATH}"
 COPY ./environment/tools/go/go-tools.txt /tmp/go-tools.txt
+# go-tools.txt is generated fully pinned by `mise run pins:sync`; the case
+# guard below enforces that at build time since hadolint cannot see through
+# "$pkg".
+# hadolint ignore=DL3062
 RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     --mount=type=cache,target=/root/go/pkg/mod,sharing=locked \
     while read -r pkg; do \
+      case "$pkg" in \
+        *@*) ;; \
+        *) echo "Unpinned go tool: $pkg" >&2; exit 1 ;; \
+      esac; \
       CGO_ENABLED=0 go install "$pkg" || exit 1; \
     done < /tmp/go-tools.txt
 
@@ -121,6 +134,7 @@ FROM base AS rust-builder
 
 ARG RUST_TOOLCHAIN=stable
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
   clang libclang-dev \
   && curl --proto '=https' --tlsv1.2 --retry 5 --retry-all-errors --retry-delay 2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "$RUST_TOOLCHAIN" \
@@ -136,6 +150,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 FROM base AS python-builder
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv \
   && curl --retry 5 --retry-all-errors --retry-delay 2 -LsSf https://astral.sh/uv/install.sh | sh \
   && export PATH="$HOME/.local/bin:$PATH" \
@@ -194,7 +209,9 @@ RUN set -eux; \
   SUMS_NAME="terraform_${TERRAFORM_VERSION}_SHA256SUMS"; \
   curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$ZIP_NAME" -o "$TMPDIR/$ZIP_NAME"; \
   curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$SUMS_NAME" -o "$TMPDIR/$SUMS_NAME"; \
-  (cd "$TMPDIR" && grep " ${ZIP_NAME}$" "$SUMS_NAME" | sha256sum -c -); \
+  REF_SHA="$(grep " ${ZIP_NAME}$" "$TMPDIR/$SUMS_NAME" | awk '{print $1}')"; \
+  ACT_SHA="$(sha256sum "$TMPDIR/$ZIP_NAME" | awk '{print $1}')"; \
+  [ "$ACT_SHA" = "$REF_SHA" ] || (echo "terraform zip checksum mismatch: expected=$REF_SHA actual=$ACT_SHA" >&2; exit 1); \
   unzip -o "$TMPDIR/$ZIP_NAME" -d "$TMPDIR"; \
   install -m 0755 "$TMPDIR/terraform" /usr/local/bin/terraform
 
@@ -204,6 +221,7 @@ FROM base
 
 COPY ./nvim/config/.bash_profile /root/
 
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ripgrep fd-find python3 mysql-client luarocks \
   && mkdir -p /root/.local/state/nvim/undo \
