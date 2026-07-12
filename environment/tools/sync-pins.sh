@@ -49,6 +49,7 @@ neovim_version=$(pin 'NEOVIM_VERSION')
 npm_version=$(pin 'NPM_VERSION')
 rust_toolchain=$(pin 'RUST_TOOLCHAIN')
 terraform_version=$(pin 'TERRAFORM_VERSION')
+hadolint_version=$(pin 'hadolint')
 
 sed -i.bak -E \
 	-e "s|^ARG GO_VERSION(=.*)?$|ARG GO_VERSION=${go_version}|" \
@@ -57,6 +58,7 @@ sed -i.bak -E \
 	-e "s|^ARG NPM_VERSION(=.*)?$|ARG NPM_VERSION=${npm_version}|" \
 	-e "s|^ARG RUST_TOOLCHAIN(=.*)?$|ARG RUST_TOOLCHAIN=${rust_toolchain}|" \
 	-e "s|^ARG TERRAFORM_VERSION(=.*)?$|ARG TERRAFORM_VERSION=${terraform_version}|" \
+	-e "s|^ARG HADOLINT_VERSION(=.*)?$|ARG HADOLINT_VERSION=${hadolint_version}|" \
 	"$DOCKERFILE"
 rm -f "${DOCKERFILE}.bak"
 echo "Synced ARG defaults in $DOCKERFILE"
