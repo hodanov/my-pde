@@ -1,20 +1,29 @@
 package lint
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 )
 
+// Sentinel errors returned by parseFrontmatter when the block shape is broken.
+// Their messages double as the finding details for the shape rules.
+var (
+	errFrontmatterMissing      = errors.New("missing leading --- frontmatter block")
+	errFrontmatterUnterminated = errors.New("frontmatter block is not terminated by ---")
+)
+
 // frontmatter is the parsed leading --- ... --- block of a markdown file.
+// parseFrontmatter is the sole constructor and fails early on a missing or
+// unterminated block, so a frontmatter value always represents a well-formed
+// block and consumers never re-check its shape.
 // Values collapse block scalars (">-", "|") and nested maps into a single
 // string; the rules only need presence and emptiness of top-level fields, so
 // this deliberately does not implement full YAML (dependency-free).
 type frontmatter struct {
-	present bool              // a leading --- delimiter was found on line 1
-	closed  bool              // a closing --- delimiter was found
-	fields  map[string]string // top-level key -> value (block scalars joined)
-	keys    []string          // top-level keys in document order
-	body    string            // content after the closing delimiter
+	fields map[string]string // top-level key -> value (block scalars joined)
+	keys   []string          // top-level keys in document order
+	body   string            // content after the closing delimiter
 }
 
 // value returns the value for key, or "" if absent.
@@ -26,39 +35,52 @@ func (f frontmatter) has(key string) bool {
 	return ok
 }
 
-// parseFrontmatter extracts the frontmatter block and the body that follows.
-// It is pure: no filesystem access.
-func parseFrontmatter(data []byte) frontmatter {
-	fm := frontmatter{fields: map[string]string{}}
+// unknownKeys returns the top-level keys absent from known, in document order.
+func (f frontmatter) unknownKeys(known map[string]bool) []string {
+	var unknown []string
+	for _, k := range f.keys {
+		if !known[k] {
+			unknown = append(unknown, k)
+		}
+	}
+	return unknown
+}
+
+// parseFrontmatter extracts the frontmatter block and the body that follows,
+// or fails with errFrontmatterMissing / errFrontmatterUnterminated when the
+// block shape is broken. It is pure: no filesystem access.
+func parseFrontmatter(data []byte) (frontmatter, error) {
 	lines := strings.Split(string(data), "\n")
 	if len(lines) == 0 || trimCR(lines[0]) != "---" {
-		return fm // present == false
+		return frontmatter{}, errFrontmatterMissing
 	}
-	fm.present = true
 
-	end := len(lines) // index of the closing delimiter, or EOF if unterminated
+	end := -1 // index of the closing delimiter
 	for i := 1; i < len(lines); i++ {
 		if trimCR(lines[i]) == "---" {
-			fm.closed = true
 			end = i
 			break
 		}
 	}
+	if end < 0 {
+		return frontmatter{}, errFrontmatterUnterminated
+	}
 
+	fm := frontmatter{fields: map[string]string{}}
 	block := make([]string, 0, end-1)
 	for i := 1; i < end; i++ {
 		block = append(block, trimCR(lines[i]))
 	}
 	parseBlock(&fm, block)
 
-	if fm.closed && end < len(lines) {
+	if end < len(lines)-1 {
 		bodyLines := make([]string, 0, len(lines)-end-1)
 		for i := end + 1; i < len(lines); i++ {
 			bodyLines = append(bodyLines, trimCR(lines[i]))
 		}
 		fm.body = strings.Join(bodyLines, "\n")
 	}
-	return fm
+	return fm, nil
 }
 
 // parseBlock fills fm.fields/keys from the frontmatter body lines. Top-level

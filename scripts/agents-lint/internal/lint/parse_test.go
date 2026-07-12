@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"errors"
 	"sort"
 	"testing"
 )
@@ -10,8 +11,7 @@ func TestParseFrontmatter(t *testing.T) {
 	tests := []struct {
 		name            string
 		src             string
-		wantPresent     bool
-		wantClosed      bool
+		wantErr         error
 		wantName        string
 		wantDescription string
 		wantHasMetadata bool
@@ -20,8 +20,6 @@ func TestParseFrontmatter(t *testing.T) {
 		{
 			name:            "simple scalars",
 			src:             "---\nname: foo\ndescription: bar\n---\nbody text",
-			wantPresent:     true,
-			wantClosed:      true,
 			wantName:        "foo",
 			wantDescription: "bar",
 			wantBody:        "body text",
@@ -29,8 +27,6 @@ func TestParseFrontmatter(t *testing.T) {
 		{
 			name:            "folded block scalar",
 			src:             "---\nname: foo\ndescription: >-\n  line one\n  line two\n---\n# Heading",
-			wantPresent:     true,
-			wantClosed:      true,
 			wantName:        "foo",
 			wantDescription: "line one line two",
 			wantBody:        "# Heading",
@@ -38,8 +34,6 @@ func TestParseFrontmatter(t *testing.T) {
 		{
 			name:            "nested metadata map",
 			src:             "---\nname: foo\ndescription: bar\nmetadata:\n  version: 1\n---\n",
-			wantPresent:     true,
-			wantClosed:      true,
 			wantName:        "foo",
 			wantDescription: "bar",
 			wantHasMetadata: true,
@@ -48,30 +42,22 @@ func TestParseFrontmatter(t *testing.T) {
 		{
 			name:            "double quoted value",
 			src:             "---\nname: foo\ndescription: \"quoted val\"\n---\n",
-			wantPresent:     true,
-			wantClosed:      true,
 			wantName:        "foo",
 			wantDescription: "quoted val",
 		},
 		{
-			name:        "no frontmatter",
-			src:         "# just a heading\ntext",
-			wantPresent: false,
-			wantClosed:  false,
+			name:    "no frontmatter",
+			src:     "# just a heading\ntext",
+			wantErr: errFrontmatterMissing,
 		},
 		{
-			name:            "unterminated frontmatter",
-			src:             "---\nname: foo\ndescription: bar\n",
-			wantPresent:     true,
-			wantClosed:      false,
-			wantName:        "foo",
-			wantDescription: "bar",
+			name:    "unterminated frontmatter",
+			src:     "---\nname: foo\ndescription: bar\n",
+			wantErr: errFrontmatterUnterminated,
 		},
 		{
 			name:            "empty name value",
 			src:             "---\nname:\ndescription: bar\n---\n",
-			wantPresent:     true,
-			wantClosed:      true,
 			wantName:        "",
 			wantDescription: "bar",
 		},
@@ -79,12 +65,15 @@ func TestParseFrontmatter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			fm := parseFrontmatter([]byte(tt.src))
-			if fm.present != tt.wantPresent {
-				t.Fatalf("present = %v, want %v", fm.present, tt.wantPresent)
+			fm, parseErr := parseFrontmatter([]byte(tt.src))
+			if tt.wantErr != nil {
+				if !errors.Is(parseErr, tt.wantErr) {
+					t.Fatalf("err = %v, want %v", parseErr, tt.wantErr)
+				}
+				return
 			}
-			if fm.closed != tt.wantClosed {
-				t.Fatalf("closed = %v, want %v", fm.closed, tt.wantClosed)
+			if parseErr != nil {
+				t.Fatalf("err = %v, want nil", parseErr)
 			}
 			if got := fm.value("name"); got != tt.wantName {
 				t.Fatalf("name = %q, want %q", got, tt.wantName)
@@ -95,7 +84,7 @@ func TestParseFrontmatter(t *testing.T) {
 			if got := fm.has("metadata"); got != tt.wantHasMetadata {
 				t.Fatalf("has(metadata) = %v, want %v", got, tt.wantHasMetadata)
 			}
-			if tt.wantClosed && fm.body != tt.wantBody {
+			if fm.body != tt.wantBody {
 				t.Fatalf("body = %q, want %q", fm.body, tt.wantBody)
 			}
 		})

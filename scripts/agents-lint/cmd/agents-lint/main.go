@@ -41,35 +41,19 @@ func execute(args []string, out, errOut io.Writer) int {
 		return 2
 	}
 
-	report, runErr := lint.Run(*root)
+	report, runErr := lint.Run(os.DirFS(*root))
 	if runErr != nil {
 		_, _ = fmt.Fprintln(errOut, "agents-lint:", runErr)
 		return 2
 	}
 
-	render(out, report)
+	report.Render(out)
 
-	if lint.HasError(report.Findings) {
+	if report.HasError() {
 		return 1
 	}
-	if *strict && lint.HasWarn(report.Findings) {
+	if *strict && report.HasWarn() {
 		return 1
 	}
 	return 0
-}
-
-// render writes the findings and a summary line to out.
-func render(out io.Writer, report lint.Report) {
-	errCount, warnCount := 0, 0
-	for _, f := range report.Findings {
-		switch f.Sev {
-		case lint.SeverityError:
-			errCount++
-		case lint.SeverityWarn:
-			warnCount++
-		}
-		_, _ = fmt.Fprintf(out, "%-5s %s\t%s: %s\n", f.Sev, f.Target, f.Rule, f.Detail)
-	}
-	_, _ = fmt.Fprintf(out, "checked %d skills, %d agents — %d errors, %d warnings\n",
-		report.SkillCount, report.AgentCount, errCount, warnCount)
 }
