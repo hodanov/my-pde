@@ -56,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM base AS node-builder
 
 ARG NODE_VERSION=24.18.0
-ARG NPM_VERSION=11.18.0
+ARG NPM_VERSION=12.0.1
 ENV NODE_HOME="/opt/node"
 ENV PATH="${NODE_HOME}/bin:${PATH}"
 
@@ -93,7 +93,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
 # Stage 3: Build Go toolchain and tools
 FROM base AS go-builder
 
-ARG GO_VERSION=1.26.4
+ARG GO_VERSION=1.26.5
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH="$(dpkg --print-architecture)" \
@@ -193,7 +193,7 @@ RUN set -eux; \
 # Stage 7: Fetch Terraform CLI binary only
 FROM base AS terraform-builder
 
-ARG TERRAFORM_VERSION=1.15.7
+ARG TERRAFORM_VERSION=1.15.8
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
