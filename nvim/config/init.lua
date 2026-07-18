@@ -167,6 +167,22 @@ else
 end
 
 -- ----------------------------------------
+-- 内蔵ターミナルの UX 整備
+-- ----------------------------------------
+local term_group = vim.api.nvim_create_augroup("terminal_ux", { clear = true })
+vim.api.nvim_create_autocmd("TermOpen", {
+	group = term_group,
+	callback = function()
+		vim.opt_local.number = false -- シェル出力に行番号を出さない
+		vim.opt_local.relativenumber = false
+		vim.opt_local.signcolumn = "no" -- サイン列を消して出力の折り返しずれを防ぐ
+		vim.cmd("startinsert") -- 開いた瞬間に端末操作モードへ入る
+	end,
+})
+-- terminal-mode からの脱出を簡略化（<Esc><Esc> を <C-\><C-n> の代替に）
+vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n>]], { desc = "Exit terminal mode" })
+
+-- ----------------------------------------
 -- indent_guides setting.
 -- ----------------------------------------
 vim.g.indent_guides_enable_on_vim_startup = 1
