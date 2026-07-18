@@ -34,6 +34,8 @@ vim.opt.foldlevelstart = 99 -- Open files fully expanded; folds (treesitter fold
 vim.opt.updatetime = 300 -- Fire CursorHold sooner (default 4000ms) for LSP document highlight. Kept >250ms to avoid frequent swap writes.
 vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current window.
 vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
+vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
+vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
 
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
