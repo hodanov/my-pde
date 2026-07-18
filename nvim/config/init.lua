@@ -23,6 +23,8 @@ vim.opt.smartindent = true -- Add a new line with autoindent
 vim.opt.colorcolumn = "120" -- Add a color on 80'th column
 vim.opt.hlsearch = true -- Highlight searched characters
 vim.opt.incsearch = true -- Highlight when inputting chars
+vim.opt.ignorecase = true -- 小文字のみの検索パターンは大文字小文字を無視する
+vim.opt.smartcase = true -- ただし大文字が1文字でも含まれる場合は大小を区別する（ignorecase と併用時のみ有効）
 vim.opt.wildmenu = true -- Show completion suggestions at command line mode
 vim.opt.conceallevel = 0 -- Show double quotations in json file and so on.
 vim.g.mapleader = " " -- Set a space key to a leader.
@@ -32,6 +34,30 @@ vim.opt.foldlevelstart = 99 -- Open files fully expanded; folds (treesitter fold
 vim.opt.updatetime = 300 -- Fire CursorHold sooner (default 4000ms) for LSP document highlight. Kept >250ms to avoid frequent swap writes.
 vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current window.
 vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
+vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
+vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
+
+-- ----------------------------------------
+-- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
+-- ----------------------------------------
+vim.opt.autoread = true -- ディスク上で更新されたファイルをバッファへ読み直す
+local autoread_group = vim.api.nvim_create_augroup("auto_reload_on_external_change", { clear = true })
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI" }, {
+	group = autoread_group,
+	callback = function()
+		-- コマンドライン入力中やバッファ種別が特殊なものは対象外
+		if vim.fn.mode() ~= "c" and vim.bo.buftype == "" then
+			vim.cmd("checktime")
+		end
+	end,
+})
+-- リロードが起きたら軽く通知（無言の差し替えを避ける）
+vim.api.nvim_create_autocmd("FileChangedShellPost", {
+	group = autoread_group,
+	callback = function()
+		vim.notify("Buffer reloaded from disk (external change)", vim.log.levels.INFO)
+	end,
+})
 
 -- ----------------------------------------
 -- Neovim 0.12 で追加された UI オプション
