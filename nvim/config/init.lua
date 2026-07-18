@@ -34,6 +34,28 @@ vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current w
 vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
 
 -- ----------------------------------------
+-- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
+-- ----------------------------------------
+vim.opt.autoread = true -- ディスク上で更新されたファイルをバッファへ読み直す
+local autoread_group = vim.api.nvim_create_augroup("auto_reload_on_external_change", { clear = true })
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI" }, {
+	group = autoread_group,
+	callback = function()
+		-- コマンドライン入力中やバッファ種別が特殊なものは対象外
+		if vim.fn.mode() ~= "c" and vim.bo.buftype == "" then
+			vim.cmd("checktime")
+		end
+	end,
+})
+-- リロードが起きたら軽く通知（無言の差し替えを避ける）
+vim.api.nvim_create_autocmd("FileChangedShellPost", {
+	group = autoread_group,
+	callback = function()
+		vim.notify("Buffer reloaded from disk (external change)", vim.log.levels.INFO)
+	end,
+})
+
+-- ----------------------------------------
 -- Neovim 0.12 で追加された UI オプション
 -- ----------------------------------------
 vim.opt.pumborder = "rounded" -- Add a rounded border to the popup menu (completion).
