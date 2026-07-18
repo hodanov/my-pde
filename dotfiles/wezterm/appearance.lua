@@ -1,6 +1,9 @@
 local wezterm = require("wezterm")
 
 return function(config)
+	-- 描画バックエンド: macOS では wgpu 経由で Metal を使う WebGpu を明示
+	config.front_end = "WebGpu"
+
 	-- カラースキーマ
 	config.color_scheme = "Catppuccin Mocha"
 
