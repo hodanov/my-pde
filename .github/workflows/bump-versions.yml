@@ -25,28 +25,48 @@ jobs:
       - name: Resolve latest versions (policy-pinned tools)
         id: resolve
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          # -f fails on HTTP errors (caught by set -e + pipefail), -S surfaces the
+          # error, --retry/--max-time absorb transient failures. Without -f, curl
+          # returns exit 0 on 4xx/5xx and pipes the error body into jq → junk values.
+          CURL=(curl -fsS --retry 3 --retry-delay 2 --max-time 30)
+
           # Node LTS latest (mise upgrade --bump would jump to non-LTS majors)
-          NODE_VERSION=$(curl -s https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | max_by(.version | ltrimstr("v") | split(".") | map(tonumber)) | .version | ltrimstr("v")')
+          NODE_VERSION=$("${CURL[@]}" https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | max_by(.version | ltrimstr("v") | split(".") | map(tonumber)) | .version | ltrimstr("v")')
 
           ## Go latest stable
-          GO_VERSION=$(curl -s 'https://go.dev/dl/?mode=json' | jq -r '[.[] | select(.stable==true)][0].version | ltrimstr("go")')
+          GO_VERSION=$("${CURL[@]}" 'https://go.dev/dl/?mode=json' | jq -r '[.[] | select(.stable==true)][0].version | ltrimstr("go")')
 
-          # Neovim latest release version
-          NEOVIM_VERSION=$(curl -s https://api.github.com/repos/neovim/neovim/releases/latest | jq -r '.tag_name | ltrimstr("v")')
+          # Neovim latest release version (authenticated to avoid the 60 req/h unauthenticated rate limit)
+          NEOVIM_VERSION=$("${CURL[@]}" -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/neovim/neovim/releases/latest | jq -r '.tag_name | ltrimstr("v")')
 
           # npm cli latest
-          NPM_VERSION=$(curl -s https://registry.npmjs.org/npm/latest | jq -r '.version')
+          NPM_VERSION=$("${CURL[@]}" https://registry.npmjs.org/npm/latest | jq -r '.version')
 
           # Terraform latest GA (Checkpoint API matches releases.hashicorp.com download source)
-          TERRAFORM_VERSION=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r '.current_version')
+          TERRAFORM_VERSION=$("${CURL[@]}" https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r '.current_version')
 
-          echo "node=$NODE_VERSION" >> $GITHUB_OUTPUT
-          echo "go=$GO_VERSION" >> $GITHUB_OUTPUT
-          echo "neovim=$NEOVIM_VERSION" >> $GITHUB_OUTPUT
-          echo "npm=$NPM_VERSION" >> $GITHUB_OUTPUT
-          echo "terraform=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+          # Validate resolved values before writing outputs: fail fast instead of
+          # generating a broken bump PR (and a wasted docker build) when an upstream
+          # endpoint errors or returns an empty/null/non-version value.
+          for pair in "node=$NODE_VERSION" "go=$GO_VERSION" "neovim=$NEOVIM_VERSION" \
+                      "npm=$NPM_VERSION" "terraform=$TERRAFORM_VERSION"; do
+            name=${pair%%=*}
+            val=${pair#*=}
+            if [[ -z "$val" || "$val" == "null" || ! "$val" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+              echo "::error::resolved $name version is invalid: '$val'" >&2
+              exit 1
+            fi
+          done
+
+          echo "node=$NODE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "go=$GO_VERSION" >> "$GITHUB_OUTPUT"
+          echo "neovim=$NEOVIM_VERSION" >> "$GITHUB_OUTPUT"
+          echo "npm=$NPM_VERSION" >> "$GITHUB_OUTPUT"
+          echo "terraform=$TERRAFORM_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Update mise.toml pins
         env:
