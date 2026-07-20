@@ -1,3 +1,8 @@
 .DS_Store
 ai-agents/skills/plan-issue-export/config.yaml
 node_modules/
+
+# Skill improvement loop artifacts — 生の作業ログでリポ名/パス/インフラ情報を含みうる。
+# このリポは public のためコミットしない（ローカル専用。SKILL.md のみ追跡）。
+ai-agents/skills/*/observations/
+ai-agents/skills/*/records/
