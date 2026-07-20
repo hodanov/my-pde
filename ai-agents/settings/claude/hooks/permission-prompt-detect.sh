@@ -65,6 +65,9 @@ HEREDOC_MARKER = re.compile(r"<<-?\s*[\"']?([A-Za-z_][A-Za-z0-9_]*)[\"']?")
 IGNORE_WORDS = {
     "[", "]", "[[", "]]", "test", ":", "true", "false",
     "then", "else", "elif", "fi", "do", "done", "esac", "Q", "S",
+    "if", "for", "while", "until", "case", "select", "function", "time",
+    "set", "local", "export", "declare", "readonly", "unset", "shift",
+    "read", "return", "continue", "break",
 }
 
 
