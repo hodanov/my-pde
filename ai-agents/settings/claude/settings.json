@@ -5,39 +5,49 @@
   },
   "permissions": {
     "allow": [
-      "Bash(actionlint:*)",
-      "Bash(docker compose:*)",
-      "Bash(find:*)",
-      "Bash(git:*)",
-      "Bash(gh:*)",
-      "Bash(go test:*)",
-      "Bash(go tool:*)",
-      "Bash(go build:*)",
-      "Bash(golangci-lint run:*)",
-      "Bash(go mod:*)",
-      "Bash(goimports:*)",
-      "Bash(grep:*)",
-      "Bash(hadolint:*)",
-      "Bash(ls:*)",
-      "Bash(make:*)",
-      "Bash(markdownlint-cli2:*)",
-      "Bash(mise:*)",
+      "Bash(actionlint *)",
+      "Bash(cd *)",
+      "Bash(docker compose *)",
+      "Bash(echo *)",
+      "Bash(find *)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(go test *)",
+      "Bash(go tool *)",
+      "Bash(go build *)",
+      "Bash(golangci-lint run *)",
+      "Bash(go mod *)",
+      "Bash(goimports *)",
+      "Bash(grep *)",
+      "Bash(hadolint *)",
+      "Bash(head *)",
+      "Bash(ls *)",
+      "Bash(make *)",
+      "Bash(markdownlint-cli2 *)",
+      "Bash(mise *)",
       "Bash(npm run lint)",
       "Bash(npm run test *)",
-      "Bash(npx markdownlint-cli2:*)",
-      "Bash(npx playwright:*)",
-      "Bash(npx prettier:*)",
-      "Bash(prettier:*)",
-      "Bash(python3:*)",
-      "Bash(rg:*)",
-      "Bash(shellcheck:*)",
-      "Bash(shfmt:*)",
-      "Bash(stylua:*)",
-      "Bash(terraform fmt:*)",
-      "Bash(tflint:*)",
-      "Bash(tombi:*)",
-      "Bash(which:*)",
-      "Bash(xargs:*)",
+      "Bash(npx markdownlint-cli2 *)",
+      "Bash(npx playwright *)",
+      "Bash(npx prettier *)",
+      "Bash(prettier *)",
+      "Bash(python3 *)",
+      "Bash(rg *)",
+      "Bash(shellcheck *)",
+      "Bash(shfmt *)",
+      "Bash(stylua *)",
+      "Bash(tail *)",
+      "Bash(terraform fmt *)",
+      "Bash(terraform validate *)",
+      "Bash(terraform init *)",
+      "Bash(terraform plan *)",
+      "Bash(terraform show *)",
+      "Bash(terraform providers *)",
+      "Bash(tflint *)",
+      "Bash(tombi *)",
+      "Bash(wc *)",
+      "Bash(which *)",
+      "Bash(xargs *)",
       "Read(~/.zshrc)",
       "Read(~/.codex/**)",
       "Read(~/.cursor/**)",
@@ -51,7 +61,7 @@
     "deny": [
       "Bash(chmod 777 *)",
       "Bash(rm -rf *)",
-      "Bash(wget:*)",
+      "Bash(wget *)",
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(./secrets/**)",
@@ -77,6 +87,10 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/guard-dangerous-bash.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/permission-prompt-detect.sh"
           }
         ]
       }
@@ -125,6 +139,10 @@
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/permission-prompt-nudge.sh"
+          },
+          {
+            "type": "command",
             "command": "~/.claude/hooks/notify-macos.sh"
           }
         ]
@@ -154,23 +172,14 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
-    "excludedCommands": [
-      "mise run *",
-      "go test *",
-      "git branch *",
-      "git config *",
-      "git push *",
-      "git fetch *",
-      "git pull *",
-      "git clone *",
-      "gh *"
-    ],
+    "excludedCommands": ["mise", "terraform", "tflint", "go", "git", "gh"],
     "filesystem": {
       "allowWrite": [
         "~/Library/Caches/go-build",
         "~/Library/Caches/golangci-lint",
         "~/go/pkg/mod",
-        "~/.npm"
+        "~/.npm",
+        " ~/.cache/pre-commit"
       ]
     },
     "network": {
