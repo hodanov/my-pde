@@ -8,7 +8,7 @@ description: >-
   implement 以降（テスト戦略 → 検証 → コミット）の規律として適用する。
   新規プロダクト開発と既存プロダクト改修で手順が分岐する。
 metadata:
-  version: 3
+  version: 4
 ---
 
 # /dev-workflow スキル
@@ -25,6 +25,17 @@ metadata:
 
 - explore / plan がハーネス側の仕組み（Claude Code の Plan Mode 等）で既に済んでいる場合、その2フェーズは重複させず、**implement 以降（テスト戦略 → verify → commit）から適用する**。本スキルの中核価値は検証とコミットの規律にある。
 - Plan Mode を持たない CLI（Cursor / Codex / Copilot）では explore から順に全フェーズを適用する。
+
+## テストの無いタスク（IaC / 設定 / ドキュメント）
+
+Terraform 等の IaC、CI/設定ファイル、ドキュメントのように**ユニットテストの概念が無い**タスクでは、フローを次のように読み替える:
+
+- **test_first はスキップ**する（挙動不変のリファクタも同様）。再現テストを書く対象が無い。
+- **verify を静的検証に読み替える**。該当するものを実行して全て通す:
+  - Terraform: `fmt -check` / `validate` / `tflint` / `terraform plan -out`→`show -json` での生成 JSON 検証
+  - GitHub Actions: `actionlint`
+  - 共通: `markdownlint` / secret-scan（gitleaks）/ 生成物の再生成差分チェック
+- **環境要因を切り分ける**。IaC の verify はローカルの `.terraform` backend キャッシュや sandbox のネットワーク制限で失敗しうる（認証エラー・プロバイダ DL 失敗など）。変更ファイルの種別を見て「コード起因か環境要因か」を切り分け、環境要因ならクリーン再実行（キャッシュ退避 / sandbox 無効）で確認する。
 
 ## 新規プロダクト開発（new product）
 
@@ -57,3 +68,4 @@ metadata:
 
 - リポジトリ常設の lint hook（`lint-changed.sh`）が編集完了時に対象リンタを自動実行し、検証漏れを可視化する。本スキルの verify はそれと併用する。
 - 言語別の lint/format コマンドは触れたファイルに応じて path-scoped rules（`.claude/rules/`, `~/.claude/rules/`）が読み込む。
+- 並行更新のあるリポジトリでは、編集の直前に対象ファイルを Read し直し、最新状態に追従してから変更する（upstream main の進行で対象ファイルが変わっていることがある）。
