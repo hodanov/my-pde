@@ -2,7 +2,7 @@
 name: commit-and-draft-pr
 description: 変更をコミットしてドラフトPRを作成する一連のGit/ghワークフロー。ユーザーが「コミットして」「PR作って」「draft PR」等を求めたときに使用し、status/diff確認・命令形コミット・push・gh pr create --draft（--assignee hodanov）まで実行する。
 metadata:
-  version: 2
+  version: 3
 ---
 
 # Commit and Draft PR
@@ -11,19 +11,19 @@ metadata:
 
 作業開始時にこれをコピーして進捗を管理する:
 
-- [ ] 1. 変更とブランチを確認（`main` または detached HEAD なら feature ブランチを作成、worktree の仮ブランチ名ならリネーム）
+- [ ] 1. 変更とブランチを確認（`main`・detached HEAD・既にマージ済みのブランチなら feature ブランチを作成、worktree の仮ブランチ名ならリネーム）
 - [ ] 2. テスト/リンタ/型チェックの状態を確認（当セッションで検証済みなら再実行せずスキップ、未検証なら実行して全て通す）
 - [ ] 3. 必要な変更のみステージング
 - [ ] 4. 規約に沿ったメッセージでコミット
 - [ ] 5. push
-- [ ] 6. ドラフト PR 作成（`--assignee hodanov`）
+- [ ] 6. PR 反映（下記「PR 反映の分岐」に従う。ユーザーが「push のみ／PR 不要」と指示した場合はスキップ）
 
 ## 事前確認
 
 - `git status` と `git diff` で変更を把握する
 - `git log --oneline -5` で直近の履歴を把握する
 - `git branch` で現在ブランチを確認する
-- `main` または detached HEAD の場合は feature ブランチを作成する
+- `main`・detached HEAD・既にマージ済みのブランチ上の場合は feature ブランチを作成する（マージ済みブランチ上に変更がある場合は `git stash -u` → 最新 main を fetch → 新ブランチ作成 → `git stash pop` で移す）
 - ブランチ名が worktree の仮名のまま（worktree ディレクトリ名と同名、または `bright-running-fox` のような自動生成名）の場合は、作業内容を表す prefix なしの `<slug>` を命名して `git branch -m <slug>` でリネームしてから進める（AGENTS.md「Parallel Work (git worktrees)」の規約）
 - 変更が無い（diff が空）場合は中断して報告する
 
@@ -90,6 +90,16 @@ feat: PDFテキスト抽出を pdfplumber に切り替え
 - リモートに同名ブランチがある場合は `--force-with-lease` を検討する
 
 ## ドラフトPR作成
+
+### PR 反映の分岐
+
+push 後、まず対象ブランチの open PR を確認する: `gh pr list --head <ブランチ名> --state open`
+
+- **ユーザーが「push のみ／PR 不要」と指示**: このステップをスキップする（引数を最優先）
+- **既存の open PR がある**: 新規作成せず push 追従で反映する（重複作成を回避）
+- **open PR が無い**: 以下の手順で新規ドラフト PR を作成する
+
+### 新規ドラフト PR 作成
 
 - `gh pr create --draft --base main --head <ブランチ名> --title "<タイトル>" --body "<本文>" --assignee hodanov`
 - PR作成時は必ず `--assignee hodanov` を付けて自分をassignする
