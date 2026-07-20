@@ -45,6 +45,11 @@ def pattern_matches(pattern, text):
     # anchored at the start. Not a full parser (quoting / $() are ignored).
     if "*" not in pattern:
         return text == pattern
+    # A trailing " *" (space + wildcard) also covers the argument-less form:
+    # e.g. "echo *" matches bare "echo". Without this, "echo" (no args) is
+    # wrongly flagged missing-allow even though "Bash(echo *)" is allowed.
+    if pattern.endswith(" *") and text == pattern[:-2]:
+        return True
     parts = pattern.split("*")
     if not text.startswith(parts[0]):
         return False
