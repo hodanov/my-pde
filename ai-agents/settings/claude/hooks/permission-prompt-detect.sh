@@ -59,8 +59,46 @@ def pattern_matches(pattern, text):
     return True
 
 
+HEREDOC_MARKER = re.compile(r"<<-?\s*[\"']?([A-Za-z_][A-Za-z0-9_]*)[\"']?")
+
+# Shell keywords / builtins (and our mask placeholders) that need no allow rule.
+IGNORE_WORDS = {
+    "[", "]", "[[", "]]", "test", ":", "true", "false",
+    "then", "else", "elif", "fi", "do", "done", "esac", "Q", "S",
+    "if", "for", "while", "until", "case", "select", "function", "time",
+    "set", "local", "export", "declare", "readonly", "unset", "shift",
+    "read", "return", "continue", "break",
+}
+
+
+def preprocess(cmd):
+    # Join line continuations so "\<newline>" does not split a command.
+    cmd = re.sub(r"\\\n", " ", cmd)
+    # Drop heredoc bodies: keep the marker line, discard body + closing delimiter.
+    # Done before masking so the quoted delimiter (<<'EOF') is still readable.
+    lines = cmd.split("\n")
+    kept, i = [], 0
+    while i < len(lines):
+        kept.append(lines[i])
+        m = HEREDOC_MARKER.search(lines[i])
+        if m:
+            delim = m.group(1)
+            i += 1
+            while i < len(lines) and lines[i].strip() != delim:
+                i += 1
+        i += 1
+    text = "\n".join(kept)
+    # Mask quoted strings and command substitutions so operators / newlines
+    # inside them neither split segments nor look like commands.
+    text = re.sub(r'"(?:\\.|[^"\\])*"', " Q ", text, flags=re.DOTALL)
+    text = re.sub(r"'[^']*'", " Q ", text)
+    text = re.sub(r"\$\([^()]*\)", " S ", text)
+    text = re.sub(r"`[^`]*`", " S ", text)
+    return text
+
+
 def split_segments(cmd):
-    tokens = re.split(r"\s*(?:\|\||&&|;|\|)\s*|\n+", cmd)
+    tokens = re.split(r"\s*(?:\|\||&&|;|\|)\s*|\n+", preprocess(cmd))
     return [t.strip() for t in tokens if t.strip()]
 
 
@@ -115,7 +153,12 @@ segments = split_segments(command)
 causes = []
 for seg in segments:
     text = strip_leading_env(seg)
-    if not text:
+    toks = text.split()
+    if not toks:
+        continue
+    word = toks[0]
+    # Skip shell builtins/keywords and non-command junk (flags, stray punctuation).
+    if word in IGNORE_WORDS or not re.match(r"^[A-Za-z0-9_./~]", word):
         continue
     if any(pattern_matches(p, text) for p in deny_pats):
         causes.append({"segment": text, "kind": "deny-hit"})
@@ -131,7 +174,7 @@ has_cd = any(
     strip_leading_env(seg) == "cd" or strip_leading_env(seg).startswith("cd ")
     for seg in segments
 )
-has_file_redirect = bool(re.search(r">>?\s*[^&\s]", command))
+has_file_redirect = bool(re.search(r">>?\s*[^&\s]", preprocess(command)))
 if has_cd and has_file_redirect:
     causes.append({"segment": command.strip(), "kind": "builtin-cd-redirect"})
 

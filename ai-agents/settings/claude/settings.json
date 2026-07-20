@@ -21,6 +21,7 @@
       "Bash(grep *)",
       "Bash(hadolint *)",
       "Bash(head *)",
+      "Bash(jq *)",
       "Bash(ls *)",
       "Bash(make *)",
       "Bash(markdownlint-cli2 *)",
