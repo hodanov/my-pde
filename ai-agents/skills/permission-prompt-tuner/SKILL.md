@@ -4,6 +4,7 @@ description: >-
   permission prompt が出た（自動許可されなかった）Bash コマンドを記録し、
   settings.json をどう調整すればプロンプトを減らせるかを提案する。
   Stop hook（permission-prompt-nudge.sh）が検出バッファ非空時に自動起動する。
+disable-model-invocation: true
 metadata:
   version: 1
 ---

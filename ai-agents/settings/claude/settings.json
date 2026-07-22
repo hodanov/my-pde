@@ -4,12 +4,17 @@
     "SKILL_OBSERVE_HOME": "~/workspace/my-pde"
   },
   "permissions": {
+    "defaultMode": "acceptEdits",
     "allow": [
       "Bash(actionlint *)",
+      "Bash(base64 *)",
+      "Bash(cat *)",
       "Bash(cd *)",
       "Bash(docker compose *)",
+      "Bash(du *)",
       "Bash(echo *)",
       "Bash(find *)",
+      "Bash(gcloud artifacts docker tags list *)",
       "Bash(git *)",
       "Bash(gh *)",
       "Bash(go test *)",
@@ -19,34 +24,48 @@
       "Bash(go mod *)",
       "Bash(goimports *)",
       "Bash(grep *)",
+      "Bash(gzcat *)",
       "Bash(hadolint *)",
       "Bash(head *)",
       "Bash(jq *)",
+      "Bash(kubectl kustomize *)",
       "Bash(ls *)",
       "Bash(make *)",
       "Bash(markdownlint-cli2 *)",
       "Bash(mise *)",
+      "Bash(mkdir -p *)",
+      "Bash(nl *)",
       "Bash(npm run lint)",
       "Bash(npm run test *)",
       "Bash(npx markdownlint-cli2 *)",
       "Bash(npx playwright *)",
       "Bash(npx prettier *)",
       "Bash(prettier *)",
+      "Bash(ps aux)",
       "Bash(python3 *)",
       "Bash(rg *)",
+      "Bash(sed -n *)",
       "Bash(shellcheck *)",
       "Bash(shfmt *)",
+      "Bash(sleep *)",
       "Bash(sort *)",
       "Bash(stylua *)",
       "Bash(tail *)",
+      "Bash(terraform -chdir=* init *)",
+      "Bash(terraform -chdir=* providers *)",
+      "Bash(terraform -chdir=* plan *)",
+      "Bash(terraform -chdir=* version)",
+      "Bash(terraform -chdir=* validate *)",
       "Bash(terraform fmt *)",
-      "Bash(terraform validate *)",
       "Bash(terraform init *)",
       "Bash(terraform plan *)",
-      "Bash(terraform show *)",
       "Bash(terraform providers *)",
+      "Bash(terraform show *)",
+      "Bash(terraform validate *)",
+      "Bash(terraform version)",
       "Bash(tflint *)",
       "Bash(tombi *)",
+      "Bash(tr *)",
       "Bash(command -v *)",
       "Bash(wc *)",
       "Bash(which *)",
@@ -67,9 +86,18 @@
       "Bash(wget *)",
       "Read(./.env)",
       "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
       "Read(./secrets/**)",
       "Read(**/*.key)",
-      "Read(**/*.pem)"
+      "Read(**/*.pem)",
+      "Read(**/*.crt)",
+      "Read(**/*.p12)",
+      "Read(**/*.pfx)",
+      "Read(**/id_rsa*)",
+      "Read(**/.netrc)",
+      "Read(**/.npmrc)",
+      "Read(**/credentials*)"
     ]
   },
   "hooks": {
@@ -90,10 +118,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/guard-dangerous-bash.sh"
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/permission-prompt-detect.sh"
           }
         ]
       }
@@ -139,10 +163,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/skill-observe-nudge.sh"
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/permission-prompt-nudge.sh"
           },
           {
             "type": "command",
