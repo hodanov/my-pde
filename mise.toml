@@ -388,6 +388,10 @@ run = "stylua --check ."
 description = "Run hadolint on the nvim Dockerfile"
 run = "hadolint environment/docker/nvim.dockerfile"
 
+[tasks."lint:actions"]
+description = "Run actionlint (with shellcheck integration) on GitHub Actions workflows"
+run = "actionlint"
+
 [tasks."lint:format"]
 description = "Run tombi, prettier, and markdownlint via environment/tools/node"
 dir = "{{config_root}}"
