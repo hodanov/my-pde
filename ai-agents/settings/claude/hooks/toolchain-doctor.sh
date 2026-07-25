@@ -8,7 +8,7 @@ export PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$PATH"
 set -u
 
 # tool -> hook(s) that silently no-op when the tool is missing.
-tools="goimports golangci-lint shfmt shellcheck prettier stylua markdownlint-cli2 tombi"
+tools="goimports golangci-lint shfmt shellcheck prettier stylua markdownlint-cli2 tombi hadolint actionlint"
 
 hook_for() {
 	case "$1" in
@@ -20,6 +20,8 @@ hook_for() {
 	stylua) echo "stylua.sh, lint-changed.sh (Lua)" ;;
 	markdownlint-cli2) echo "lint-changed.sh (Markdown)" ;;
 	tombi) echo "tombi.sh" ;;
+	hadolint) echo "lint-changed.sh (Dockerfile)" ;;
+	actionlint) echo "lint-changed.sh (GitHub Actions)" ;;
 	*) echo "formatter/lint hook" ;;
 	esac
 }

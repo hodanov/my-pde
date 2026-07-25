@@ -48,6 +48,17 @@ while IFS= read -r f; do
 			append_issue "- [shellcheck] $f"
 		fi
 		;;
+	.github/workflows/*.yml | .github/workflows/*.yaml)
+		# actionlint bundles its inline `run:` scripts to shellcheck when present.
+		if command -v actionlint >/dev/null 2>&1 && ! actionlint "$f" >/dev/null 2>&1; then
+			append_issue "- [actionlint] $f"
+		fi
+		;;
+	Dockerfile | Dockerfile.* | *.dockerfile | */Dockerfile | */Dockerfile.*)
+		if command -v hadolint >/dev/null 2>&1 && ! hadolint "$f" >/dev/null 2>&1; then
+			append_issue "- [hadolint] $f"
+		fi
+		;;
 	esac
 done <<EOF
 $files
