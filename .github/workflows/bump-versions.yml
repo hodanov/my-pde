@@ -62,11 +62,13 @@ jobs:
             fi
           done
 
-          echo "node=$NODE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "go=$GO_VERSION" >> "$GITHUB_OUTPUT"
-          echo "neovim=$NEOVIM_VERSION" >> "$GITHUB_OUTPUT"
-          echo "npm=$NPM_VERSION" >> "$GITHUB_OUTPUT"
-          echo "terraform=$TERRAFORM_VERSION" >> "$GITHUB_OUTPUT"
+          {
+            echo "node=$NODE_VERSION"
+            echo "go=$GO_VERSION"
+            echo "neovim=$NEOVIM_VERSION"
+            echo "npm=$NPM_VERSION"
+            echo "terraform=$TERRAFORM_VERSION"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Update mise.toml pins
         env:
