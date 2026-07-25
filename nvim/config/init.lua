@@ -158,6 +158,24 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
 })
 
 -- ----------------------------------------
+-- 散文系 filetype でのみビルトイン spell を有効化する。
+--   spelllang = "en,cjk": 英単語を検査しつつ、cjk で日本語など東アジア文字は検査対象から外す
+--                          (README/Markdown は日本語混在のため cjk が必須)
+--   spelloptions = "camel": camelCase/PascalCase を単語分割し、識別子の誤検出を防ぐ
+-- コードバッファ (go/lua/python 等) はノイズが大きいため対象にしない。
+-- 操作: ]s / [s で誤り移動、z= で候補提示、zg で正語登録、zw で誤語登録。
+-- ----------------------------------------
+vim.api.nvim_create_autocmd("FileType", {
+	group = vim.api.nvim_create_augroup("prose_spell", { clear = true }),
+	pattern = { "markdown", "text", "plaintext", "gitcommit" },
+	callback = function()
+		vim.opt_local.spell = true
+		vim.opt_local.spelllang = { "en", "cjk" }
+		vim.opt_local.spelloptions = "camel"
+	end,
+})
+
+-- ----------------------------------------
 -- Open init.vim and 'source' it.
 -- ----------------------------------------
 vim.api.nvim_set_keymap("n", "<Leader>.", ":vs ~/.config/nvim/init.lua<CR>", { noremap = true, silent = true })
