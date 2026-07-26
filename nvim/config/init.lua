@@ -37,6 +37,7 @@ vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current w
 vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
 vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
 vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
+vim.opt.confirm = true -- 未保存バッファを破棄しうる :q / :e 等でエラーにせず、保存/破棄/キャンセルの確認ダイアログを出す
 
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
