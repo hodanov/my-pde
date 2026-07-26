@@ -140,6 +140,30 @@ if vim.fn.has("persistent_undo") == 1 then
 end
 
 -- ----------------------------------------
+-- Restore the last cursor position when reopening a file.
+-- BufReadPost は shada から `"` マーク (バッファを最後に離れた位置) が復元された後に
+-- 発火するので、この契機で参照する。永続 undo と合わせて中断→再開の摩擦を減らす。
+-- ----------------------------------------
+local last_pos_group = vim.api.nvim_create_augroup("restore_last_cursor_pos", { clear = true })
+vim.api.nvim_create_autocmd("BufReadPost", {
+	group = last_pos_group,
+	callback = function(args)
+		local buf = args.buf
+		-- コミットメッセージ等は常に先頭で開くのが自然なので除外する。
+		local ft = vim.bo[buf].filetype
+		if ft == "gitcommit" or ft == "gitrebase" then
+			return
+		end
+		local mark = vim.api.nvim_buf_get_mark(buf, '"')
+		local line = mark[1]
+		if line > 0 and line <= vim.api.nvim_buf_line_count(buf) then
+			-- 範囲外行や折り畳み等での失敗を握りつぶして安全に復帰する。
+			pcall(vim.api.nvim_win_set_cursor, 0, mark)
+		end
+	end,
+})
+
+-- ----------------------------------------
 -- Settings for indent each files.
 -- ----------------------------------------
 vim.api.nvim_create_augroup("html_css_js_and_others_indent", { clear = true })
