@@ -65,6 +65,7 @@ jobs:
           EXCLUDE_PATTERN: ${{ inputs.test-exclude-pattern }}
         run: |
           if [ -n "$EXCLUDE_PATTERN" ]; then
+            # shellcheck disable=SC2046  # intentional word-splitting of the go list output
             go test $(go list ./... | grep -Ev "$EXCLUDE_PATTERN") -v -count=1 -coverprofile=coverage.out
           else
             go test ./... -v -count=1 -coverprofile=coverage.out
