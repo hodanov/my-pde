@@ -23,6 +23,7 @@ vim.opt.smartindent = true -- Add a new line with autoindent
 vim.opt.colorcolumn = "120" -- Add a color on 80'th column
 vim.opt.hlsearch = true -- Highlight searched characters
 vim.opt.incsearch = true -- Highlight when inputting chars
+vim.opt.inccommand = "split" -- :substitute の置換結果を入力中にライブプレビュー（下部スプリットに before/after 一覧）
 vim.opt.ignorecase = true -- 小文字のみの検索パターンは大文字小文字を無視する
 vim.opt.smartcase = true -- ただし大文字が1文字でも含まれる場合は大小を区別する（ignorecase と併用時のみ有効）
 vim.opt.wildmenu = true -- Show completion suggestions at command line mode
@@ -36,6 +37,7 @@ vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current w
 vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
 vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
 vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
+vim.opt.confirm = true -- 未保存バッファを破棄しうる :q / :e 等でエラーにせず、保存/破棄/キャンセルの確認ダイアログを出す
 
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)

@@ -146,6 +146,15 @@ vim.api.nvim_create_autocmd("LspAttach", {
 vim.diagnostic.config({
 	virtual_text = false,
 	virtual_lines = { current_line = true },
+	severity_sort = true, -- 1 行に複数診断があるとき、最も重い診断をサイン列/float/loclist の先頭に出す
+	signs = {
+		text = {
+			[vim.diagnostic.severity.ERROR] = "",
+			[vim.diagnostic.severity.WARN] = "",
+			[vim.diagnostic.severity.INFO] = "",
+			[vim.diagnostic.severity.HINT] = "",
+		},
+	},
 	jump = {
 		on_jump = function(_, bufnr)
 			vim.diagnostic.open_float({ bufnr = bufnr })
