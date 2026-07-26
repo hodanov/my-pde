@@ -23,6 +23,7 @@ vim.opt.smartindent = true -- Add a new line with autoindent
 vim.opt.colorcolumn = "120" -- Add a color on 80'th column
 vim.opt.hlsearch = true -- Highlight searched characters
 vim.opt.incsearch = true -- Highlight when inputting chars
+vim.opt.inccommand = "split" -- :substitute の置換結果を入力中にライブプレビュー（下部スプリットに before/after 一覧）
 vim.opt.ignorecase = true -- 小文字のみの検索パターンは大文字小文字を無視する
 vim.opt.smartcase = true -- ただし大文字が1文字でも含まれる場合は大小を区別する（ignorecase と併用時のみ有効）
 vim.opt.wildmenu = true -- Show completion suggestions at command line mode
