@@ -23,6 +23,7 @@ vim.opt.smartindent = true -- Add a new line with autoindent
 vim.opt.colorcolumn = "120" -- Add a color on 80'th column
 vim.opt.hlsearch = true -- Highlight searched characters
 vim.opt.incsearch = true -- Highlight when inputting chars
+vim.opt.inccommand = "split" -- :substitute の置換結果を入力中にライブプレビュー（下部スプリットに before/after 一覧）
 vim.opt.ignorecase = true -- 小文字のみの検索パターンは大文字小文字を無視する
 vim.opt.smartcase = true -- ただし大文字が1文字でも含まれる場合は大小を区別する（ignorecase と併用時のみ有効）
 vim.opt.wildmenu = true -- Show completion suggestions at command line mode
@@ -36,6 +37,7 @@ vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current w
 vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
 vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
 vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
+vim.opt.confirm = true -- 未保存バッファを破棄しうる :q / :e 等でエラーにせず、保存/破棄/キャンセルの確認ダイアログを出す
 
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
@@ -136,6 +138,30 @@ if vim.fn.has("persistent_undo") == 1 then
 	vim.cmd("set undodir=" .. undo_path)
 	vim.opt.undofile = true
 end
+
+-- ----------------------------------------
+-- Restore the last cursor position when reopening a file.
+-- BufReadPost は shada から `"` マーク (バッファを最後に離れた位置) が復元された後に
+-- 発火するので、この契機で参照する。永続 undo と合わせて中断→再開の摩擦を減らす。
+-- ----------------------------------------
+local last_pos_group = vim.api.nvim_create_augroup("restore_last_cursor_pos", { clear = true })
+vim.api.nvim_create_autocmd("BufReadPost", {
+	group = last_pos_group,
+	callback = function(args)
+		local buf = args.buf
+		-- コミットメッセージ等は常に先頭で開くのが自然なので除外する。
+		local ft = vim.bo[buf].filetype
+		if ft == "gitcommit" or ft == "gitrebase" then
+			return
+		end
+		local mark = vim.api.nvim_buf_get_mark(buf, '"')
+		local line = mark[1]
+		if line > 0 and line <= vim.api.nvim_buf_line_count(buf) then
+			-- 範囲外行や折り畳み等での失敗を握りつぶして安全に復帰する。
+			pcall(vim.api.nvim_win_set_cursor, 0, mark)
+		end
+	end,
+})
 
 -- ----------------------------------------
 -- Settings for indent each files.

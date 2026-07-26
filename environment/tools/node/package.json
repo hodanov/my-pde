@@ -16,7 +16,7 @@
     "textlint-rule-preset-ja-technical-writing": "^12.0.2",
     "textlint-rule-preset-japanese": "^10.0.4",
     "tombi": "^1.1.1",
-    "typescript": "^6.0.2",
+    "typescript": "^7.0.2",
     "typescript-language-server": "^5.0.0",
     "vscode-langservers-extracted": "^4.10.0",
     "yaml-language-server": "^1.18.0",

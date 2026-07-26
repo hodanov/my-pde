@@ -3,6 +3,7 @@
 # then run `mise install` at the repo root.
 
 [tools]
+actionlint = "1.7.12"
 go = "1.26.5"
 golangci-lint = "2.12.2"
 node = "24.18.0"
@@ -387,6 +388,10 @@ run = "stylua --check ."
 description = "Run hadolint on the nvim Dockerfile"
 run = "hadolint environment/docker/nvim.dockerfile"
 
+[tasks."lint:actions"]
+description = "Run actionlint (with shellcheck integration) on GitHub Actions workflows"
+run = "actionlint"
+
 [tasks."lint:format"]
 description = "Run tombi, prettier, and markdownlint via environment/tools/node"
 dir = "{{config_root}}"
@@ -409,13 +414,14 @@ run = '"{{config_root}}/ai-agents/scripts/verify-changed.sh"'
 
 [tasks."docker:build"]
 description = "Build the nvim image with versions injected from mise.toml"
+# GO_VERSION / NODE_VERSION are NOT passed as --build-arg: the Dockerfile ARG
+# defaults are generated from mise.toml [tools] by `pins:sync` and verified by
+# `pins:check`, so the build always uses the mise-pinned versions without
+# depending on the host's active go/node. The remaining [env]-sourced args are
+# likewise synced ARG defaults; passing them keeps the injection explicit.
 run = '''
-GO_VERSION="$(go env GOVERSION | sed 's/^go//')"
-NODE_VERSION="$(node --version | sed 's/^v//')"
 docker build \
   --file environment/docker/nvim.dockerfile \
-  --build-arg GO_VERSION="$GO_VERSION" \
-  --build-arg NODE_VERSION="$NODE_VERSION" \
   --build-arg NEOVIM_VERSION="$NEOVIM_VERSION" \
   --build-arg NPM_VERSION="$NPM_VERSION" \
   --build-arg RUST_TOOLCHAIN="$RUST_TOOLCHAIN" \
