@@ -15,7 +15,7 @@ hadolint = "2.14.0"
 "go:golang.org/x/tools/gopls" = "0.23.0"
 "go:github.com/go-delve/delve/cmd/dlv" = "1.27.0"
 "go:github.com/nametake/golangci-lint-langserver" = "0.0.12"
-terraform-ls = "0.38.8"
+terraform-ls = "0.39.0"
 tflint = "0.64.0"
 
 # Docker-only versions: synced into the Dockerfile ARG defaults by
