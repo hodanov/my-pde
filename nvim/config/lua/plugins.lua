@@ -47,6 +47,20 @@ return {
 			require("nvim_treesitter")
 		end,
 	},
+	{ -- Appearance: 外側スコープ（関数/クラス/if/for 等）を画面上部にスティッキー表示
+		"nvim-treesitter/nvim-treesitter-context",
+		dependencies = { "nvim-treesitter/nvim-treesitter" },
+		lazy = true,
+		event = { "BufRead", "BufNewFile" },
+		config = function()
+			require("treesitter-context").setup({
+				max_lines = 3, -- スティッキーヘッダは最大3行まで（深いネストでも画面を圧迫しない）
+				trim_scope = "outer", -- 3行を超えたら外側から捨てて内側の直近スコープを優先表示
+				min_window_height = 20, -- 画面が低いときは邪魔になるので出さない
+				mode = "cursor", -- カーソル行を基準にコンテキストを算出
+			})
+		end,
+	},
 	{ -- Configurations for Nvim LSP
 		"neovim/nvim-lspconfig",
 		lazy = false,
