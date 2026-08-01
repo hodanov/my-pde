@@ -48,6 +48,7 @@ node_version=$(pin 'node')
 neovim_version=$(pin 'NEOVIM_VERSION')
 npm_version=$(pin 'NPM_VERSION')
 rust_toolchain=$(pin 'RUST_TOOLCHAIN')
+stylua_version=$(pin 'stylua')
 terraform_version=$(pin 'TERRAFORM_VERSION')
 hadolint_version=$(pin 'hadolint')
 
@@ -57,6 +58,7 @@ sed -i.bak -E \
 	-e "s|^ARG NEOVIM_VERSION(=.*)?$|ARG NEOVIM_VERSION=${neovim_version}|" \
 	-e "s|^ARG NPM_VERSION(=.*)?$|ARG NPM_VERSION=${npm_version}|" \
 	-e "s|^ARG RUST_TOOLCHAIN(=.*)?$|ARG RUST_TOOLCHAIN=${rust_toolchain}|" \
+	-e "s|^ARG STYLUA_VERSION(=.*)?$|ARG STYLUA_VERSION=${stylua_version}|" \
 	-e "s|^ARG TERRAFORM_VERSION(=.*)?$|ARG TERRAFORM_VERSION=${terraform_version}|" \
 	-e "s|^ARG HADOLINT_VERSION(=.*)?$|ARG HADOLINT_VERSION=${hadolint_version}|" \
 	"$DOCKERFILE"
