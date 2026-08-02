@@ -10,7 +10,7 @@ require("lualine").setup({
 		},
 		ignore_focus = {},
 		always_divide_middle = true,
-		globalstatus = false,
+		globalstatus = true, -- laststatus=3。分割時もステータスラインを画面最下部の1本に統一する
 		refresh = {
 			statusline = 1000,
 			tabline = 1000,
