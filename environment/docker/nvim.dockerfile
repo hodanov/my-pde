@@ -133,6 +133,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
 FROM base AS rust-builder
 
 ARG RUST_TOOLCHAIN=stable
+# STYLUA_VERSION は mise.toml [tools] の stylua を源泉に sync-pins.sh が生成する。
+ARG STYLUA_VERSION=2.5.2
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -143,7 +145,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
-    cargo install stylua tree-sitter-cli
+    cargo install stylua --version "$STYLUA_VERSION" --locked \
+    && cargo install tree-sitter-cli
 
 ####################
 # Stage 5: Build Python venv with uv
