@@ -13,11 +13,7 @@ lint.linters_by_ft = {
 	markdown = { "markdownlint-cli2" },
 	dockerfile = { "hadolint" },
 	terraform = { "tflint" },
-	-- bash/sh スクリプトの実バグ・危険パターン（未クオート変数 SC2086 等）を編集/保存時に検査。
-	-- shellcheck 未インストール時は nvim-lint が黙ってスキップする。
 	sh = { "shellcheck" },
-	-- GitHub Actions ワークフロー専用。複合 filetype の "ghaction" 成分を key にすることで
-	-- 通常の yaml には作用させない。actionlint 未インストール時は nvim-lint が黙ってスキップする。
 	ghaction = { "actionlint" },
 }
 

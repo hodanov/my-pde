@@ -227,7 +227,7 @@ vim.api.nvim_create_autocmd("TermOpen", {
 	callback = function()
 		vim.opt_local.number = false -- シェル出力に行番号を出さない
 		vim.opt_local.relativenumber = false
-		vim.opt_local.signcolumn = "no" -- サイン列を消して出力の折り返しずれを防ぐ
+		vim.opt_local.signcolumn = "yes" -- サイン列を消して出力の折り返しずれを防ぐ
 		vim.cmd("startinsert") -- 開いた瞬間に端末操作モードへ入る
 	end,
 })
