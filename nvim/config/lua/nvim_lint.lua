@@ -14,10 +14,11 @@ lint.linters_by_ft = {
 	dockerfile = { "hadolint" },
 	terraform = { "tflint" },
 	-- bash/sh スクリプトの実バグ・危険パターン（未クオート変数 SC2086 等）を編集/保存時に検査。
-	-- shellcheck 未インストール時は nvim-lint が黙ってスキップする。
+	-- shellcheck は nvim イメージ同梱（apt）。未インストールだと nvim-lint は黙ってスキップせず
+	-- BufReadPost/BufWritePost のたびに ENOENT エラーを出すので、同梱は必須。
 	sh = { "shellcheck" },
 	-- GitHub Actions ワークフロー専用。複合 filetype の "ghaction" 成分を key にすることで
-	-- 通常の yaml には作用させない。actionlint 未インストール時は nvim-lint が黙ってスキップする。
+	-- 通常の yaml には作用させない。actionlint は nvim イメージ同梱（go-tools.txt 経由）。
 	ghaction = { "actionlint" },
 }
 

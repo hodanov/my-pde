@@ -227,6 +227,9 @@ COPY ./nvim/config/.bash_profile /root/
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ripgrep fd-find python3 mysql-client luarocks \
+  # shellcheck: nvim-lint の sh linter が使う。未インストールだと sh を開く/保存するたびに
+  # ENOENT エラーが出る。Ubuntu 26.04 の候補は mise.toml のピン (0.11.0) と一致する。
+  shellcheck \
   && mkdir -p /root/.local/state/nvim/undo \
   && apt-get autoremove -y \
   && apt-get clean -y \
