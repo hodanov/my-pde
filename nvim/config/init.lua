@@ -26,6 +26,14 @@ vim.opt.incsearch = true -- Highlight when inputting chars
 vim.opt.inccommand = "split" -- :substitute の置換結果を入力中にライブプレビュー（下部スプリットに before/after 一覧）
 vim.opt.ignorecase = true -- 小文字のみの検索パターンは大文字小文字を無視する
 vim.opt.smartcase = true -- ただし大文字が1文字でも含まれる場合は大小を区別する（ignorecase と併用時のみ有効）
+-- :grep / :lgrep を ripgrep バックエンドにし、結果を quickfix に集約する。
+-- rg は .gitignore を尊重し高速。--vimgrep で file:line:col:text を出力する。
+-- :grep <pat> → :copen → :cdo s/old/new/gc | update でプロジェクト横断の一括置換の基点になる。
+if vim.fn.executable("rg") == 1 then
+	vim.opt.grepprg = "rg --vimgrep --smart-case --hidden --glob '!.git'"
+	vim.opt.grepformat = "%f:%l:%c:%m"
+	vim.keymap.set("n", "co", ":copen<CR>", { noremap = true, silent = true, desc = "Open quickfix list" })
+end
 vim.opt.wildmenu = true -- Show completion suggestions at command line mode
 vim.opt.conceallevel = 0 -- Show double quotations in json file and so on.
 vim.g.mapleader = " " -- Set a space key to a leader.
