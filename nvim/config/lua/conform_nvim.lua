@@ -12,6 +12,7 @@ require("conform").setup({
 		lua = { "stylua" },
 		markdown = { "markdownlint-cli2" },
 		python = { "ruff_fix", "ruff_format", "ruff_organize_imports" },
+		sh = { "shfmt" }, -- bash/sh を保存時に整形（mise 固定の shfmt / 既存フックと同一スタイル）
 		terraform = { "terraform_fmt" },
 		["terraform-vars"] = { "terraform_fmt" },
 		yaml = { "prettierd", "prettier", stop_after_first = true },
