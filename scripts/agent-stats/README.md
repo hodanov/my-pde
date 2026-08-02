@@ -46,7 +46,7 @@ go run ./cmd/agent-stats --json
 
 ## 構成
 
-```
+```text
 scripts/agent-stats/
   cmd/agent-stats/main.go     # フラグ解釈 → 走査 → 集計 → 出力
   internal/parser/            # JSONL → Session（CLI 別実装を差し替えられるよう分離）
