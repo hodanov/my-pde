@@ -30,8 +30,6 @@ golangci_lint=$(pin 'golangci-lint')
 langserver=$(pin '"go:github.com/nametake/golangci-lint-langserver"')
 terraform_ls=$(pin 'terraform-ls')
 tflint=$(pin 'tflint')
-# shfmt / actionlint は Go 製なので go-builder 経由で nvim イメージに同梱する
-# （conform の sh / nvim-lint の ghaction が動くために必要）。
 shfmt=$(pin 'shfmt')
 actionlint=$(pin 'actionlint')
 

@@ -56,6 +56,12 @@ RPROMPT="%F{#6c7086}%D{%m/%d %H:%M}%f"
 export LC_ALL=en_US.UTF-8
 
 ####################
+# Homebrew (Apple Silicon / arm64)
+# Must be evaluated before anyenv/go so /opt/homebrew/bin precedes /usr/local/bin
+####################
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+####################
 # Alias
 ####################
 alias python="python3"
