@@ -19,7 +19,7 @@ metadata:
 
 ## 適用範囲・住み分け
 
-- 本スキルは **更新そのものの適用と検証** を担う。GitHub Actions の SHA ピン留め・Dependabot / Renovate のクールダウン設定は `supply-chain-hardening`（pinact）に委譲し、ここでは再実装しない。
+- 本スキルは **更新そのものの適用と検証** を担う。GitHub Actions の SHA ピン留めは対象外（版数タグの更新のみ扱う）。
 - Dependabot / Renovate が回っているリポジトリでは、本スキルは **major 更新・Bot PR のまとめレビュー・手動追随** を主対象とする。二重運用を避けるため、単一パッケージの patch/minor 追随は Bot に任せてよい。
 - `$ARGUMENTS` で対象エコシステムを絞れる（`all` / `go` / `npm` / `terraform` / `gha` / `pre-commit`）。`--major` 指定時のみ major バージョンを対象に含める。
 
@@ -48,7 +48,7 @@ metadata:
 - Go: `go get -u ./... && go mod tidy`（major は個別に `go get module@vX`）
 - npm: `npm update`、または個別に `npm i pkg@x`
 - Terraform: provider の版数制約（`required_providers`）を更新し `terraform init -upgrade`
-- GitHub Actions: 版数タグを更新（SHA ピン留めは `supply-chain-hardening` に委譲）
+- GitHub Actions: 版数タグを更新（SHA ピン留めは対象外）
 - pre-commit: `pre-commit autoupdate`
 
 ### 4. 検証
