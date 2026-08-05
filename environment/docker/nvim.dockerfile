@@ -55,8 +55,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Stage 2: Build Node runtime and npm tools
 FROM base AS node-builder
 
-ARG NODE_VERSION=24.18.0
-ARG NPM_VERSION=12.0.1
+ARG NODE_VERSION=24.18.1
+ARG NPM_VERSION=12.0.2
 ENV NODE_HOME="/opt/node"
 ENV PATH="${NODE_HOME}/bin:${PATH}"
 
@@ -170,7 +170,7 @@ WORKDIR /
 # Stage 6: Fetch hadolint binary only
 FROM base AS hadolint-builder
 
-ARG HADOLINT_VERSION=2.14.0
+ARG HADOLINT_VERSION=2.15.1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
