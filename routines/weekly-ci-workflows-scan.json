@@ -5,7 +5,7 @@
   "cron_expression": "0 22 * * 4",
   "schedule_note": "木 22:00 UTC = 毎週金曜 7:00 JST",
   "job_config": {
-    "model": "claude-opus-4-8",
+    "model": "claude-opus-5",
     "repository": "https://github.com/hodanov/my-pde",
     "environment_id": "env_01H6ttcff6EJXggu8Xqmx5gN",
     "allowed_tools": ["Bash", "Read", "Grep", "Glob", "WebSearch", "WebFetch"]
