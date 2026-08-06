@@ -59,6 +59,40 @@ func TestParseReaderEmpty(t *testing.T) {
 	}
 }
 
+// splitTurnFixture mirrors real Claude Code transcripts: one logical assistant
+// turn (thinking -> text -> tool_use) is written as multiple JSONL lines that
+// share the same message.id and each repeat the whole turn's usage.
+const splitTurnFixture = `
+{"type":"assistant","timestamp":"2026-08-06T10:00:00Z","message":{"id":"msg_1","model":"claude-sonnet-5","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":2,"cache_creation_input_tokens":1},"content":[{"type":"thinking","text":"..."}]}}
+{"type":"assistant","timestamp":"2026-08-06T10:00:01Z","message":{"id":"msg_1","model":"claude-sonnet-5","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":2,"cache_creation_input_tokens":1},"content":[{"type":"text","text":"ok"}]}}
+{"type":"assistant","timestamp":"2026-08-06T10:00:02Z","message":{"id":"msg_1","model":"claude-sonnet-5","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":2,"cache_creation_input_tokens":1},"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"a.go"}}]}}
+{"type":"assistant","timestamp":"2026-08-06T10:00:03Z","message":{"id":"msg_2","model":"claude-sonnet-5","usage":{"input_tokens":3,"output_tokens":2},"content":[{"type":"text","text":"done"}]}}
+{"type":"assistant","timestamp":"2026-08-06T10:00:04Z","message":{"model":"claude-sonnet-5","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"text","text":"legacy, no id"}]}}
+`
+
+func TestParseReaderDedupesSplitTurns(t *testing.T) {
+	t.Parallel()
+	s := ParseReader("split.jsonl", strings.NewReader(splitTurnFixture))
+
+	// msg_1 (3 lines) + msg_2 (1 line) count as 2 real turns; the id-less line
+	// cannot be deduped, so it is counted as a 3rd turn.
+	if s.AssistantTurns != 3 {
+		t.Errorf("AssistantTurns = %d, want 3 (msg_1 once + msg_2 once + id-less line)", s.AssistantTurns)
+	}
+	// msg_1's usage must be counted once despite appearing on 3 lines.
+	want := Tokens{Input: 14, Output: 8, CacheRead: 2, CacheCreation: 1}
+	if s.Tokens != want {
+		t.Errorf("Tokens = %+v, want %+v (msg_1 usage counted once, not 3x)", s.Tokens, want)
+	}
+	// tool_use only appears on one of msg_1's lines, so it must still be counted.
+	if s.ToolCounts["Edit"] != 1 {
+		t.Errorf("ToolCounts[Edit] = %d, want 1", s.ToolCounts["Edit"])
+	}
+	if s.FileCounts["a.go"] != 1 {
+		t.Errorf("FileCounts[a.go] = %d, want 1", s.FileCounts["a.go"])
+	}
+}
+
 func TestDurationGuards(t *testing.T) {
 	t.Parallel()
 	end := time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC)

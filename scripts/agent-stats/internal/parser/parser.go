@@ -36,6 +36,13 @@ type Session struct {
 	FileCounts     map[string]int `json:"file_counts"`
 	Start          time.Time      `json:"start"`
 	End            time.Time      `json:"end"`
+
+	// seenMessageIDs dedupes assistant turns and their token usage. Claude Code
+	// writes one logical turn (thinking -> text -> tool_use) as multiple JSONL
+	// lines that share the same message.id and each repeat the whole turn's
+	// usage; without this, turns and tokens are counted once per line instead
+	// of once per turn.
+	seenMessageIDs map[string]struct{}
 }
 
 // Duration returns the wall-clock span between the first and last timestamped
@@ -65,6 +72,7 @@ type rawLine struct {
 }
 
 type rawMsg struct {
+	ID      string          `json:"id"`
 	Model   string          `json:"model"`
 	Usage   *rawUsage       `json:"usage"`
 	Content json.RawMessage `json:"content"`
@@ -102,9 +110,10 @@ func ParseFile(path string) (Session, error) {
 // It never returns an error: unparseable lines are skipped.
 func ParseReader(name string, r io.Reader) Session {
 	s := Session{
-		File:       name,
-		ToolCounts: map[string]int{},
-		FileCounts: map[string]int{},
+		File:           name,
+		ToolCounts:     map[string]int{},
+		FileCounts:     map[string]int{},
+		seenMessageIDs: map[string]struct{}{},
 	}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 64*1024), maxLineBytes)
@@ -140,15 +149,30 @@ func applyLine(s *Session, raw *rawLine) {
 	if raw.Type != "assistant" || raw.Message == nil {
 		return
 	}
-	s.AssistantTurns++
 	if raw.Message.Model != "" {
 		s.Model = raw.Message.Model
 	}
-	if u := raw.Message.Usage; u != nil {
-		s.Tokens.Input += u.InputTokens
-		s.Tokens.Output += u.OutputTokens
-		s.Tokens.CacheRead += u.CacheReadInputTokens
-		s.Tokens.CacheCreation += u.CacheCreationInputTokens
+	// A turn split across multiple lines shares one message.id and repeats the
+	// same usage on every line; count the turn and its tokens once per id. A
+	// line without an id can't be deduped, so it is always counted (lenient
+	// fallback for older or unrecognised transcript shapes).
+	id := raw.Message.ID
+	alreadyCounted := false
+	if id != "" {
+		if _, ok := s.seenMessageIDs[id]; ok {
+			alreadyCounted = true
+		} else {
+			s.seenMessageIDs[id] = struct{}{}
+		}
+	}
+	if !alreadyCounted {
+		s.AssistantTurns++
+		if u := raw.Message.Usage; u != nil {
+			s.Tokens.Input += u.InputTokens
+			s.Tokens.Output += u.OutputTokens
+			s.Tokens.CacheRead += u.CacheReadInputTokens
+			s.Tokens.CacheCreation += u.CacheCreationInputTokens
+		}
 	}
 	for _, c := range decodeContent(raw.Message.Content) {
 		if c.Type != "tool_use" || c.Name == "" {

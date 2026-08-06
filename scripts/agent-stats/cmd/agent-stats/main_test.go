@@ -64,6 +64,29 @@ func TestCollectMissingDir(t *testing.T) {
 	}
 }
 
+func TestCollectSkipsUnreadableFile(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: file permissions are not enforced")
+	}
+	root := t.TempDir()
+	writeTranscript(t, root, "good.jsonl", "2026-07-30T11:30:00Z", "/home/u/proj")
+	badPath := filepath.Join(root, "bad.jsonl")
+	writeTranscript(t, root, "bad.jsonl", "2026-07-30T11:30:00Z", "/home/u/proj")
+	if err := os.Chmod(badPath, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(badPath, 0o644) })
+
+	got, err := collect(root, 0, "", time.Now())
+	if err != nil {
+		t.Fatalf("collect should skip the unreadable file rather than error: %v", err)
+	}
+	if len(got) != 1 || got[0].File != "good.jsonl" {
+		t.Fatalf("collect = %+v, want only good.jsonl", got)
+	}
+}
+
 func TestRunSmoke(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()

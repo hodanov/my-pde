@@ -88,7 +88,11 @@ func collect(dir string, since time.Duration, project string, now time.Time) ([]
 		}
 		s, perr := parser.ParseFile(path)
 		if perr != nil {
-			return perr
+			// A single unreadable transcript (permission error, race with a
+			// deleted file, ...) shouldn't blank out every other session's
+			// results; skip it and keep walking.
+			fmt.Fprintf(os.Stderr, "agent-stats: skipping %s: %v\n", path, perr)
+			return nil
 		}
 		if !cutoff.IsZero() && !s.End.IsZero() && s.End.Before(cutoff) {
 			return nil

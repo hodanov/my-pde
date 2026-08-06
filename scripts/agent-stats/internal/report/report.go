@@ -94,7 +94,7 @@ func RenderTable(s *Summary) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Sessions:        %d\n", s.Sessions)
 	fmt.Fprintf(&b, "Assistant turns: %d\n", s.AssistantTurns)
-	fmt.Fprintf(&b, "Duration:        %s\n", s.Duration.Round(time.Second))
+	fmt.Fprintf(&b, "Duration:        %s (sum of each session's first-to-last timestamp span, including idle gaps in resumed sessions)\n", s.Duration.Round(time.Second))
 	b.WriteString("\nTokens\n")
 	fmt.Fprintf(&b, "  input          %d\n", s.Tokens.Input)
 	fmt.Fprintf(&b, "  output         %d\n", s.Tokens.Output)

@@ -15,6 +15,15 @@ Claude Code の `~/.claude/projects/**/*.jsonl` を 1 行ずつ寛容にパー�
 - Edit / Write / MultiEdit / NotebookEdit の `file_path` から頻出編集ファイル top-N
 - 先頭・末尾 timestamp から算出したセッション時間、`cwd` / `gitBranch`
 
+Claude Code は1回のアシスタント応答（thinking → text → tool_use）を、同じ `message.id` を
+持つ複数の JSONL 行に分割して書き、各行に同一の usage を repeat する。トークン数・ターン数は
+`message.id` ごとに1回だけ集計し、この分割による二重カウントを避けている（`id` を持たない行は
+dedupe できないため、そのまま1行1カウントとして扱う）。
+
+集計テーブルの `Duration` は、各セッションの「先頭 timestamp 〜 末尾 timestamp」の差分を全セッ
+ション分単純合算した値であり、実作業時間ではない。resume で日をまたいだセッションはアイドル時
+間も含むため、値が大きく見えることがある。
+
 ## 使い方
 
 ```sh
