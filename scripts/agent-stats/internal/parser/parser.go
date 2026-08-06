@@ -34,6 +34,7 @@ type Session struct {
 	AssistantTurns int            `json:"assistant_turns"`
 	ToolCounts     map[string]int `json:"tool_counts"`
 	FileCounts     map[string]int `json:"file_counts"`
+	SkillCounts    map[string]int `json:"skill_counts"`
 	Start          time.Time      `json:"start"`
 	End            time.Time      `json:"end"`
 
@@ -113,6 +114,7 @@ func ParseReader(name string, r io.Reader) Session {
 		File:           name,
 		ToolCounts:     map[string]int{},
 		FileCounts:     map[string]int{},
+		SkillCounts:    map[string]int{},
 		seenMessageIDs: map[string]struct{}{},
 	}
 	sc := bufio.NewScanner(r)
@@ -184,6 +186,11 @@ func applyLine(s *Session, raw *rawLine) {
 				s.FileCounts[fp]++
 			}
 		}
+		if c.Name == "Skill" {
+			if skill := skillNameOf(c.Input); skill != "" {
+				s.SkillCounts[skill]++
+			}
+		}
 	}
 }
 
@@ -212,6 +219,19 @@ func filePathOf(input json.RawMessage) string {
 		return ""
 	}
 	return fields.FilePath
+}
+
+func skillNameOf(input json.RawMessage) string {
+	if len(input) == 0 {
+		return ""
+	}
+	var fields struct {
+		Skill string `json:"skill"`
+	}
+	if err := json.Unmarshal(input, &fields); err != nil {
+		return ""
+	}
+	return fields.Skill
 }
 
 func parseTime(s string) time.Time {

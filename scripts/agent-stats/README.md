@@ -13,6 +13,7 @@ Claude Code の `~/.claude/projects/**/*.jsonl` を 1 行ずつ寛容にパー�
 - アシスタントターン数
 - tool 別呼び出し回数（Edit / Write / Bash / 各 MCP / skill など）
 - Edit / Write / MultiEdit / NotebookEdit の `file_path` から頻出編集ファイル top-N
+- `Skill` tool_use の `input.skill` から、どの skill が何回呼ばれたか（skill 内訳）
 - 先頭・末尾 timestamp から算出したセッション時間、`cwd` / `gitBranch`
 
 Claude Code は1回のアシスタント応答（thinking → text → tool_use）を、同じ `message.id` を
@@ -23,6 +24,10 @@ dedupe できないため、そのまま1行1カウントとして扱う）。
 集計テーブルの `Duration` は、各セッションの「先頭 timestamp 〜 末尾 timestamp」の差分を全セッ
 ション分単純合算した値であり、実作業時間ではない。resume で日をまたいだセッションはアイドル時
 間も含むため、値が大きく見えることがある。
+
+skill 内訳（`Skills`）は `Tool calls` の `Skill` 行とは別集計。`Tool calls` の `Skill` は
+`input.skill` の有無によらず全 Skill 呼び出しをカウントするのに対し、`Skills` は
+`input.skill` を持つ呼び出しだけをその skill 名で集計する。
 
 ## 使い方
 

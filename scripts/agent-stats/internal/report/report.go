@@ -28,6 +28,7 @@ type Summary struct {
 	Models         []Count          `json:"models"`
 	Tools          []Count          `json:"tools"`
 	Files          []Count          `json:"files"`
+	Skills         []Count          `json:"skills"`
 	List           []parser.Session `json:"list"`
 }
 
@@ -37,6 +38,7 @@ func Summarize(sessions []parser.Session) Summary {
 	models := map[string]int{}
 	tools := map[string]int{}
 	files := map[string]int{}
+	skills := map[string]int{}
 	sum := Summary{Sessions: len(sessions), List: sessions}
 	for i := range sessions {
 		s := &sessions[i]
@@ -55,10 +57,14 @@ func Summarize(sessions []parser.Session) Summary {
 		for path, n := range s.FileCounts {
 			files[path] += n
 		}
+		for name, n := range s.SkillCounts {
+			skills[name] += n
+		}
 	}
 	sum.Models = ranked(models, 0)
 	sum.Tools = ranked(tools, 0)
 	sum.Files = ranked(files, 0)
+	sum.Skills = ranked(skills, 0)
 	return sum
 }
 
@@ -103,6 +109,7 @@ func RenderTable(s *Summary) string {
 
 	writeCounts(&b, "Models", s.Models, 0)
 	writeCounts(&b, "Tool calls", s.Tools, 0)
+	writeCounts(&b, "Skills", s.Skills, 0)
 	writeCounts(&b, "Top files", s.Files, topFiles)
 
 	b.WriteString("\nNote: only Claude Code transcripts are parsed; other AI CLIs are not yet supported.\n")

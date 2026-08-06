@@ -16,8 +16,9 @@ func sessions() []parser.Session {
 			Model:          "claude-opus-4-8",
 			Tokens:         parser.Tokens{Input: 100, Output: 40, CacheRead: 10},
 			AssistantTurns: 2,
-			ToolCounts:     map[string]int{"Edit": 3, "Bash": 1},
+			ToolCounts:     map[string]int{"Edit": 3, "Bash": 1, "Skill": 2},
 			FileCounts:     map[string]int{"a.go": 2, "b.go": 1},
+			SkillCounts:    map[string]int{"dev-workflow": 2},
 			Start:          time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC),
 			End:            time.Date(2026, 7, 30, 10, 5, 0, 0, time.UTC),
 		},
@@ -26,8 +27,9 @@ func sessions() []parser.Session {
 			Model:          "claude-sonnet-5",
 			Tokens:         parser.Tokens{Input: 50, Output: 20},
 			AssistantTurns: 1,
-			ToolCounts:     map[string]int{"Edit": 1, "Read": 4},
+			ToolCounts:     map[string]int{"Edit": 1, "Read": 4, "Skill": 1},
 			FileCounts:     map[string]int{"a.go": 1},
+			SkillCounts:    map[string]int{"review": 1},
 			Start:          time.Date(2026, 7, 30, 11, 0, 0, 0, time.UTC),
 			End:            time.Date(2026, 7, 30, 11, 10, 0, 0, time.UTC),
 		},
@@ -56,6 +58,9 @@ func TestSummarize(t *testing.T) {
 	}
 	if s.Files[0].Name != "a.go" || s.Files[0].Count != 3 {
 		t.Errorf("Files[0] = %+v, want a.go:3", s.Files[0])
+	}
+	if len(s.Skills) != 2 || s.Skills[0].Name != "dev-workflow" || s.Skills[0].Count != 2 {
+		t.Errorf("Skills = %+v, want [dev-workflow:2 review:1]", s.Skills)
 	}
 }
 
@@ -97,7 +102,7 @@ func TestRenderTable(t *testing.T) {
 	t.Parallel()
 	summary := Summarize(sessions())
 	out := RenderTable(&summary)
-	for _, want := range []string{"Sessions:", "Tokens", "Edit", "a.go", "Claude Code"} {
+	for _, want := range []string{"Sessions:", "Tokens", "Edit", "a.go", "Skills", "dev-workflow", "Claude Code"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("table missing %q\n%s", want, out)
 		}
