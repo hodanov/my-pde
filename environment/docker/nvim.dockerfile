@@ -133,7 +133,6 @@ RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
 FROM base AS rust-builder
 
 ARG RUST_TOOLCHAIN=stable
-# STYLUA_VERSION は mise.toml [tools] の stylua を源泉に sync-pins.sh が生成する。
 ARG STYLUA_VERSION=2.5.2
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
@@ -227,6 +226,7 @@ COPY ./nvim/config/.bash_profile /root/
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ripgrep fd-find python3 mysql-client luarocks \
+  shellcheck \
   && mkdir -p /root/.local/state/nvim/undo \
   && apt-get autoremove -y \
   && apt-get clean -y \

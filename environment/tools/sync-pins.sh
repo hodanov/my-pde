@@ -30,6 +30,8 @@ golangci_lint=$(pin 'golangci-lint')
 langserver=$(pin '"go:github.com/nametake/golangci-lint-langserver"')
 terraform_ls=$(pin 'terraform-ls')
 tflint=$(pin 'tflint')
+shfmt=$(pin 'shfmt')
+actionlint=$(pin 'actionlint')
 
 # NOTE: no comments or blank lines — the Dockerfile `go install`s every line.
 cat >"$GO_TOOLS" <<EOF
@@ -40,6 +42,8 @@ github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v${golangci_lint}
 github.com/nametake/golangci-lint-langserver@v${langserver}
 github.com/hashicorp/terraform-ls@v${terraform_ls}
 github.com/terraform-linters/tflint@v${tflint}
+mvdan.cc/sh/v3/cmd/shfmt@v${shfmt}
+github.com/rhysd/actionlint/cmd/actionlint@v${actionlint}
 EOF
 echo "Generated $GO_TOOLS"
 

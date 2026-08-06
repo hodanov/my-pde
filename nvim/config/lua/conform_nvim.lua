@@ -12,15 +12,18 @@ require("conform").setup({
 		lua = { "stylua" },
 		markdown = { "markdownlint-cli2" },
 		python = { "ruff_fix", "ruff_format", "ruff_organize_imports" },
-		sh = { "shfmt" }, -- bash/sh を保存時に整形（mise 固定の shfmt / 既存フックと同一スタイル）
+		sh = { "shfmt" },
 		terraform = { "terraform_fmt" },
 		["terraform-vars"] = { "terraform_fmt" },
 		yaml = { "prettierd", "prettier", stop_after_first = true },
 	},
+	formatters = {
+		shfmt = {
+			args = { "-filename", "$FILENAME" },
+		},
+	},
 })
 
--- 手動フォーマット。保存時 (format_on_save) と同じ conform のチェーンを通す。
--- conform にフォーマッタが無い filetype では lsp_format = "fallback" で LSP 整形に委譲する。
 vim.keymap.set({ "n", "v" }, "<space>f", function()
 	require("conform").format({ async = true, lsp_format = "fallback" })
 end, { desc = "Format buffer or range (conform)" })
