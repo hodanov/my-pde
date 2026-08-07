@@ -93,6 +93,41 @@ func TestParseReaderDedupesSplitTurns(t *testing.T) {
 	}
 }
 
+// skillFixture mirrors how the Skill tool records which skill was invoked:
+// tool_use name "Skill" with an input.skill field. Not every Skill call is
+// guaranteed to carry that field (schema drift), so one line omits it.
+const skillFixture = `
+{"type":"assistant","timestamp":"2026-08-06T10:00:00Z","message":{"id":"msg_1","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","name":"Skill","input":{"skill":"dev-workflow"}}]}}
+{"type":"assistant","timestamp":"2026-08-06T10:00:01Z","message":{"id":"msg_2","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","name":"Skill","input":{"skill":"dev-workflow","args":"do the thing"}}]}}
+{"type":"assistant","timestamp":"2026-08-06T10:00:02Z","message":{"id":"msg_3","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","name":"Skill","input":{"skill":"review"}}]}}
+{"type":"assistant","timestamp":"2026-08-06T10:00:03Z","message":{"id":"msg_4","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","name":"Skill","input":{}}]}}
+{"type":"assistant","timestamp":"2026-08-06T10:00:04Z","message":{"id":"msg_5","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","name":"Bash","input":{"command":"ls"}}]}}
+`
+
+func TestParseReaderSkillCounts(t *testing.T) {
+	t.Parallel()
+	s := ParseReader("skills.jsonl", strings.NewReader(skillFixture))
+
+	// Every Skill invocation still counts toward the generic tool tally,
+	// including the one with no input.skill field.
+	if s.ToolCounts["Skill"] != 4 {
+		t.Errorf("ToolCounts[Skill] = %d, want 4", s.ToolCounts["Skill"])
+	}
+	if s.SkillCounts["dev-workflow"] != 2 {
+		t.Errorf("SkillCounts[dev-workflow] = %d, want 2", s.SkillCounts["dev-workflow"])
+	}
+	if s.SkillCounts["review"] != 1 {
+		t.Errorf("SkillCounts[review] = %d, want 1", s.SkillCounts["review"])
+	}
+	if len(s.SkillCounts) != 2 {
+		t.Errorf("SkillCounts = %v, want only dev-workflow and review (no entry for the id-less call)", s.SkillCounts)
+	}
+	// A non-Skill tool must never leak into SkillCounts.
+	if _, ok := s.SkillCounts["ls"]; ok {
+		t.Errorf("SkillCounts must not contain non-Skill tool data, got %v", s.SkillCounts)
+	}
+}
+
 func TestDurationGuards(t *testing.T) {
 	t.Parallel()
 	end := time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC)
