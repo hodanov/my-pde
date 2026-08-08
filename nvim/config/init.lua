@@ -192,6 +192,22 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
 })
 
 -- ----------------------------------------
+-- 散文系 filetype の折り返しを読みやすくする（ドキュメント編集の主用途向け）
+-- linebreak: 単語境界で折り返す / breakindent: 継続行を字下げに揃える
+-- breakindentopt=list:-1: Markdown 箇条書きの折り返しをぶら下げ字下げにする
+-- ----------------------------------------
+vim.api.nvim_create_augroup("prose_wrap", { clear = true })
+vim.api.nvim_create_autocmd("FileType", {
+	group = "prose_wrap",
+	pattern = { "markdown", "text", "plaintext", "gitcommit" },
+	callback = function()
+		vim.opt_local.linebreak = true -- 単語の途中で折り返さない
+		vim.opt_local.breakindent = true -- 折り返し継続行を元のインデントに揃える
+		vim.opt_local.breakindentopt = "list:-1" -- 箇条書き/番号リストの継続行をぶら下げ字下げにする
+	end,
+})
+
+-- ----------------------------------------
 -- Open init.vim and 'source' it.
 -- ----------------------------------------
 vim.api.nvim_set_keymap("n", "<Leader>.", ":vs ~/.config/nvim/init.lua<CR>", { noremap = true, silent = true })
