@@ -148,6 +148,45 @@ if vim.fn.has("persistent_undo") == 1 then
 end
 
 -- ----------------------------------------
+-- Session persistence（中断→再開の摩擦を減らす。undofile / カーソル位置復元の続き）
+-- cwd ごとにバッファ/分割構成/タブ/折り畳みを保存し、任意で復元する。
+-- ----------------------------------------
+-- options / globals は保存対象に含めない（起動時の設定を常に優先し、古い設定の固着や
+-- 他プラグインとの干渉を避ける）。terminal も除外（死んだ端末バッファ復元の混乱を防ぐ）。
+vim.opt.sessionoptions = "buffers,curdir,folds,tabpages,winsize,winpos,help"
+
+local session_dir = vim.fn.stdpath("state") .. "/sessions/"
+vim.fn.mkdir(session_dir, "p")
+
+-- cwd を一意なファイル名へエンコードする（path separator を % に置き換える）。
+local function session_file()
+	return session_dir .. vim.fn.getcwd():gsub("[\\/:]", "%%") .. ".vim"
+end
+
+-- 終了時に自動保存する。ただし「引数なしで開いた通常編集」時のみ
+-- (`nvim foo.lua` のような単発起動でセッションを上書きしない)。
+vim.api.nvim_create_autocmd("VimLeavePre", {
+	group = vim.api.nvim_create_augroup("auto_save_session", { clear = true }),
+	callback = function()
+		if vim.fn.argc() > 0 then
+			return
+		end
+		vim.cmd("mksession! " .. vim.fn.fnameescape(session_file()))
+	end,
+})
+
+-- 復元は手動（自動復元は「特定ファイルを開きたいだけの起動」まで巻き戻すため、明示キーに寄せる）。
+-- <Leader>s (= init.lua を source) と衝突しない <Leader>S を割り当てる。
+vim.keymap.set("n", "<Leader>S", function()
+	local f = session_file()
+	if vim.fn.filereadable(f) == 1 then
+		vim.cmd("source " .. vim.fn.fnameescape(f))
+	else
+		vim.notify("No saved session for " .. vim.fn.getcwd(), vim.log.levels.WARN)
+	end
+end, { desc = "Restore session for cwd" })
+
+-- ----------------------------------------
 -- Restore the last cursor position when reopening a file.
 -- BufReadPost は shada から `"` マーク (バッファを最後に離れた位置) が復元された後に
 -- 発火するので、この契機で参照する。永続 undo と合わせて中断→再開の摩擦を減らす。
