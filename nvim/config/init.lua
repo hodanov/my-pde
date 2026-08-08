@@ -48,6 +48,27 @@ vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁�
 vim.opt.confirm = true -- 未保存バッファを破棄しうる :q / :e 等でエラーにせず、保存/破棄/キャンセルの確認ダイアログを出す
 
 -- ----------------------------------------
+-- :grep / :make 等で quickfix が populate されたら結果窓を自動で開く（ripgrep 動線の最終ピース）
+-- 先頭が l 以外のコマンド (:grep/:make/:vimgrep) → quickfix を cwindow で開く
+-- 先頭が l のコマンド (:lgrep/:lvimgrep 等)      → location list を lwindow で開く
+-- cwindow/lwindow は「有効なエントリがあれば開き、空なら閉じる」ので 0 件ヒット時に窓は出ない。
+-- nested を付け、cwindow が発火する FileType/BufWinEnter 等の autocmd を抑止しない。
+-- ----------------------------------------
+local qf_group = vim.api.nvim_create_augroup("auto_open_quickfix", { clear = true })
+vim.api.nvim_create_autocmd("QuickFixCmdPost", {
+	group = qf_group,
+	pattern = { "[^l]*" }, -- :grep / :make / :vimgrep 等（先頭が l 以外）
+	nested = true,
+	command = "botright cwindow",
+})
+vim.api.nvim_create_autocmd("QuickFixCmdPost", {
+	group = qf_group,
+	pattern = { "l*" }, -- :lgrep / :lvimgrep 等（location list 系）
+	nested = true,
+	command = "lwindow",
+})
+
+-- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
 -- ----------------------------------------
 vim.opt.autoread = true -- ディスク上で更新されたファイルをバッファへ読み直す
