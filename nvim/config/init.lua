@@ -45,6 +45,11 @@ vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current w
 vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
 vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
 vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
+-- jumplist (<C-o>/<C-i>) / changelist (g;/g,) / alternate-file (<C-^>) / マークジャンプで
+-- 戻った際に、カーソル行だけでなく「カーソル行と topline の距離」= 元の画面スクロール位置まで復元する。
+-- gd / grr / telescope / quickfix から飛んで戻る往復で、毎回 zz を打ち直す手間を消す。
+-- 既定は "clean" (未ロードバッファを jumplist から除く) のため、上書きせず append する。
+vim.opt.jumpoptions:append("view")
 vim.opt.confirm = true -- 未保存バッファを破棄しうる :q / :e 等でエラーにせず、保存/破棄/キャンセルの確認ダイアログを出す
 
 -- ----------------------------------------
