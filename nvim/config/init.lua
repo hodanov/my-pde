@@ -43,9 +43,49 @@ vim.opt.foldlevelstart = 99 -- Open files fully expanded; folds (treesitter fold
 vim.opt.updatetime = 300 -- Fire CursorHold sooner (default 4000ms) for LSP document highlight. Kept >250ms to avoid frequent swap writes.
 vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current window.
 vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
+-- 分割の開閉で周囲ウィンドウの表示テキストが上下にズレないよう、画面上の見た目位置を保つ。
+-- 既定は "cursor"（カーソルの相対位置を保つ＝ビューポートはスクロールしうる）。
+-- quickfix(:copen) / ターミナル分割 / gitsigns プレビュー等の開閉時に読んでいた行を見失うのを防ぐ。
+vim.opt.splitkeep = "screen"
+-- quickfix (:cc / :cn / :cp や quickfix ウィンドウ上の <CR>) から飛ぶ際、対象ファイルを
+-- 既に表示しているウィンドウが同一タブ内にあればそこへジャンプする。
+-- 既定の "uselast" だけだと他ウィンドウを見ずに「直前に使ったウィンドウ」へ読み込むため、
+-- 突き合わせ中の分割が差し替わり、同じファイルが 2 枚並ぶことがある。
+-- 未表示時のフォールバックとして uselast を残したいので、代入せず append する。
+vim.opt.switchbuf:append("useopen")
 vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
 vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
+-- jumplist (<C-o>/<C-i>) / changelist (g;/g,) / alternate-file (<C-^>) / マークジャンプで
+-- 戻った際に、カーソル行だけでなく「カーソル行と topline の距離」= 元の画面スクロール位置まで復元する。
+-- gd / grr / telescope / quickfix から飛んで戻る往復で、毎回 zz を打ち直す手間を消す。
+-- 既定は "clean" (未ロードバッファを jumplist から除く) のため、上書きせず append する。
+vim.opt.jumpoptions:append("view")
 vim.opt.confirm = true -- 未保存バッファを破棄しうる :q / :e 等でエラーにせず、保存/破棄/キャンセルの確認ダイアログを出す
+-- diff の行内アライメントを精緻化する（gitsigns インラインプレビュー / :diffthis 双方に効く）。
+-- 既定値を壊さないよう append で足す（重複指定は無視される）。internal は既定で有効。
+vim.opt.diffopt:append("linematch:60") -- 変更ハンク内で似た行同士を対応付け直し、本当に変わった行だけを着色（Neovim 0.9+）
+vim.opt.diffopt:append("algorithm:histogram") -- 内蔵 diff のアルゴリズムを histogram にし、並べ替えを含む差分でも直感的なマッチにする
+
+-- ----------------------------------------
+-- :grep / :make 等で quickfix が populate されたら結果窓を自動で開く（ripgrep 動線の最終ピース）
+-- 先頭が l 以外のコマンド (:grep/:make/:vimgrep) → quickfix を cwindow で開く
+-- 先頭が l のコマンド (:lgrep/:lvimgrep 等)      → location list を lwindow で開く
+-- cwindow/lwindow は「有効なエントリがあれば開き、空なら閉じる」ので 0 件ヒット時に窓は出ない。
+-- nested を付け、cwindow が発火する FileType/BufWinEnter 等の autocmd を抑止しない。
+-- ----------------------------------------
+local qf_group = vim.api.nvim_create_augroup("auto_open_quickfix", { clear = true })
+vim.api.nvim_create_autocmd("QuickFixCmdPost", {
+	group = qf_group,
+	pattern = { "[^l]*" }, -- :grep / :make / :vimgrep 等（先頭が l 以外）
+	nested = true,
+	command = "botright cwindow",
+})
+vim.api.nvim_create_autocmd("QuickFixCmdPost", {
+	group = qf_group,
+	pattern = { "l*" }, -- :lgrep / :lvimgrep 等（location list 系）
+	nested = true,
+	command = "lwindow",
+})
 
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
@@ -148,6 +188,44 @@ if vim.fn.has("persistent_undo") == 1 then
 end
 
 -- ----------------------------------------
+-- Session persistence（中断→再開の摩擦を減らす。undofile / カーソル位置復元の続き）
+-- cwd ごとにバッファ/分割構成/タブ/折り畳みを保存し、任意で復元する。
+-- ----------------------------------------
+-- options / globals は保存対象に含めない（起動時の設定を常に優先し、古い設定の固着や
+-- 他プラグインとの干渉を避ける）。terminal も除外（死んだ端末バッファ復元の混乱を防ぐ）。
+vim.opt.sessionoptions = "buffers,curdir,folds,tabpages,winsize,winpos,help"
+
+local session_dir = vim.fn.stdpath("state") .. "/sessions/"
+vim.fn.mkdir(session_dir, "p")
+
+-- cwd を一意なファイル名へエンコードする（path separator を % に置き換える）。
+local function session_file()
+	return session_dir .. vim.fn.getcwd():gsub("[\\/:]", "%%") .. ".vim"
+end
+
+-- 終了時に自動保存する。ただし「引数なしで開いた通常編集」時のみ
+-- (`nvim foo.lua` のような単発起動でセッションを上書きしない)。
+vim.api.nvim_create_autocmd("VimLeavePre", {
+	group = vim.api.nvim_create_augroup("auto_save_session", { clear = true }),
+	callback = function()
+		if vim.fn.argc() > 0 then
+			return
+		end
+		vim.cmd("mksession! " .. vim.fn.fnameescape(session_file()))
+	end,
+})
+
+-- 復元は手動（自動復元は「特定ファイルを開きたいだけの起動」まで巻き戻すため、明示キーに寄せる）。
+vim.keymap.set("n", "<Leader>s", function()
+	local f = session_file()
+	if vim.fn.filereadable(f) == 1 then
+		vim.cmd("source " .. vim.fn.fnameescape(f))
+	else
+		vim.notify("No saved session for " .. vim.fn.getcwd(), vim.log.levels.WARN)
+	end
+end, { desc = "Restore session for cwd" })
+
+-- ----------------------------------------
 -- Restore the last cursor position when reopening a file.
 -- BufReadPost は shada から `"` マーク (バッファを最後に離れた位置) が復元された後に
 -- 発火するので、この契機で参照する。永続 undo と合わせて中断→再開の摩擦を減らす。
@@ -192,10 +270,25 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
 })
 
 -- ----------------------------------------
--- Open init.vim and 'source' it.
+-- 散文系 filetype の折り返しを読みやすくする（ドキュメント編集の主用途向け）
+-- linebreak: 単語境界で折り返す / breakindent: 継続行を字下げに揃える
+-- breakindentopt=list:-1: Markdown 箇条書きの折り返しをぶら下げ字下げにする
+-- ----------------------------------------
+vim.api.nvim_create_augroup("prose_wrap", { clear = true })
+vim.api.nvim_create_autocmd("FileType", {
+	group = "prose_wrap",
+	pattern = { "markdown", "text", "plaintext", "gitcommit" },
+	callback = function()
+		vim.opt_local.linebreak = true -- 単語の途中で折り返さない
+		vim.opt_local.breakindent = true -- 折り返し継続行を元のインデントに揃える
+		vim.opt_local.breakindentopt = "list:-1" -- 箇条書き/番号リストの継続行をぶら下げ字下げにする
+	end,
+})
+
+-- ----------------------------------------
+-- Open init.vim.
 -- ----------------------------------------
 vim.api.nvim_set_keymap("n", "<Leader>.", ":vs ~/.config/nvim/init.lua<CR>", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", "<Leader>s", ":source ~/.config/nvim/init.lua<CR>", { noremap = true, silent = true })
 
 -- ----------------------------------------
 -- Clear highlighted characters.
