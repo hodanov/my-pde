@@ -9,7 +9,7 @@ description: >-
 disable-model-invocation: true
 argument-hint: "<フック名> [用途の一言]"
 metadata:
-  version: 1
+  version: 2
 ---
 
 # /hook-scaffold スキル
@@ -18,7 +18,6 @@ metadata:
 
 新規フックの追加を、スクリプト雛形の生成から 3 CLI（claude / cursor / copilot）分の配線・検証まで、
 本リポジトリの規約どおりに一貫した手順で完了させる。
-`skill-scaffold` が担う「スキルの新規作成」に対する、hook 側の対（つい）を埋める。
 
 ## Workflow
 
