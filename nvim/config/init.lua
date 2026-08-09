@@ -216,8 +216,7 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 })
 
 -- 復元は手動（自動復元は「特定ファイルを開きたいだけの起動」まで巻き戻すため、明示キーに寄せる）。
--- <Leader>s (= init.lua を source) と衝突しない <Leader>S を割り当てる。
-vim.keymap.set("n", "<Leader>S", function()
+vim.keymap.set("n", "<Leader>s", function()
 	local f = session_file()
 	if vim.fn.filereadable(f) == 1 then
 		vim.cmd("source " .. vim.fn.fnameescape(f))
@@ -287,10 +286,9 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 -- ----------------------------------------
--- Open init.vim and 'source' it.
+-- Open init.vim.
 -- ----------------------------------------
 vim.api.nvim_set_keymap("n", "<Leader>.", ":vs ~/.config/nvim/init.lua<CR>", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", "<Leader>s", ":source ~/.config/nvim/init.lua<CR>", { noremap = true, silent = true })
 
 -- ----------------------------------------
 -- Clear highlighted characters.
