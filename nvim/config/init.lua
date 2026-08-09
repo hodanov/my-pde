@@ -47,6 +47,12 @@ vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the 
 -- 既定は "cursor"（カーソルの相対位置を保つ＝ビューポートはスクロールしうる）。
 -- quickfix(:copen) / ターミナル分割 / gitsigns プレビュー等の開閉時に読んでいた行を見失うのを防ぐ。
 vim.opt.splitkeep = "screen"
+-- quickfix (:cc / :cn / :cp や quickfix ウィンドウ上の <CR>) から飛ぶ際、対象ファイルを
+-- 既に表示しているウィンドウが同一タブ内にあればそこへジャンプする。
+-- 既定の "uselast" だけだと他ウィンドウを見ずに「直前に使ったウィンドウ」へ読み込むため、
+-- 突き合わせ中の分割が差し替わり、同じファイルが 2 枚並ぶことがある。
+-- 未表示時のフォールバックとして uselast を残したいので、代入せず append する。
+vim.opt.switchbuf:append("useopen")
 vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
 vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
 vim.opt.confirm = true -- 未保存バッファを破棄しうる :q / :e 等でエラーにせず、保存/破棄/キャンセルの確認ダイアログを出す
