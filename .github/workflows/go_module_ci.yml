@@ -116,35 +116,43 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          # Pass every value through env instead of expanding ${{ }} inside run:.
+          # ${{ }} is substituted as text before bash parses the script, so a
+          # coverage report line (which starts with a PR-controlled source file
+          # path) could otherwise inject $(...) or break the BODY="..." quoting.
+          REPO: ${{ github.repository }}
+          MODULE: ${{ inputs.module }}
+          COVERAGE_TOTAL: ${{ steps.coverage.outputs.total }}
+          COVERAGE_REPORT: ${{ steps.coverage.outputs.report }}
         run: |
-          MARKER="<!-- coverage-${{ inputs.module }} -->"
+          MARKER="<!-- coverage-${MODULE} -->"
           BODY="${MARKER}
-          ## 📊 Go Test Coverage: ${{ inputs.module }}
+          ## 📊 Go Test Coverage: ${MODULE}
 
-          **Total coverage: ${{ steps.coverage.outputs.total }}**
+          **Total coverage: ${COVERAGE_TOTAL}**
 
           <details>
           <summary>Per-package / per-function breakdown</summary>
 
           \`\`\`
-          ${{ steps.coverage.outputs.report }}
+          ${COVERAGE_REPORT}
           \`\`\`
 
           </details>"
 
           EXISTING_COMMENT_ID=$(gh api \
-            "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            "repos/${REPO}/issues/${PR_NUMBER}/comments" \
             --jq ".[] | select(.body | startswith(\"${MARKER}\")) | .id" \
           )
 
           if [ -n "$EXISTING_COMMENT_ID" ]; then
             gh api \
               --method PATCH \
-              "repos/${{ github.repository }}/issues/comments/${EXISTING_COMMENT_ID}" \
+              "repos/${REPO}/issues/comments/${EXISTING_COMMENT_ID}" \
               -f body="${BODY}"
           else
             gh api \
               --method POST \
-              "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+              "repos/${REPO}/issues/${PR_NUMBER}/comments" \
               -f body="${BODY}"
           fi
