@@ -61,6 +61,10 @@ vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁�
 -- 既定は "clean" (未ロードバッファを jumplist から除く) のため、上書きせず append する。
 vim.opt.jumpoptions:append("view")
 vim.opt.confirm = true -- 未保存バッファを破棄しうる :q / :e 等でエラーにせず、保存/破棄/キャンセルの確認ダイアログを出す
+-- diff の行内アライメントを精緻化する（gitsigns インラインプレビュー / :diffthis 双方に効く）。
+-- 既定値を壊さないよう append で足す（重複指定は無視される）。internal は既定で有効。
+vim.opt.diffopt:append("linematch:60") -- 変更ハンク内で似た行同士を対応付け直し、本当に変わった行だけを着色（Neovim 0.9+）
+vim.opt.diffopt:append("algorithm:histogram") -- 内蔵 diff のアルゴリズムを histogram にし、並べ替えを含む差分でも直感的なマッチにする
 
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
