@@ -436,6 +436,16 @@ prettier --check .
 markdownlint-cli2 "**/*.md"
 '''
 
+[tasks.lint]
+description = "Run all repo-wide linters (CI parity)"
+depends = [
+  "lint:shell",
+  "lint:stylua",
+  "lint:docker",
+  "lint:actions",
+  "lint:format",
+]
+
 # ---- Changed-files verification (human entry point; the verify-runner
 # subagent runs ai-agents/scripts/verify-changed.sh directly) ----
 
