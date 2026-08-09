@@ -43,6 +43,10 @@ vim.opt.foldlevelstart = 99 -- Open files fully expanded; folds (treesitter fold
 vim.opt.updatetime = 300 -- Fire CursorHold sooner (default 4000ms) for LSP document highlight. Kept >250ms to avoid frequent swap writes.
 vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current window.
 vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
+-- 分割の開閉で周囲ウィンドウの表示テキストが上下にズレないよう、画面上の見た目位置を保つ。
+-- 既定は "cursor"（カーソルの相対位置を保つ＝ビューポートはスクロールしうる）。
+-- quickfix(:copen) / ターミナル分割 / gitsigns プレビュー等の開閉時に読んでいた行を見失うのを防ぐ。
+vim.opt.splitkeep = "screen"
 -- quickfix (:cc / :cn / :cp や quickfix ウィンドウ上の <CR>) から飛ぶ際、対象ファイルを
 -- 既に表示しているウィンドウが同一タブ内にあればそこへジャンプする。
 -- 既定の "uselast" だけだと他ウィンドウを見ずに「直前に使ったウィンドウ」へ読み込むため、
