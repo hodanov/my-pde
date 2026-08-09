@@ -43,9 +43,28 @@ vim.opt.foldlevelstart = 99 -- Open files fully expanded; folds (treesitter fold
 vim.opt.updatetime = 300 -- Fire CursorHold sooner (default 4000ms) for LSP document highlight. Kept >250ms to avoid frequent swap writes.
 vim.opt.splitbelow = true -- Open horizontal splits (:split) below the current window.
 vim.opt.splitright = true -- Open vertical splits (:vsplit) to the right of the current window.
+-- 分割の開閉で周囲ウィンドウの表示テキストが上下にズレないよう、画面上の見た目位置を保つ。
+-- 既定は "cursor"（カーソルの相対位置を保つ＝ビューポートはスクロールしうる）。
+-- quickfix(:copen) / ターミナル分割 / gitsigns プレビュー等の開閉時に読んでいた行を見失うのを防ぐ。
+vim.opt.splitkeep = "screen"
+-- quickfix (:cc / :cn / :cp や quickfix ウィンドウ上の <CR>) から飛ぶ際、対象ファイルを
+-- 既に表示しているウィンドウが同一タブ内にあればそこへジャンプする。
+-- 既定の "uselast" だけだと他ウィンドウを見ずに「直前に使ったウィンドウ」へ読み込むため、
+-- 突き合わせ中の分割が差し替わり、同じファイルが 2 枚並ぶことがある。
+-- 未表示時のフォールバックとして uselast を残したいので、代入せず append する。
+vim.opt.switchbuf:append("useopen")
 vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
 vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
+-- jumplist (<C-o>/<C-i>) / changelist (g;/g,) / alternate-file (<C-^>) / マークジャンプで
+-- 戻った際に、カーソル行だけでなく「カーソル行と topline の距離」= 元の画面スクロール位置まで復元する。
+-- gd / grr / telescope / quickfix から飛んで戻る往復で、毎回 zz を打ち直す手間を消す。
+-- 既定は "clean" (未ロードバッファを jumplist から除く) のため、上書きせず append する。
+vim.opt.jumpoptions:append("view")
 vim.opt.confirm = true -- 未保存バッファを破棄しうる :q / :e 等でエラーにせず、保存/破棄/キャンセルの確認ダイアログを出す
+-- diff の行内アライメントを精緻化する（gitsigns インラインプレビュー / :diffthis 双方に効く）。
+-- 既定値を壊さないよう append で足す（重複指定は無視される）。internal は既定で有効。
+vim.opt.diffopt:append("linematch:60") -- 変更ハンク内で似た行同士を対応付け直し、本当に変わった行だけを着色（Neovim 0.9+）
+vim.opt.diffopt:append("algorithm:histogram") -- 内蔵 diff のアルゴリズムを histogram にし、並べ替えを含む差分でも直感的なマッチにする
 
 -- ----------------------------------------
 -- :grep / :make 等で quickfix が populate されたら結果窓を自動で開く（ripgrep 動線の最終ピース）
@@ -210,6 +229,22 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
 	group = "html_css_js_and_others_indent",
 	pattern = "*.go",
 	command = "set noexpandtab tabstop=8 shiftwidth=8",
+})
+
+-- ----------------------------------------
+-- 散文系 filetype の折り返しを読みやすくする（ドキュメント編集の主用途向け）
+-- linebreak: 単語境界で折り返す / breakindent: 継続行を字下げに揃える
+-- breakindentopt=list:-1: Markdown 箇条書きの折り返しをぶら下げ字下げにする
+-- ----------------------------------------
+vim.api.nvim_create_augroup("prose_wrap", { clear = true })
+vim.api.nvim_create_autocmd("FileType", {
+	group = "prose_wrap",
+	pattern = { "markdown", "text", "plaintext", "gitcommit" },
+	callback = function()
+		vim.opt_local.linebreak = true -- 単語の途中で折り返さない
+		vim.opt_local.breakindent = true -- 折り返し継続行を元のインデントに揃える
+		vim.opt_local.breakindentopt = "list:-1" -- 箇条書き/番号リストの継続行をぶら下げ字下げにする
+	end,
 })
 
 -- ----------------------------------------
