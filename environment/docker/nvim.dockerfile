@@ -175,18 +175,20 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
   case "$ARCH" in \
-    amd64) HL_ARCH="Linux-x86_64" ;; \
-    arm64) HL_ARCH="Linux-arm64" ;; \
+    amd64) HL_ARCH="linux-x86_64" ;; \
+    arm64) HL_ARCH="linux-arm64" ;; \
     *) echo "Unsupported arch for hadolint: $ARCH" >&2; exit 1 ;; \
   esac; \
   BASE_URL="https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}"; \
   TMPDIR="/tmp/hadolint"; \
   mkdir -p "$TMPDIR"; \
+  BIN_NAME="hadolint-${HL_ARCH}"; \
   BIN_PATH="$TMPDIR/hadolint"; \
-  SHA_PATH="$TMPDIR/hadolint.sha256"; \
-  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/hadolint-$HL_ARCH" -o "$BIN_PATH"; \
-  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/hadolint-$HL_ARCH.sha256" -o "$SHA_PATH"; \
-  REF_SHA="$(awk '{print $1}' "$SHA_PATH")"; \
+  SHA_PATH="$TMPDIR/checksums.sha256"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$BIN_NAME" -o "$BIN_PATH"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/checksums.sha256" -o "$SHA_PATH"; \
+  REF_SHA="$(grep -E " \*?${BIN_NAME}\$" "$SHA_PATH" | awk '{print $1}')"; \
+  [ -n "$REF_SHA" ] || (echo "hadolint checksum not found for $BIN_NAME in checksums.sha256" >&2; exit 1); \
   ACT_SHA="$(sha256sum "$BIN_PATH" | awk '{print $1}')"; \
   [ "$ACT_SHA" = "$REF_SHA" ] || (echo "hadolint checksum mismatch: expected=$REF_SHA actual=$ACT_SHA" >&2; exit 1); \
   install -m 0755 "$BIN_PATH" /usr/local/bin/hadolint
