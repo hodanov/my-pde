@@ -263,4 +263,4 @@ COPY ./environment/tools/python/ruff.toml /root/.config/ruff/
 WORKDIR /workspace
 
 HEALTHCHECK --interval=10m --timeout=1m --start-period=10m --retries=1 \
-  CMD nvim --headless -c 'checkhealth' -c 'qall' 2>/dev/null || exit 1
+  CMD ["sh", "-c", "nvim --headless -c 'checkhealth' -c 'qall' 2>/dev/null || exit 1"]
