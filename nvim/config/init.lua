@@ -319,8 +319,9 @@ vim.api.nvim_create_autocmd("TermOpen", {
 	group = term_group,
 	callback = function()
 		vim.opt_local.number = false -- シェル出力に行番号を出さない
-		vim.opt_local.relativenumber = false
-		vim.opt_local.signcolumn = "yes" -- サイン列を消して出力の折り返しずれを防ぐ
+		-- 0.12 の端末バッファは signcolumn のローカル既定が "no" (:h terminal-config) だが、
+		-- ここではあえて "yes" で上書きしてサイン列分の幅を確保し、出力の折り返しずれを防ぐ。
+		vim.opt_local.signcolumn = "yes"
 		vim.cmd("startinsert") -- 開いた瞬間に端末操作モードへ入る
 	end,
 })
