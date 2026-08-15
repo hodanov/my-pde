@@ -296,20 +296,73 @@ vim.api.nvim_set_keymap("n", "<Leader>.", ":vs ~/.config/nvim/init.lua<CR>", { n
 vim.api.nvim_set_keymap("n", "<C-[><C-[>", ":nohlsearch<CR>", { noremap = true, silent = true })
 
 -- ----------------------------------------
--- vimshell setting.
+-- 内蔵ターミナル（同じ端末を出し入れするトグル）
+--
+--   <Leader>- : 水平分割 / <Leader>l : 垂直分割
+--     端末窓が現在の窓         → 隠す（ジョブは生かしたまま）
+--     端末窓が別の窓にある     → そこへフォーカスを移す
+--     端末窓は無いがバッファ有 → 指定の分割で開き直す（cwd/履歴ごと戻る）
+--     バッファも無い           → 新しく term://bash を起動する
+--
+-- :split term://bash を直接叩くと毎回新しい bash が起動する。
+-- term:// バッファは起動後 term://{cwd}//{pid}:bash へ改名される (:h terminal) ため、
+-- 2 回目以降が既存バッファに当たることは無く、プロセスとバッファが増え続ける。
+-- 分割方向は splitbelow / splitright に従うので、従来どおり下・右に出る。
+-- 追跡するのは 1 本だけで、<Leader>- と <Leader>l は同じシェルを共有する。
 -- ----------------------------------------
-if vim.fn.has("nvim") == 1 then
-	vim.api.nvim_set_keymap("n", "<Leader>-", ":split term://bash<CR>", { noremap = true, silent = true })
-	vim.api.nvim_set_keymap("n", "<Leader>l", ":vsplit term://bash<CR>", { noremap = true, silent = true })
-else
-	vim.api.nvim_set_keymap(
-		"n",
-		"<Leader>-",
-		":below terminal ++close ++rows=13 bash<CR>",
-		{ noremap = true, silent = true }
-	)
-	vim.api.nvim_set_keymap("n", "<Leader>l", ":vertical terminal ++close bash<CR>", { noremap = true, silent = true })
+local term_state = { buf = nil }
+
+-- 現在のタブページで、追跡中の端末バッファを表示している窓を返す。
+local function find_term_win()
+	if not term_state.buf then
+		return nil
+	end
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+		if vim.api.nvim_win_get_buf(win) == term_state.buf then
+			return win
+		end
+	end
+	return nil
 end
+
+local function toggle_terminal(split_cmd)
+	-- :bwipeout 等で外から消された場合に備えて、無効なら追跡状態を落とす。
+	if term_state.buf and not vim.api.nvim_buf_is_valid(term_state.buf) then
+		term_state.buf = nil
+	end
+
+	local win = find_term_win()
+	if win then
+		if win == vim.api.nvim_get_current_win() then
+			-- 最後の 1 枚だと閉じられない (E444) ので握りつぶす。
+			-- 'hidden' が既定で有効なため、閉じてもバッファとジョブは残る。
+			pcall(vim.api.nvim_win_close, win, false)
+		else
+			vim.api.nvim_set_current_win(win)
+			vim.cmd("startinsert")
+		end
+		return
+	end
+
+	if term_state.buf then
+		-- 既存の端末を開き直す。TermOpen は再発火しないが、
+		-- バッファローカルな設定はバッファ側に残っているので問題ない。
+		vim.cmd(split_cmd)
+		vim.api.nvim_win_set_buf(0, term_state.buf)
+		vim.cmd("startinsert")
+		return
+	end
+
+	vim.cmd(split_cmd .. " term://bash")
+	term_state.buf = vim.api.nvim_get_current_buf()
+end
+
+vim.keymap.set("n", "<Leader>-", function()
+	toggle_terminal("split")
+end, { desc = "Toggle terminal (horizontal split)" })
+vim.keymap.set("n", "<Leader>l", function()
+	toggle_terminal("vsplit")
+end, { desc = "Toggle terminal (vertical split)" })
 
 -- ----------------------------------------
 -- 内蔵ターミナルの UX 整備
@@ -323,6 +376,24 @@ vim.api.nvim_create_autocmd("TermOpen", {
 		-- ここではあえて "yes" で上書きしてサイン列分の幅を確保し、出力の折り返しずれを防ぐ。
 		vim.opt_local.signcolumn = "yes"
 		vim.cmd("startinsert") -- 開いた瞬間に端末操作モードへ入る
+	end,
+})
+-- bash を exit したら「[Process exited]」の残骸を残さず片付け、
+-- 次の <Leader>- で新しいシェルが起動するように追跡状態も落とす。
+-- 0.12 では終了しても仮想テキストが出るだけでバッファは消えない (:h terminal-config)。
+vim.api.nvim_create_autocmd("TermClose", {
+	group = term_group,
+	callback = function(args)
+		if args.buf ~= term_state.buf then
+			return -- 手動で開いた端末には手を出さない
+		end
+		term_state.buf = nil
+		-- TermClose の中で即 buf_delete するのは避け、次のループへ逃がす。
+		vim.schedule(function()
+			if vim.api.nvim_buf_is_valid(args.buf) then
+				pcall(vim.api.nvim_buf_delete, args.buf, { force = true })
+			end
+		end)
 	end,
 })
 -- terminal-mode からの脱出を簡略化（<Esc><Esc> を <C-\><C-n> の代替に）
