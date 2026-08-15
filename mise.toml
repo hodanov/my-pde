@@ -229,6 +229,42 @@ description = "Remove agent-stats build artifacts"
 dir = "scripts/agent-stats"
 run = "rm -f agent-stats coverage.out"
 
+# ---- pipeline-metrics (Go) ----
+
+[tasks."pipeline-metrics:build"]
+description = "Build the pipeline-metrics binary"
+dir = "scripts/pipeline-metrics"
+run = "go build -o pipeline-metrics ./cmd/pipeline-metrics"
+
+[tasks."pipeline-metrics:run"]
+description = "Run pipeline-metrics (pass flags after --)"
+dir = "scripts/pipeline-metrics"
+run = "go run ./cmd/pipeline-metrics"
+
+[tasks."pipeline-metrics:test"]
+description = "Run pipeline-metrics Go tests"
+dir = "scripts/pipeline-metrics"
+run = "go test ./..."
+
+[tasks."pipeline-metrics:lint"]
+description = "Run golangci-lint and goimports check for pipeline-metrics"
+dir = "scripts/pipeline-metrics"
+run = [
+  "golangci-lint run --allow-parallel-runners",
+  '''
+diff=$(find . -name '*.go' -exec goimports -d {} +)
+if [ -n "$diff" ]; then
+  echo "$diff"
+  exit 1
+fi
+''',
+]
+
+[tasks."pipeline-metrics:clean"]
+description = "Remove pipeline-metrics build artifacts"
+dir = "scripts/pipeline-metrics"
+run = "rm -f pipeline-metrics coverage.out"
+
 # ---- Aggregates ----
 
 [tasks."go:test"]
@@ -239,7 +275,8 @@ depends = [
   "config-diff:test",
   "go-verify:test",
   "scaffold:test",
-  "agent-stats:test"
+  "agent-stats:test",
+  "pipeline-metrics:test"
 ]
 
 [tasks."go:lint"]
@@ -250,7 +287,8 @@ depends = [
   "config-diff:lint",
   "go-verify:lint",
   "scaffold:lint",
-  "agent-stats:lint"
+  "agent-stats:lint",
+  "pipeline-metrics:lint"
 ]
 
 # ---- AI agents deploy: agents.xml symlinks ----

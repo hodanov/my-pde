@@ -1,0 +1,279 @@
+[
+  {
+    "number": 201,
+    "title": "nvim: adopted and shipped 1",
+    "state": "CLOSED",
+    "labels": [
+      { "id": "LA_1", "name": "scan:nvim" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-08-01T23:00:00Z",
+    "closedAt": "2026-08-03T10:00:00Z"
+  },
+  {
+    "number": 202,
+    "title": "nvim: adopted and shipped 2",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:nvim" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-08-02T23:00:00Z",
+    "closedAt": "2026-08-04T10:00:00Z"
+  },
+  {
+    "number": 203,
+    "title": "nvim: adopted and shipped 3",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:nvim" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-08-03T23:00:00Z",
+    "closedAt": "2026-08-05T10:00:00Z"
+  },
+  {
+    "number": 204,
+    "title": "nvim: adopted and shipped 4",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:nvim" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-08-04T23:00:00Z",
+    "closedAt": "2026-08-06T10:00:00Z"
+  },
+  {
+    "number": 205,
+    "title": "nvim: adopted and shipped 5",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:nvim" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-08-05T23:00:00Z",
+    "closedAt": "2026-08-07T10:00:00Z"
+  },
+  {
+    "number": 206,
+    "title": "nvim: adopted and shipped 6",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:nvim" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-08-06T23:00:00Z",
+    "closedAt": "2026-08-08T10:00:00Z"
+  },
+  {
+    "number": 207,
+    "title": "nvim: adopted and shipped 7",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:nvim" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-08-07T23:00:00Z",
+    "closedAt": "2026-08-09T10:00:00Z"
+  },
+  {
+    "number": 208,
+    "title": "nvim: adopted and shipped 8",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:nvim" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-08-08T23:00:00Z",
+    "closedAt": "2026-08-10T10:00:00Z"
+  },
+  {
+    "number": 209,
+    "title": "nvim: rejected 1",
+    "state": "CLOSED",
+    "labels": [{ "name": "scan:nvim" }, { "name": "rejected" }],
+    "createdAt": "2026-07-25T23:00:00Z",
+    "closedAt": "2026-07-27T23:00:00Z"
+  },
+  {
+    "number": 210,
+    "title": "nvim: rejected 2",
+    "state": "CLOSED",
+    "labels": [{ "name": "scan:nvim" }, { "name": "rejected" }],
+    "createdAt": "2026-07-26T23:00:00Z",
+    "closedAt": "2026-07-30T23:00:00Z"
+  },
+  {
+    "number": 301,
+    "title": "scripts: adopted 1",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:scripts" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-07-20T22:00:00Z",
+    "closedAt": "2026-07-27T22:00:00Z"
+  },
+  {
+    "number": 302,
+    "title": "scripts: adopted 2",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:scripts" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-07-21T22:00:00Z",
+    "closedAt": "2026-07-28T22:00:00Z"
+  },
+  {
+    "number": 303,
+    "title": "scripts: adopted 3",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:scripts" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-07-22T22:00:00Z",
+    "closedAt": "2026-07-29T22:00:00Z"
+  },
+  {
+    "number": 304,
+    "title": "scripts: implemented then thrown away",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:scripts" },
+      { "name": "adopted" },
+      { "name": "pr-created" },
+      { "name": "rejected" }
+    ],
+    "createdAt": "2026-07-23T22:00:00Z",
+    "closedAt": "2026-07-30T22:00:00Z"
+  },
+  {
+    "number": 305,
+    "title": "scripts: rejected 2",
+    "state": "CLOSED",
+    "labels": [{ "name": "scan:scripts" }, { "name": "rejected" }],
+    "createdAt": "2026-07-24T22:00:00Z",
+    "closedAt": "2026-07-25T22:00:00Z"
+  },
+  {
+    "number": 306,
+    "title": "scripts: rejected 3",
+    "state": "CLOSED",
+    "labels": [{ "name": "scan:scripts" }, { "name": "rejected" }],
+    "createdAt": "2026-07-25T22:00:00Z",
+    "closedAt": "2026-07-26T22:00:00Z"
+  },
+  {
+    "number": 307,
+    "title": "scripts: rejected 4",
+    "state": "CLOSED",
+    "labels": [{ "name": "scan:scripts" }, { "name": "rejected" }],
+    "createdAt": "2026-07-26T22:00:00Z",
+    "closedAt": "2026-07-27T22:00:00Z"
+  },
+  {
+    "number": 308,
+    "title": "scripts: rejected 5",
+    "state": "CLOSED",
+    "labels": [{ "name": "scan:scripts" }, { "name": "rejected" }],
+    "createdAt": "2026-07-27T22:00:00Z",
+    "closedAt": "2026-07-28T22:00:00Z"
+  },
+  {
+    "number": 401,
+    "title": "ci: waiting on the human gate",
+    "state": "OPEN",
+    "labels": [{ "name": "scan:ci" }],
+    "createdAt": "2026-07-20T22:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 402,
+    "title": "ci: adopted, no PR yet 1",
+    "state": "OPEN",
+    "labels": [{ "name": "scan:ci" }, { "name": "adopted" }],
+    "createdAt": "2026-08-01T22:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 403,
+    "title": "ci: adopted, no PR yet 2",
+    "state": "OPEN",
+    "labels": [{ "name": "scan:ci" }, { "name": "adopted" }],
+    "createdAt": "2026-08-02T22:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 404,
+    "title": "ci: adopted, no PR yet 3",
+    "state": "OPEN",
+    "labels": [{ "name": "scan:ci" }, { "name": "adopted" }],
+    "createdAt": "2026-08-03T22:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 405,
+    "title": "ci: adopted with an open PR",
+    "state": "OPEN",
+    "labels": [
+      { "name": "scan:ci" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-08-05T22:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 501,
+    "title": "environment: closed without a triage label",
+    "state": "CLOSED",
+    "labels": [{ "name": "scan:environment" }],
+    "createdAt": "2026-06-30T22:00:00Z",
+    "closedAt": "2026-07-01T22:00:00Z"
+  },
+  {
+    "number": 601,
+    "title": "hand-written issue that picked up a triage label",
+    "state": "CLOSED",
+    "labels": [{ "name": "enhancement" }, { "name": "adopted" }],
+    "createdAt": "2026-07-15T09:00:00Z",
+    "closedAt": "2026-07-16T09:00:00Z"
+  },
+  {
+    "number": 602,
+    "title": "two scan labels on one issue",
+    "state": "OPEN",
+    "labels": [
+      { "name": "scan:nvim" },
+      { "name": "scan:ci" },
+      { "name": "adopted" }
+    ],
+    "createdAt": "2026-08-10T22:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 700,
+    "title": "nvim: raised before the rejected convention existed",
+    "state": "CLOSED",
+    "labels": [
+      { "name": "scan:nvim" },
+      { "name": "adopted" },
+      { "name": "pr-created" }
+    ],
+    "createdAt": "2026-05-01T23:00:00Z",
+    "closedAt": "2026-05-03T23:00:00Z"
+  }
+]

@@ -1,0 +1,333 @@
+## 直近 90 日の成績（フロー）
+
+集計対象は 2026-06-28 以降に起票された `scan:*` Issue と `auto/*` PR。母数が 5 件未満の率は `—` と表示する（小標本の率は偶然で大きく振れるため）。
+
+| スキャン | 起票 | 直近28日 | 採用率 | 実装後却下 | PR化率 | マージ率 | PR化 p50 | E2E p50 |
+| --- | --: | --: | --- | --- | --- | --- | --: | --: |
+| `scan:ci` | 6 | 6 | 100% (n=5) | — (n=1) | 20% (n=5) | — (n=0) | 3.5 日 | — |
+| `scan:environment` | 1 | 0 | — (n=0) | — (n=0) | — (n=0) | — (n=0) | — | — |
+| `scan:nvim` | 10 | 10 | 80% (n=10) | 0% (n=8) | 100% (n=8) | 100% (n=8) | 0.4 日 | 1.5 日 |
+| `scan:scripts` | 8 | 8 | 38% (n=8) | — (n=4) | — (n=3) | — (n=4) | 4.0 日 | 7.0 日 |
+| **合計** | 25 | — | 70% (n=23) | 8% (n=13) | 75% (n=16) | 93% (n=14) | 0.4 日 | 1.5 日 |
+
+- `auto/*` PR: マージ 13 / 未マージ close 1 / Open 1（うち Issue に紐づかない meta ブランチ 2）
+- マージまで p50 1.0 日 / p90 2.5 日、不採用判定まで p50 1.0 日
+- 未 triage 1 件（最古 25 日）/ PR 化待ち 4 件
+- 未マージ close の PR: #814
+- ラベル運用の崩れ: untracked close 1 件 / `scan:*` 重複 #602 / scan 以外に triage ラベル #601
+- 集計起点より前の scan Issue 1 件は率の分母から除外している（`rejected` 運用の開始前）
+
+<details>
+<summary>月次トレンド</summary>
+
+Issue 側（起票・採用率・PR 化率）は Issue の起票月、PR 側（作成数・マージ率・E2E）は PR の作成月で束ねている。
+
+| 月 | 起票 | 採用率 | PR化率 | PR作成 | マージ率 | E2E p50 |
+| --- | --: | --- | --- | --: | --- | --: |
+| 2026-06 | 1 | — (n=0) | — (n=0) | 0 | — (n=0) | — |
+| 2026-07 | 11 | 30% (n=10) | — (n=3) | 4 | — (n=4) | 7.0 日 |
+| 2026-08（進行中） | 13 | 100% (n=13) | 69% (n=13) | 11 | 100% (n=10) | 1.5 日 |
+
+</details>
+
+<details>
+<summary>machine-readable metrics</summary>
+
+```json
+{
+  "generated_at": "2026-08-15T00:00:00Z",
+  "since": "2026-06-28T00:00:00Z",
+  "window_days": 90,
+  "min_sample": 5,
+  "overall": {
+    "opened": 25,
+    "adopted": 16,
+    "rejected": 7,
+    "untriaged": 1,
+    "untracked_close": 1,
+    "oldest_untriaged_days": 25,
+    "pr_pending": 4,
+    "adopted_rate": {
+      "rate": 0.696,
+      "num": 16,
+      "denom": 23
+    },
+    "rejected_after_pr_rate": {
+      "rate": 0.077,
+      "num": 1,
+      "denom": 13
+    },
+    "pr_created_rate": {
+      "rate": 0.75,
+      "num": 12,
+      "denom": 16
+    },
+    "merge_rate": {
+      "rate": 0.929,
+      "num": 13,
+      "denom": 14
+    },
+    "merged_prs": 13,
+    "unmerged_closed_prs": 1,
+    "open_prs": 1,
+    "unmerged_pr_numbers": [
+      814
+    ],
+    "meta_branch_prs": 2,
+    "reject_latency_days_p50": 1,
+    "pr_lag_days_p50": 0.4,
+    "merge_lead_days_p50": 1,
+    "merge_lead_days_p90": 2.5,
+    "e2e_lead_days_p50": 1.5,
+    "pre_policy_issues": 1
+  },
+  "scans": [
+    {
+      "label": "scan:ci",
+      "prompt": "routines/prompts/weekly-ci-workflows-scan.md",
+      "opened": 6,
+      "opened_last_28d": 6,
+      "adopted": 5,
+      "rejected": 0,
+      "untriaged": 1,
+      "untracked_close": 0,
+      "oldest_untriaged_days": 25,
+      "adopted_rate": {
+        "rate": 1,
+        "num": 5,
+        "denom": 5
+      },
+      "rejected_after_pr_rate": {
+        "rate": null,
+        "num": 0,
+        "denom": 1
+      },
+      "pr_created_rate": {
+        "rate": 0.2,
+        "num": 1,
+        "denom": 5
+      },
+      "merge_rate": {
+        "rate": null,
+        "num": 0,
+        "denom": 0
+      },
+      "pr_lag_days_p50": 3.5,
+      "e2e_lead_days_p50": null,
+      "sample": 5
+    },
+    {
+      "label": "scan:environment",
+      "prompt": "routines/prompts/weekly-environment-scan.md",
+      "opened": 1,
+      "opened_last_28d": 0,
+      "adopted": 0,
+      "rejected": 0,
+      "untriaged": 0,
+      "untracked_close": 1,
+      "oldest_untriaged_days": 0,
+      "adopted_rate": {
+        "rate": null,
+        "num": 0,
+        "denom": 0
+      },
+      "rejected_after_pr_rate": {
+        "rate": null,
+        "num": 0,
+        "denom": 0
+      },
+      "pr_created_rate": {
+        "rate": null,
+        "num": 0,
+        "denom": 0
+      },
+      "merge_rate": {
+        "rate": null,
+        "num": 0,
+        "denom": 0
+      },
+      "pr_lag_days_p50": null,
+      "e2e_lead_days_p50": null,
+      "sample": 0
+    },
+    {
+      "label": "scan:nvim",
+      "prompt": "routines/prompts/daily-neovim-trend-scan.md",
+      "opened": 10,
+      "opened_last_28d": 10,
+      "adopted": 8,
+      "rejected": 2,
+      "untriaged": 0,
+      "untracked_close": 0,
+      "oldest_untriaged_days": 0,
+      "adopted_rate": {
+        "rate": 0.8,
+        "num": 8,
+        "denom": 10
+      },
+      "rejected_after_pr_rate": {
+        "rate": 0,
+        "num": 0,
+        "denom": 8
+      },
+      "pr_created_rate": {
+        "rate": 1,
+        "num": 8,
+        "denom": 8
+      },
+      "merge_rate": {
+        "rate": 1,
+        "num": 8,
+        "denom": 8
+      },
+      "pr_lag_days_p50": 0.4,
+      "e2e_lead_days_p50": 1.5,
+      "sample": 10
+    },
+    {
+      "label": "scan:scripts",
+      "prompt": "routines/prompts/weekly-scripts-tooling-scan.md",
+      "opened": 8,
+      "opened_last_28d": 8,
+      "adopted": 3,
+      "rejected": 5,
+      "untriaged": 0,
+      "untracked_close": 0,
+      "oldest_untriaged_days": 0,
+      "adopted_rate": {
+        "rate": 0.375,
+        "num": 3,
+        "denom": 8
+      },
+      "rejected_after_pr_rate": {
+        "rate": null,
+        "num": 1,
+        "denom": 4
+      },
+      "pr_created_rate": {
+        "rate": null,
+        "num": 3,
+        "denom": 3
+      },
+      "merge_rate": {
+        "rate": null,
+        "num": 3,
+        "denom": 4
+      },
+      "pr_lag_days_p50": 4,
+      "e2e_lead_days_p50": 7,
+      "sample": 8
+    }
+  ],
+  "months": [
+    {
+      "month": "2026-06",
+      "opened": 1,
+      "adopted_rate": {
+        "rate": null,
+        "num": 0,
+        "denom": 0
+      },
+      "pr_created_rate": {
+        "rate": null,
+        "num": 0,
+        "denom": 0
+      },
+      "prs_created": 0,
+      "merge_rate": {
+        "rate": null,
+        "num": 0,
+        "denom": 0
+      },
+      "e2e_lead_days_p50": null,
+      "partial": false
+    },
+    {
+      "month": "2026-07",
+      "opened": 11,
+      "adopted_rate": {
+        "rate": 0.3,
+        "num": 3,
+        "denom": 10
+      },
+      "pr_created_rate": {
+        "rate": null,
+        "num": 3,
+        "denom": 3
+      },
+      "prs_created": 4,
+      "merge_rate": {
+        "rate": null,
+        "num": 3,
+        "denom": 4
+      },
+      "e2e_lead_days_p50": 7,
+      "partial": false
+    },
+    {
+      "month": "2026-08",
+      "opened": 13,
+      "adopted_rate": {
+        "rate": 1,
+        "num": 13,
+        "denom": 13
+      },
+      "pr_created_rate": {
+        "rate": 0.692,
+        "num": 9,
+        "denom": 13
+      },
+      "prs_created": 11,
+      "merge_rate": {
+        "rate": 1,
+        "num": 10,
+        "denom": 10
+      },
+      "e2e_lead_days_p50": 1.5,
+      "partial": true
+    }
+  ],
+  "alerts": [
+    {
+      "metric": "adopted_rate",
+      "scope": "scan:scripts",
+      "message": "scan:scripts の採用率が 38%（n=8）で閾値 0.60 を下回っている。提案の選定基準が広すぎる可能性がある。",
+      "prompts": [
+        "routines/prompts/weekly-scripts-tooling-scan.md"
+      ]
+    },
+    {
+      "metric": "liveness",
+      "scope": "scan:environment",
+      "message": "scan:environment は直近 28 日で 1 件も起票していない。ネタ切れか Routine の実行失敗を疑う。",
+      "prompts": [
+        "routines/prompts/weekly-environment-scan.md"
+      ]
+    },
+    {
+      "metric": "pr_created_rate",
+      "scope": "overall",
+      "message": "adopted の PR 化率が 75%（n=16）で、PR 化待ちが 4 件滞留している。PR Bot の実行失敗を疑う。",
+      "prompts": [
+        "routines/prompts/weekly-adopted-issue-pr-bot.md"
+      ]
+    },
+    {
+      "metric": "triage_backlog",
+      "scope": "overall",
+      "message": "最も古い未 triage の scan Issue が 25 日待っている（閾値 14 日）。判定は人間側の担当。",
+      "prompts": []
+    }
+  ],
+  "anomalies": {
+    "multi_scan_label": [
+      602
+    ],
+    "triaged_non_scan": [
+      601
+    ]
+  }
+}
+```
+
+</details>

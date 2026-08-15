@@ -2,6 +2,7 @@ name: Pipeline digest
 permissions:
   contents: read
   issues: write
+  pull-requests: read
 
 on:
   schedule:
@@ -16,6 +17,41 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea # v4.2.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch issues and pull requests
+        run: |
+          set -euo pipefail
+
+          gh issue list --state all --limit 1000 \
+            --json number,title,state,labels,createdAt,closedAt > issues.json
+          gh pr list --state all --limit 1000 \
+            --json number,title,state,headRefName,createdAt,closedAt,mergedAt > prs.json
+
+      # The flow metrics are a bonus on top of the backlog view: if the CLI
+      # fails, the digest must still be published rather than the whole run
+      # going red and leaving last week's issue in place.
+      - name: Build flow metrics
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          mise run pipeline-metrics:run -- \
+            --issues "$GITHUB_WORKSPACE/issues.json" \
+            --prs "$GITHUB_WORKSPACE/prs.json" \
+            --format markdown > flow.md
+          mise run pipeline-metrics:run -- \
+            --issues "$GITHUB_WORKSPACE/issues.json" \
+            --prs "$GITHUB_WORKSPACE/prs.json" \
+            --format alerts > alerts.md
+
       - name: Build and publish digest issue
         run: |
           set -euo pipefail
@@ -52,6 +88,10 @@ jobs:
             ')
 
           {
+            if [ -s alerts.md ]; then
+              cat alerts.md
+              echo
+            fi
             echo "自律改善パイプラインの週次ダイジェスト（$(date -u +%Y-%m-%d) UTC 時点）。\`pipeline-digest.yml\` がこの Issue の body を毎週上書き更新する。"
             echo
             echo "## Triage 待ちの scan Issue（adopted / rejected 未判定）"
@@ -69,6 +109,14 @@ jobs:
             echo "## 14 日以上 Open のままの scan Issue"
             echo
             echo "${stale:-なし}"
+            echo
+            if [ -s flow.md ]; then
+              cat flow.md
+            else
+              echo "## 成果（フロー）指標"
+              echo
+              echo "メトリクスの生成に失敗した。ワークフローの \`Build flow metrics\` ステップのログを参照。"
+            fi
           } > body.md
 
           gh label create digest --description "Auto-updated pipeline digest" --color BFD4F2 || true
@@ -78,4 +126,17 @@ jobs:
             gh issue edit "$num" --body-file body.md
           else
             gh issue create --title "Pipeline digest" --label digest --body-file body.md
+            num=$(gh issue list --state open --label digest --limit 1 --json number --jq '.[0].number // empty')
+          fi
+
+          # The alert label is a notification that clears itself: it goes on when
+          # a threshold is breached and comes off once the figures recover, so
+          # the digest stays a single issue instead of a stream of them.
+          gh label create alert --description "Pipeline metric threshold breached" --color D93F0B || true
+          if [ -n "$num" ]; then
+            if [ -s alerts.md ]; then
+              gh issue edit "$num" --add-label alert
+            else
+              gh issue edit "$num" --remove-label alert || true
+            fi
           fi

@@ -1,0 +1,146 @@
+[
+  {
+    "number": 801,
+    "title": "feat(nvim): ship 201",
+    "state": "MERGED",
+    "headRefName": "auto/issue-201-ship",
+    "createdAt": "2026-08-02T09:00:00Z",
+    "closedAt": "2026-08-03T10:00:00Z",
+    "mergedAt": "2026-08-03T10:00:00Z"
+  },
+  {
+    "number": 802,
+    "title": "feat(nvim): ship 202",
+    "state": "MERGED",
+    "headRefName": "auto/issue-202-ship",
+    "createdAt": "2026-08-03T09:00:00Z",
+    "closedAt": "2026-08-04T10:00:00Z",
+    "mergedAt": "2026-08-04T10:00:00Z"
+  },
+  {
+    "number": 803,
+    "title": "feat(nvim): ship 203",
+    "state": "MERGED",
+    "headRefName": "auto/issue-203-ship",
+    "createdAt": "2026-08-04T09:00:00Z",
+    "closedAt": "2026-08-05T10:00:00Z",
+    "mergedAt": "2026-08-05T10:00:00Z"
+  },
+  {
+    "number": 804,
+    "title": "feat(nvim): ship 204",
+    "state": "MERGED",
+    "headRefName": "auto/issue-204-ship",
+    "createdAt": "2026-08-05T09:00:00Z",
+    "closedAt": "2026-08-06T10:00:00Z",
+    "mergedAt": "2026-08-06T10:00:00Z"
+  },
+  {
+    "number": 805,
+    "title": "feat(nvim): ship 205",
+    "state": "MERGED",
+    "headRefName": "auto/issue-205-ship",
+    "createdAt": "2026-08-06T09:00:00Z",
+    "closedAt": "2026-08-07T10:00:00Z",
+    "mergedAt": "2026-08-07T10:00:00Z"
+  },
+  {
+    "number": 806,
+    "title": "feat(nvim): ship 206",
+    "state": "MERGED",
+    "headRefName": "auto/issue-206-ship",
+    "createdAt": "2026-08-07T09:00:00Z",
+    "closedAt": "2026-08-08T10:00:00Z",
+    "mergedAt": "2026-08-08T10:00:00Z"
+  },
+  {
+    "number": 807,
+    "title": "feat(nvim): ship 207",
+    "state": "MERGED",
+    "headRefName": "auto/issue-207-ship",
+    "createdAt": "2026-08-08T09:00:00Z",
+    "closedAt": "2026-08-09T10:00:00Z",
+    "mergedAt": "2026-08-09T10:00:00Z"
+  },
+  {
+    "number": 808,
+    "title": "feat(nvim): ship 208",
+    "state": "MERGED",
+    "headRefName": "auto/issue-208-ship",
+    "createdAt": "2026-08-09T09:00:00Z",
+    "closedAt": "2026-08-10T10:00:00Z",
+    "mergedAt": "2026-08-10T10:00:00Z"
+  },
+  {
+    "number": 811,
+    "title": "feat(scripts): ship 301",
+    "state": "MERGED",
+    "headRefName": "auto/issue-301-tool",
+    "createdAt": "2026-07-26T09:00:00Z",
+    "closedAt": "2026-07-27T22:00:00Z",
+    "mergedAt": "2026-07-27T22:00:00Z"
+  },
+  {
+    "number": 812,
+    "title": "feat(scripts): ship 302",
+    "state": "MERGED",
+    "headRefName": "auto/issue-302-tool",
+    "createdAt": "2026-07-26T09:00:00Z",
+    "closedAt": "2026-07-28T22:00:00Z",
+    "mergedAt": "2026-07-28T22:00:00Z"
+  },
+  {
+    "number": 813,
+    "title": "feat(scripts): ship 303",
+    "state": "MERGED",
+    "headRefName": "auto/issue-303-tool",
+    "createdAt": "2026-07-26T09:00:00Z",
+    "closedAt": "2026-07-29T22:00:00Z",
+    "mergedAt": "2026-07-29T22:00:00Z"
+  },
+  {
+    "number": 814,
+    "title": "feat(scripts): implemented 304 then closed",
+    "state": "CLOSED",
+    "headRefName": "auto/issue-304-tool",
+    "createdAt": "2026-07-26T09:00:00Z",
+    "closedAt": "2026-07-30T22:00:00Z",
+    "mergedAt": null
+  },
+  {
+    "number": 815,
+    "title": "ci: open PR for 405",
+    "state": "OPEN",
+    "headRefName": "auto/issue-405-workflow",
+    "createdAt": "2026-08-09T09:00:00Z",
+    "closedAt": null,
+    "mergedAt": null
+  },
+  {
+    "number": 820,
+    "title": "chore(routines): monthly prompt improvement",
+    "state": "MERGED",
+    "headRefName": "auto/routine-improve-20260802",
+    "createdAt": "2026-08-02T09:00:00Z",
+    "closedAt": "2026-08-02T20:00:00Z",
+    "mergedAt": "2026-08-02T20:00:00Z"
+  },
+  {
+    "number": 821,
+    "title": "feat: branch naming an issue that is out of scope",
+    "state": "MERGED",
+    "headRefName": "auto/issue-999-orphan",
+    "createdAt": "2026-08-02T09:00:00Z",
+    "closedAt": "2026-08-02T21:00:00Z",
+    "mergedAt": "2026-08-02T21:00:00Z"
+  },
+  {
+    "number": 830,
+    "title": "chore: bump tool versions",
+    "state": "MERGED",
+    "headRefName": "chore/bump-tool-versions",
+    "createdAt": "2026-08-03T03:00:00Z",
+    "closedAt": "2026-08-03T04:00:00Z",
+    "mergedAt": "2026-08-03T04:00:00Z"
+  }
+]

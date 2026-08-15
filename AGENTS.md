@@ -29,7 +29,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 
 Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mise.toml` at the repo root. Run `mise tasks ls` for the full list.
 
-### Go apps under `scripts/` (ai-bridge, nvim-sync, config-diff, go-verify)
+### Go apps under `scripts/` (ai-bridge, nvim-sync, config-diff, go-verify, scaffold, agent-stats, pipeline-metrics)
 
 - `mise run <app>:build` — build the binary (e.g. `mise run ai-bridge:build`).
 - `mise run <app>:test` — run Go tests; `mise run go:test` runs all apps.

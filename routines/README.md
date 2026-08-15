@@ -17,7 +17,12 @@ claude.ai のスケジュール Routine（クラウドエージェント / CCR�
 | `weekly-ci-workflows-scan.json`      | `Weekly CI Workflows Scan`      | 毎週金曜 7:00 JST (`0 22 * * 4`) | `.github/workflows/` の CI 改善を Issue 起票（最大1件）      |
 | `monthly-routine-improve.json`       | `Monthly Routine Improve`       | 毎月2日 7:00 JST (`0 22 1 * *`)  | 運用実績からプロンプト改善を draft PR で提案（メタループ）   |
 
-このほか、LLM を使わない定型処理として `.github/workflows/pipeline-digest.yml`（毎週土曜 7:00 JST）が、triage 待ち Issue・滞留 adopted・Open な `auto/*` PR をまとめた digest Issue を更新する。
+このほか、LLM を使わない定型処理として `.github/workflows/pipeline-digest.yml`（毎週土曜 7:00 JST）が digest Issue を更新する。内容は 2 種類:
+
+- **ストック（滞留）**: triage 待ち Issue・滞留 adopted・Open な `auto/*` PR・14 日以上 Open の scan Issue。`gh` + `jq` で集計する。
+- **フロー（成果）+ 閾値警告**: スキャン別の採用率・実装後却下率・PR 化率・マージ率・リードタイムと月次トレンド。`scripts/pipeline-metrics`（Go CLI）が集計し、閾値を割ると body 冒頭に警告ブロックを出して digest Issue に `alert` ラベルを付ける（回復すると自動で外れる）。末尾の `machine-readable metrics` JSON ブロックを `Monthly Routine Improve` がパースし、改善テーマの絞り込みに使う。
+
+指標の定義・閾値・制約は `scripts/pipeline-metrics/README.md` を参照。
 
 ## プロンプトの間接参照
 
@@ -61,6 +66,17 @@ claude.ai のスケジュール Routine（クラウドエージェント / CCR�
 - スキャンが起票した Issue の採用判定はラベルで記録する: 採用は `adopted`、不採用は **`rejected` を付けて Close**。
 - **rejected で Close するときは、不採用の理由を一言コメントに残す**。`Monthly Routine Improve`（メタループ）がこのコメントを読んでスキャンのプロンプト改善に使う。
 - `adopted` Issue は日曜朝の PR Bot がドラフト PR 化し、`pr-created` ラベルを付ける。月曜朝の PR Care Bot が CI 失敗・コンフリクト・レビュー指摘をケアする。
+
+### ラベル運用の約束（効果測定の前提）
+
+`scripts/pipeline-metrics` はラベルとタイムスタンプだけから指標を導くため、次を守らないと数値が崩れる。
+
+- **`rejected` は Close と同時に付ける。** 不採用の判定時刻を `closedAt` から取っているため、後から付け直すとリードタイムが狂う。
+- **`adopted` は後から外さない。** 実装まで進めた後に捨てる場合は、`adopted` と `pr-created` を残したまま `rejected` を足して Close する。これが「実装コストを払ってから捨てた」件数（`rejected_after_pr_rate`）の入力になる。
+- **`scan:*` は 1 Issue につき 1 つ。** 複数付いた Issue は辞書順で先頭のラベルに寄せられ、`anomalies.multi_scan_label` として digest に出る。
+- **triage ラベルは scan Issue にだけ付ける。** 手動起票の Issue に `adopted` / `rejected` を付けると `anomalies.triaged_non_scan` に出る（集計の分母には入らない）。
+- 集計の起点は **2026-06-28**（`rejected` 運用が定着した日）。それ以前の Issue は件数だけ数え、率の分母には入れない。過去に遡ってラベルを付け直すことはしない。
+- ラベル運用が崩れると digest の `untracked close`（ラベル無しで Close された scan Issue）の件数が増える。ここが 0 でなくなったら運用を見直す。
 
 ## 既知の制約 / TODO
 
