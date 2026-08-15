@@ -137,10 +137,27 @@ vim.opt.winborder = "rounded" -- Default border for floating windows (hover, sig
 -- ----------------------------------------
 -- Copy to the system clipboard.
 -- ----------------------------------------
+-- 任意のテキストをクリップボードへ送る共通口（ヤンク以外の経路から使う）。
+-- OSC52 が使える端末ではホスト側のクリップボードへ直接送る。
+-- 使えない環境では + レジスタ（clipboard プロバイダがあればその先）へ落とす。
+local copy_to_clipboard = function(text)
+	vim.fn.setreg("+", text)
+end
+
 local has_osc52, osc52 = pcall(require, "vim.ui.clipboard.osc52")
 if has_osc52 then
 	local osc52_copy_plus = osc52.copy("+")
 	local osc52_copy_star = osc52.copy("*")
+
+	copy_to_clipboard = function(text)
+		-- + レジスタにも入れる（nvim 内で "+p したいとき用）。ただしコンテナ内に
+		-- clipboard プロバイダは無い前提なので、ホストへ実際に届けるのは OSC52 送出のほう。
+		-- setreg() は TextYankPost を発火させないので、この二重書きは意図的。
+		vim.fn.setreg("+", text)
+		osc52_copy_plus({ text })
+		osc52_copy_star({ text })
+	end
+
 	local osc52_yank_group = vim.api.nvim_create_augroup("auto_copy_yank_to_osc52", { clear = true })
 	vim.api.nvim_create_autocmd("TextYankPost", {
 		group = osc52_yank_group,
@@ -160,6 +177,58 @@ if has_osc52 then
 elseif vim.fn.has("clipboard") == 1 then
 	vim.opt.clipboard = "unnamedplus"
 end
+
+-- ----------------------------------------
+-- 「相対パス:行番号」参照をクリップボードへ取る
+-- （PR レビューコメント / Issue 本文 / AI CLI へのプロンプト向け）
+--   <leader>y          … カーソル行  → nvim/config/init.lua:55
+--   <leader>y (visual) … 選択範囲    → nvim/config/init.lua:55-62
+-- 参照は cwd 相対に正規化する（絶対パスは他人と共有できず、AI にも渡しにくいため）。
+-- <leader>ai (ai_bridge) とは宛先も送る内容も違うので置き換えではなく併存させる。
+-- ----------------------------------------
+local function location_ref(from, to)
+	-- ターミナル分割 / quickfix 等の特殊バッファは term://... のような無意味な参照になる
+	if vim.bo.buftype ~= "" then
+		vim.notify("Not a file buffer", vim.log.levels.WARN)
+		return nil
+	end
+	local abs = vim.fn.expand("%:p")
+	if abs == "" then
+		vim.notify("Buffer has no file name", vim.log.levels.WARN)
+		return nil
+	end
+	local path = vim.fn.fnamemodify(abs, ":.") -- cwd 配下なら相対、外なら絶対のまま
+	if to and to ~= from then
+		return ("%s:%d-%d"):format(path, from, to)
+	end
+	return ("%s:%d"):format(path, from)
+end
+
+local function yank_location_ref(from, to)
+	local ref = location_ref(from, to)
+	if not ref then
+		return
+	end
+	copy_to_clipboard(ref)
+	vim.notify(ref, vim.log.levels.INFO) -- 何をコピーしたか必ず見せる（無言でコピーしない）
+end
+
+vim.keymap.set("n", "<leader>y", function()
+	yank_location_ref(vim.fn.line("."))
+end, { desc = "Yank <path>:<line> reference to clipboard" })
+
+-- select モードで <leader> が文字入力に化けないよう "v" ではなく "x" に張る。
+vim.keymap.set("x", "<leader>y", function()
+	-- ビジュアルモード実行中の '< / '> は「前回の」選択範囲を指す（:h getpos()）。
+	-- 現在の範囲は "v"（選択開始）と "."（カーソル）から取る。
+	local from, to = vim.fn.line("v"), vim.fn.line(".")
+	if from > to then
+		from, to = to, from
+	end
+	yank_location_ref(from, to)
+	-- 範囲を掴んだら選択は用済みなので抜ける（ai_bridge.lua と同じ作法）
+	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+end, { desc = "Yank <path>:<from>-<to> reference to clipboard" })
 
 -- ----------------------------------------
 -- Highlight yanked text (ヤンク範囲を一瞬フラッシュして視覚フィードバックする)
