@@ -95,6 +95,23 @@ vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 })
 
 -- ----------------------------------------
+-- quickfix / location list の絞り込み (:Cfilter / :Lfilter)
+-- Neovim 同梱の opt パッケージ。start/ ではなく opt/ にあるため packadd するまで使えない。
+--
+--   :Cfilter  /{pat}/   … {pat} に一致するエントリだけ残す
+--   :Cfilter! /{pat}/   … {pat} に一致するエントリを落とす
+--   :Lfilter[!] /{pat}/ … location list 版 (q の診断リスト等)
+--
+-- 照合対象は「ファイル名」と「マッチ行の本文」の両方（大文字小文字を区別するので
+-- 無視したいときはパターン側に \c を書く。ignorecase / smartcase は効かない）。
+-- 絞り込みは元リストを壊さず新しいリストを積むので、:colder / :cnewer で行き来できる。
+-- :grep の結果だけでなく、gq (gitsigns setqflist) / grr (LSP 参照) /
+-- telescope の <C-q> のように「再実行で条件を足せない」経路のリストにも効くのが本質。
+-- 将来 runtime から外れても init.lua 全体を巻き添えにしないよう pcall で包む。
+-- ----------------------------------------
+pcall(vim.cmd.packadd, "cfilter")
+
+-- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
 -- ----------------------------------------
 vim.opt.autoread = true -- ディスク上で更新されたファイルをバッファへ読み直す
