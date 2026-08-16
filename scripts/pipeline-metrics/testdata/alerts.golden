@@ -1,0 +1,7 @@
+> [!WARNING]
+> **閾値超過 4 件**（2026-08-16T00:00:00Z 時点 / 集計起点 2026-06-28）
+>
+> - `scan:gamma` の起票が直近 28 日で 0 件（窓内 8 件）。Routine が停止している疑い。claude.ai の Routine 稼働状況と併せて確認する
+> - 最古の未 triage が 26.6 日経過（#129 / 未 triage 計 1 件、閾値 14 日）。`adopted` か `rejected` を付けて滞留を解く
+> - `scan:beta` の採用率 45%（5/11）が閾値 60% を下回る。提案の選定基準を見直す
+> - `scan:alpha` の PR 化率 70%（7/10）が閾値 80% を下回り、PR 化待ちが 3 件滞留している → `routines/prompts/weekly-adopted-issue-pr-bot.md`

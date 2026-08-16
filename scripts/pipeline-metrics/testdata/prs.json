@@ -1,0 +1,236 @@
+[
+  {
+    "number": 200,
+    "title": "fixture pr #200",
+    "state": "MERGED",
+    "headRefName": "auto/issue-100-before-since",
+    "createdAt": "2026-06-21T09:00:00Z",
+    "closedAt": "2026-06-22T09:00:00Z",
+    "mergedAt": "2026-06-22T09:00:00Z"
+  },
+  {
+    "number": 201,
+    "title": "fixture pr #201",
+    "state": "MERGED",
+    "headRefName": "auto/issue-101-alpha-one",
+    "createdAt": "2026-07-21T09:00:00Z",
+    "closedAt": "2026-07-22T09:00:00Z",
+    "mergedAt": "2026-07-22T09:00:00Z"
+  },
+  {
+    "number": 202,
+    "title": "fixture pr #202",
+    "state": "MERGED",
+    "headRefName": "auto/issue-102-alpha-two",
+    "createdAt": "2026-07-26T09:00:00Z",
+    "closedAt": "2026-07-27T21:00:00Z",
+    "mergedAt": "2026-07-27T21:00:00Z"
+  },
+  {
+    "number": 203,
+    "title": "fixture pr #203",
+    "state": "MERGED",
+    "headRefName": "auto/issue-103-alpha-three",
+    "createdAt": "2026-07-31T09:00:00Z",
+    "closedAt": "2026-08-01T09:00:00Z",
+    "mergedAt": "2026-08-01T09:00:00Z"
+  },
+  {
+    "number": 204,
+    "title": "fixture pr #204",
+    "state": "MERGED",
+    "headRefName": "auto/issue-104-alpha-four",
+    "createdAt": "2026-08-03T09:00:00Z",
+    "closedAt": "2026-08-04T09:00:00Z",
+    "mergedAt": "2026-08-04T09:00:00Z"
+  },
+  {
+    "number": 205,
+    "title": "fixture pr #205",
+    "state": "MERGED",
+    "headRefName": "auto/issue-105-alpha-five",
+    "createdAt": "2026-08-06T09:00:00Z",
+    "closedAt": "2026-08-08T09:00:00Z",
+    "mergedAt": "2026-08-08T09:00:00Z"
+  },
+  {
+    "number": 206,
+    "title": "fixture pr #206",
+    "state": "CLOSED",
+    "headRefName": "auto/issue-106-alpha-six",
+    "createdAt": "2026-08-09T09:00:00Z",
+    "closedAt": "2026-08-10T09:00:00Z",
+    "mergedAt": null
+  },
+  {
+    "number": 211,
+    "title": "fixture pr #211",
+    "state": "MERGED",
+    "headRefName": "auto/issue-111-beta-one",
+    "createdAt": "2026-07-02T09:00:00Z",
+    "closedAt": "2026-07-03T09:00:00Z",
+    "mergedAt": "2026-07-03T09:00:00Z"
+  },
+  {
+    "number": 212,
+    "title": "fixture pr #212",
+    "state": "MERGED",
+    "headRefName": "auto/issue-112-beta-two",
+    "createdAt": "2026-07-06T09:00:00Z",
+    "closedAt": "2026-07-07T09:00:00Z",
+    "mergedAt": "2026-07-07T09:00:00Z"
+  },
+  {
+    "number": 213,
+    "title": "fixture pr #213",
+    "state": "MERGED",
+    "headRefName": "auto/issue-113-beta-three",
+    "createdAt": "2026-07-10T09:00:00Z",
+    "closedAt": "2026-07-11T09:00:00Z",
+    "mergedAt": "2026-07-11T09:00:00Z"
+  },
+  {
+    "number": 214,
+    "title": "fixture pr #214",
+    "state": "MERGED",
+    "headRefName": "auto/issue-114-beta-four",
+    "createdAt": "2026-07-14T09:00:00Z",
+    "closedAt": "2026-07-15T09:00:00Z",
+    "mergedAt": "2026-07-15T09:00:00Z"
+  },
+  {
+    "number": 215,
+    "title": "fixture pr #215",
+    "state": "MERGED",
+    "headRefName": "auto/issue-115-beta-five",
+    "createdAt": "2026-08-02T09:00:00Z",
+    "closedAt": "2026-08-03T09:00:00Z",
+    "mergedAt": "2026-08-03T09:00:00Z"
+  },
+  {
+    "number": 219,
+    "title": "fixture pr #219",
+    "state": "CLOSED",
+    "headRefName": "auto/issue-119-beta-nine",
+    "createdAt": "2026-07-16T09:00:00Z",
+    "closedAt": "2026-07-18T09:00:00Z",
+    "mergedAt": null
+  },
+  {
+    "number": 221,
+    "title": "fixture pr #221",
+    "state": "MERGED",
+    "headRefName": "auto/issue-121-gamma-one",
+    "createdAt": "2026-06-29T09:00:00Z",
+    "closedAt": "2026-06-30T09:00:00Z",
+    "mergedAt": "2026-06-30T09:00:00Z"
+  },
+  {
+    "number": 222,
+    "title": "fixture pr #222",
+    "state": "MERGED",
+    "headRefName": "auto/issue-122-gamma-two",
+    "createdAt": "2026-07-01T09:00:00Z",
+    "closedAt": "2026-07-02T09:00:00Z",
+    "mergedAt": "2026-07-02T09:00:00Z"
+  },
+  {
+    "number": 223,
+    "title": "fixture pr #223",
+    "state": "MERGED",
+    "headRefName": "auto/issue-123-gamma-three",
+    "createdAt": "2026-07-03T09:00:00Z",
+    "closedAt": "2026-07-04T09:00:00Z",
+    "mergedAt": "2026-07-04T09:00:00Z"
+  },
+  {
+    "number": 224,
+    "title": "fixture pr #224",
+    "state": "MERGED",
+    "headRefName": "auto/issue-124-gamma-four",
+    "createdAt": "2026-07-05T09:00:00Z",
+    "closedAt": "2026-07-06T09:00:00Z",
+    "mergedAt": "2026-07-06T09:00:00Z"
+  },
+  {
+    "number": 225,
+    "title": "fixture pr #225",
+    "state": "MERGED",
+    "headRefName": "auto/issue-125-gamma-five",
+    "createdAt": "2026-07-07T09:00:00Z",
+    "closedAt": "2026-07-08T09:00:00Z",
+    "mergedAt": "2026-07-08T09:00:00Z"
+  },
+  {
+    "number": 226,
+    "title": "fixture pr #226",
+    "state": "MERGED",
+    "headRefName": "auto/issue-126-gamma-six",
+    "createdAt": "2026-07-09T09:00:00Z",
+    "closedAt": "2026-07-10T09:00:00Z",
+    "mergedAt": "2026-07-10T09:00:00Z"
+  },
+  {
+    "number": 227,
+    "title": "fixture pr #227",
+    "state": "MERGED",
+    "headRefName": "auto/issue-127-gamma-seven",
+    "createdAt": "2026-07-11T09:00:00Z",
+    "closedAt": "2026-07-12T09:00:00Z",
+    "mergedAt": "2026-07-12T09:00:00Z"
+  },
+  {
+    "number": 230,
+    "title": "fixture pr #230",
+    "state": "OPEN",
+    "headRefName": "auto/issue-130-delta-one",
+    "createdAt": "2026-08-02T09:00:00Z",
+    "closedAt": null,
+    "mergedAt": null
+  },
+  {
+    "number": 232,
+    "title": "fixture pr #232",
+    "state": "MERGED",
+    "headRefName": "auto/issue-132-both-labels",
+    "createdAt": "2026-08-14T09:00:00Z",
+    "closedAt": "2026-08-15T09:00:00Z",
+    "mergedAt": "2026-08-15T09:00:00Z"
+  },
+  {
+    "number": 250,
+    "title": "fixture pr #250",
+    "state": "MERGED",
+    "headRefName": "auto/routine-improve-20260801",
+    "createdAt": "2026-08-01T09:00:00Z",
+    "closedAt": "2026-08-01T21:00:00Z",
+    "mergedAt": "2026-08-01T21:00:00Z"
+  },
+  {
+    "number": 251,
+    "title": "fixture pr #251",
+    "state": "MERGED",
+    "headRefName": "auto/issue-999-ghost",
+    "createdAt": "2026-08-04T09:00:00Z",
+    "closedAt": "2026-08-05T09:00:00Z",
+    "mergedAt": "2026-08-05T09:00:00Z"
+  },
+  {
+    "number": 252,
+    "title": "fixture pr #252",
+    "state": "MERGED",
+    "headRefName": "feature/hand-written",
+    "createdAt": "2026-08-05T09:00:00Z",
+    "closedAt": "2026-08-06T09:00:00Z",
+    "mergedAt": "2026-08-06T09:00:00Z"
+  },
+  {
+    "number": 253,
+    "title": "fixture pr #253",
+    "state": "MERGED",
+    "headRefName": "auto/issue-140-not-a-scan",
+    "createdAt": "2026-07-25T21:00:00Z",
+    "closedAt": "2026-07-26T09:00:00Z",
+    "mergedAt": "2026-07-26T09:00:00Z"
+  }
+]
