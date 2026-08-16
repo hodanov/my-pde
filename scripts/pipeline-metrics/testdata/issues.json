@@ -1,0 +1,598 @@
+[
+  {
+    "number": 100,
+    "title": "fixture issue #100",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-06-20T09:00:00Z",
+    "closedAt": "2026-06-25T09:00:00Z"
+  },
+  {
+    "number": 101,
+    "title": "fixture issue #101",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-20T09:00:00Z",
+    "closedAt": "2026-07-22T09:00:00Z"
+  },
+  {
+    "number": 102,
+    "title": "fixture issue #102",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-25T09:00:00Z",
+    "closedAt": "2026-07-27T21:00:00Z"
+  },
+  {
+    "number": 103,
+    "title": "fixture issue #103",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-30T09:00:00Z",
+    "closedAt": "2026-08-01T09:00:00Z"
+  },
+  {
+    "number": 104,
+    "title": "fixture issue #104",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-08-02T09:00:00Z",
+    "closedAt": "2026-08-04T09:00:00Z"
+  },
+  {
+    "number": 105,
+    "title": "fixture issue #105",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      }
+    ],
+    "createdAt": "2026-08-05T09:00:00Z",
+    "closedAt": "2026-08-08T09:00:00Z"
+  },
+  {
+    "number": 106,
+    "title": "fixture issue #106",
+    "state": "OPEN",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-08-08T09:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 107,
+    "title": "fixture issue #107",
+    "state": "OPEN",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      }
+    ],
+    "createdAt": "2026-08-09T09:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 108,
+    "title": "fixture issue #108",
+    "state": "OPEN",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-08-10T09:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 109,
+    "title": "fixture issue #109",
+    "state": "OPEN",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      }
+    ],
+    "createdAt": "2026-08-11T09:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 110,
+    "title": "fixture issue #110",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "rejected"
+      }
+    ],
+    "createdAt": "2026-08-12T09:00:00Z",
+    "closedAt": "2026-08-13T09:00:00Z"
+  },
+  {
+    "number": 111,
+    "title": "fixture issue #111",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-01T09:00:00Z",
+    "closedAt": "2026-07-03T09:00:00Z"
+  },
+  {
+    "number": 112,
+    "title": "fixture issue #112",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-05T09:00:00Z",
+    "closedAt": "2026-07-07T09:00:00Z"
+  },
+  {
+    "number": 113,
+    "title": "fixture issue #113",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-09T09:00:00Z",
+    "closedAt": "2026-07-11T09:00:00Z"
+  },
+  {
+    "number": 114,
+    "title": "fixture issue #114",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-13T09:00:00Z",
+    "closedAt": "2026-07-15T09:00:00Z"
+  },
+  {
+    "number": 115,
+    "title": "fixture issue #115",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-08-01T09:00:00Z",
+    "closedAt": "2026-08-03T09:00:00Z"
+  },
+  {
+    "number": 116,
+    "title": "fixture issue #116",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "rejected"
+      }
+    ],
+    "createdAt": "2026-07-02T09:00:00Z",
+    "closedAt": "2026-07-03T09:00:00Z"
+  },
+  {
+    "number": 117,
+    "title": "fixture issue #117",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "rejected"
+      }
+    ],
+    "createdAt": "2026-07-06T09:00:00Z",
+    "closedAt": "2026-07-08T09:00:00Z"
+  },
+  {
+    "number": 118,
+    "title": "fixture issue #118",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "rejected"
+      }
+    ],
+    "createdAt": "2026-07-10T09:00:00Z",
+    "closedAt": "2026-07-13T09:00:00Z"
+  },
+  {
+    "number": 119,
+    "title": "fixture issue #119",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "rejected"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-14T09:00:00Z",
+    "closedAt": "2026-07-18T09:00:00Z"
+  },
+  {
+    "number": 120,
+    "title": "fixture issue #120",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      }
+    ],
+    "createdAt": "2026-07-20T09:00:00Z",
+    "closedAt": "2026-07-21T09:00:00Z"
+  },
+  {
+    "number": 133,
+    "title": "fixture issue #133",
+    "state": "OPEN",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "rejected"
+      }
+    ],
+    "createdAt": "2026-08-14T09:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 121,
+    "title": "fixture issue #121",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:gamma"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-06-28T09:00:00Z",
+    "closedAt": "2026-06-30T09:00:00Z"
+  },
+  {
+    "number": 122,
+    "title": "fixture issue #122",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:gamma"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-06-30T09:00:00Z",
+    "closedAt": "2026-07-02T09:00:00Z"
+  },
+  {
+    "number": 123,
+    "title": "fixture issue #123",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:gamma"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-02T09:00:00Z",
+    "closedAt": "2026-07-04T09:00:00Z"
+  },
+  {
+    "number": 124,
+    "title": "fixture issue #124",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:gamma"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-04T09:00:00Z",
+    "closedAt": "2026-07-06T09:00:00Z"
+  },
+  {
+    "number": 125,
+    "title": "fixture issue #125",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:gamma"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-06T09:00:00Z",
+    "closedAt": "2026-07-08T09:00:00Z"
+  },
+  {
+    "number": 126,
+    "title": "fixture issue #126",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:gamma"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-08T09:00:00Z",
+    "closedAt": "2026-07-10T09:00:00Z"
+  },
+  {
+    "number": 127,
+    "title": "fixture issue #127",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:gamma"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-07-10T09:00:00Z",
+    "closedAt": "2026-07-12T09:00:00Z"
+  },
+  {
+    "number": 128,
+    "title": "fixture issue #128",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:gamma"
+      },
+      {
+        "name": "rejected"
+      }
+    ],
+    "createdAt": "2026-07-12T09:00:00Z",
+    "closedAt": "2026-07-14T09:00:00Z"
+  },
+  {
+    "number": 129,
+    "title": "fixture issue #129",
+    "state": "OPEN",
+    "labels": [
+      {
+        "name": "scan:delta"
+      }
+    ],
+    "createdAt": "2026-07-20T09:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 130,
+    "title": "fixture issue #130",
+    "state": "OPEN",
+    "labels": [
+      {
+        "name": "scan:delta"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-08-01T09:00:00Z",
+    "closedAt": null
+  },
+  {
+    "number": 131,
+    "title": "fixture issue #131",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:delta"
+      },
+      {
+        "name": "rejected"
+      }
+    ],
+    "createdAt": "2026-08-05T09:00:00Z",
+    "closedAt": "2026-08-06T09:00:00Z"
+  },
+  {
+    "number": 132,
+    "title": "fixture issue #132",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "scan:beta"
+      },
+      {
+        "name": "scan:alpha"
+      },
+      {
+        "name": "adopted"
+      },
+      {
+        "name": "pr-created"
+      }
+    ],
+    "createdAt": "2026-08-13T09:00:00Z",
+    "closedAt": "2026-08-15T09:00:00Z"
+  },
+  {
+    "number": 140,
+    "title": "fixture issue #140",
+    "state": "CLOSED",
+    "labels": [
+      {
+        "name": "rejected"
+      }
+    ],
+    "createdAt": "2026-07-25T09:00:00Z",
+    "closedAt": "2026-07-26T09:00:00Z"
+  },
+  {
+    "number": 141,
+    "title": "fixture issue #141",
+    "state": "OPEN",
+    "labels": [],
+    "createdAt": "2026-07-26T09:00:00Z",
+    "closedAt": null
+  }
+]

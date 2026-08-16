@@ -2,6 +2,7 @@ name: Pipeline digest
 permissions:
   contents: read
   issues: write
+  pull-requests: read
 
 on:
   schedule:
@@ -16,7 +17,46 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea # v4.2.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The flow metrics need the full history, not just what is open now.
+      - name: Export issues and pull requests
+        run: |
+          set -euo pipefail
+
+          gh issue list --state all --limit 1000 \
+            --json number,title,state,labels,createdAt,closedAt > "$RUNNER_TEMP/issues.json"
+          gh pr list --state all --limit 1000 \
+            --json number,title,state,headRefName,createdAt,closedAt,mergedAt > "$RUNNER_TEMP/prs.json"
+
+      # Everything below tolerates this step failing: the digest still gets
+      # published with the stock section, and says so in the body.
+      - name: Compute flow metrics
+        id: metrics
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          mise run pipeline-metrics:build
+          bin=./scripts/pipeline-metrics/pipeline-metrics
+
+          "$bin" --issues "$RUNNER_TEMP/issues.json" --prs "$RUNNER_TEMP/prs.json" \
+            --format markdown > "$RUNNER_TEMP/flow.md"
+          "$bin" --issues "$RUNNER_TEMP/issues.json" --prs "$RUNNER_TEMP/prs.json" \
+            --format alerts > "$RUNNER_TEMP/alerts.md"
+
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
       - name: Build and publish digest issue
+        env:
+          METRICS_OK: ${{ steps.metrics.outputs.ok }}
         run: |
           set -euo pipefail
 
@@ -52,7 +92,12 @@ jobs:
             ')
 
           {
-            echo "自律改善パイプラインの週次ダイジェスト（$(date -u +%Y-%m-%d) UTC 時点）。\`pipeline-digest.yml\` がこの Issue の body を毎週上書き更新する。"
+            if [ "${METRICS_OK:-}" = "true" ] && [ -s "$RUNNER_TEMP/alerts.md" ]; then
+              cat "$RUNNER_TEMP/alerts.md"
+              echo
+            fi
+
+            echo "自律改善パイプラインの週次ダイジェスト（$(date -u +%Y-%m-%d) UTC 時点）。\`pipeline-digest.yml\` がこの Issue の body を毎週上書き更新する。前半が滞留（ストック）、後半が \`scripts/pipeline-metrics\` の集計したフロー指標。"
             echo
             echo "## Triage 待ちの scan Issue（adopted / rejected 未判定）"
             echo
@@ -69,6 +114,16 @@ jobs:
             echo "## 14 日以上 Open のままの scan Issue"
             echo
             echo "${stale:-なし}"
+            echo
+
+            if [ "${METRICS_OK:-}" = "true" ] && [ -s "$RUNNER_TEMP/flow.md" ]; then
+              cat "$RUNNER_TEMP/flow.md"
+            else
+              echo "## フロー指標"
+              echo
+              echo "> [!CAUTION]"
+              echo "> フロー指標の生成に失敗したため、今週はストックのみ。Actions のログを確認すること。"
+            fi
           } > body.md
 
           gh label create digest --description "Auto-updated pipeline digest" --color BFD4F2 || true
@@ -78,4 +133,17 @@ jobs:
             gh issue edit "$num" --body-file body.md
           else
             gh issue create --title "Pipeline digest" --label digest --body-file body.md
+            num=$(gh issue list --state open --label digest --limit 1 --json number --jq '.[0].number // empty')
+          fi
+
+          # The alert label mirrors the warning block, so it comes off by itself
+          # once the metrics recover. Leave it untouched when the CLI failed:
+          # a missing warning block is then "unknown", not "all clear".
+          if [ "${METRICS_OK:-}" = "true" ] && [ -n "$num" ]; then
+            if [ -s "$RUNNER_TEMP/alerts.md" ]; then
+              gh label create alert --description "Pipeline metric over threshold" --color D93F0B || true
+              gh issue edit "$num" --add-label alert
+            else
+              gh issue edit "$num" --remove-label alert || true
+            fi
           fi
