@@ -24,6 +24,18 @@ require("gitsigns").setup({
 		-- プレビュー（<leader> = <space>。<space>h を避けて <leader>g 系に）
 		map("n", "<leader>gp", gs.preview_hunk, "Preview hunk")
 		map("n", "<leader>gi", gs.preview_hunk_inline, "Preview hunk inline")
+
+		-- blame（レビュー中に「この行はいつ・なぜ入ったか」を辿る導線）
+		-- <leader>gB: ファイル全体の blame をスクロール同期の縦分割で開く。
+		--   窓内で s = そのコミットの詳細(メッセージ＋差分)を縦分割 / S = 新規タブ /
+		--   r = そのコミット時点で blame をやり直す（履歴を遡って追える）。
+		-- <leader>gl: カーソル行だけを float で。full = true でコミットメッセージ全文と
+		--   ハンクまで出す。分割を増やさず 1 行だけ確認したいとき用。
+		-- diff base（<leader>gb）とは無関係で、change_base の設定に影響されない。
+		map("n", "<leader>gB", gs.blame, "Blame current file (scroll-bound split)")
+		map("n", "<leader>gl", function()
+			gs.blame_line({ full = true })
+		end, "Blame current line (full)")
 	end,
 })
 
@@ -71,3 +83,21 @@ vim.keymap.set("n", "<leader>gb", function()
 	review_base_on = true
 	vim.notify(("gitsigns: diff base -> merge-base with %s (%s)"):format(ref, rev:sub(1, 8)), vim.log.levels.INFO)
 end, { desc = "Toggle gitsigns diff base: index <-> merge-base with base branch" })
+
+-- ----------------------------------------
+-- 変更ハンクをリポジトリ横断で quickfix に集約する（レビューの入口）。
+-- 対象は <leader>gb で設定中の diff base に従う:
+--   既定(index)        → 未コミットの変更だけ
+--   merge-base 切替後  → ブランチが加えた変更全体（＝ PR の差分）
+-- ]c/[c はバッファローカルなので「まだ開いていない変更ファイル」へは到達できない。
+-- 集約後は ]q / [q でファイルを跨いでハンクを順送りでき、
+-- switchbuf の useopen により参照用に開いてある分割は潰れない。
+-- gitsigns 側が quickfix ウィンドウまで開く（opts.open 既定 true）。
+-- setqflist("all") はアタッチ済みバッファに限らず cwd のリポジトリも対象にするグローバルな
+-- 操作なので、<leader>gb と同じくバッファローカルな on_attach ではなくここに置く。
+-- キーは既存の <leader>gp / <leader>gi / <leader>gb に揃える（素の gq は組み込みの
+-- フォーマット演算子なので潰さない）。
+-- ----------------------------------------
+vim.keymap.set("n", "<leader>gq", function()
+	gs.setqflist("all")
+end, { desc = "Send all changed hunks (current diff base) to quickfix" })
