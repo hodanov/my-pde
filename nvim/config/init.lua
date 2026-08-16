@@ -55,6 +55,13 @@ vim.opt.splitkeep = "screen"
 vim.opt.switchbuf:append("useopen")
 vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
 vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
+-- スクロールを「バッファ行」ではなく「画面行」単位にする（既定 off）。
+-- off だと <C-e>/<C-y>/<C-d>/<C-u> が 1 バッファ行単位で動くため、wrap + linebreak を
+-- 入れた散文（1 段落 = 1 バッファ行 = 画面十数行）では 1 押しで段落ごと飛び、
+-- 窓の最上行を行の途中から始めることもできない（長い段落の後半と次の見出しを同時に表示できない）。
+-- mouse = "" でスクロール手段がキーボードのみのため影響が大きい。
+-- 部分表示中は行頭に <<< が出る。'display' は Neovim 既定で "lastline" なので追加設定は不要。
+vim.opt.smoothscroll = true
 -- jumplist (<C-o>/<C-i>) / changelist (g;/g,) / alternate-file (<C-^>) / マークジャンプで
 -- 戻った際に、カーソル行だけでなく「カーソル行と topline の距離」= 元の画面スクロール位置まで復元する。
 -- gd / grr / telescope / quickfix から飛んで戻る往復で、毎回 zz を打ち直す手間を消す。
@@ -86,6 +93,23 @@ vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 	nested = true,
 	command = "lwindow",
 })
+
+-- ----------------------------------------
+-- quickfix / location list の絞り込み (:Cfilter / :Lfilter)
+-- Neovim 同梱の opt パッケージ。start/ ではなく opt/ にあるため packadd するまで使えない。
+--
+--   :Cfilter  /{pat}/   … {pat} に一致するエントリだけ残す
+--   :Cfilter! /{pat}/   … {pat} に一致するエントリを落とす
+--   :Lfilter[!] /{pat}/ … location list 版 (q の診断リスト等)
+--
+-- 照合対象は「ファイル名」と「マッチ行の本文」の両方（大文字小文字を区別するので
+-- 無視したいときはパターン側に \c を書く。ignorecase / smartcase は効かない）。
+-- 絞り込みは元リストを壊さず新しいリストを積むので、:colder / :cnewer で行き来できる。
+-- :grep の結果だけでなく、gq (gitsigns setqflist) / grr (LSP 参照) /
+-- telescope の <C-q> のように「再実行で条件を足せない」経路のリストにも効くのが本質。
+-- 将来 runtime から外れても init.lua 全体を巻き添えにしないよう pcall で包む。
+-- ----------------------------------------
+pcall(vim.cmd.packadd, "cfilter")
 
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)

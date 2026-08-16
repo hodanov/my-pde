@@ -4,14 +4,22 @@ services:
     build:
       context: ../..
       dockerfile: environment/docker/nvim.dockerfile
+    # Let Docker inject tini as PID 1. The keep-alive `sleep infinity` below drops
+    # to PID 2, and orphaned processes (LSP servers etc. spawned by nvim through
+    # `docker exec`) get re-parented to tini, which reaps them. `sleep` never
+    # calls wait(), so without this zombies accumulate for the lifetime of this
+    # always-on container. tini also forwards signals, so `compose stop`/`down`
+    # no longer waits out the 10s SIGKILL timeout.
+    init: true
     # Interactive TTY for stable exec sessions
     tty: true
     # Keep STDIN open so non-interactive startup doesn't close bash immediately
     stdin_open: true
-    # Keep-alive: run an infinite sleep as PID 1 so the container stays up
+    # Keep-alive: run an infinite sleep as the main process so the container stays up
+    # (with `init: true` above, tini is PID 1 and this runs as PID 2)
     # - Purpose: always-on toolbox container; attach with `docker exec -it nvim-dev bash --login`
     # - Why: if PID 1 exits quickly, container stops or hits a restart loop
-    # - Alternative: ["tail","-f","/dev/null"]
+    # - Alternative: ["tail","-f","/dev/null"] (also never reaps orphans; `init: true` above is the real fix)
     # - Note: replace/remove this if you later run a real long-lived service as PID 1
     command: ["sleep", "infinity"]
     restart: always
