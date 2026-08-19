@@ -224,6 +224,7 @@ RUN set -eux; \
 FROM base
 
 COPY ./nvim/config/.bash_profile /root/
+COPY ./nvim/config/.bashrc /root/
 
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
