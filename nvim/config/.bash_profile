@@ -1,9 +1,3 @@
-BEGIN="\[\e[1;37;42m\]"
-MIDDLE="\[\e[0;30;47m\]"
-END="\[\e[m\]"
-HOST_NAME="my-nvim"
-export PS1="${BEGIN} \u@${HOST_NAME} ${MIDDLE} \w ${END} "
-
 # goenv
 export PATH="$PATH:/usr/local/go/bin"
 
@@ -16,3 +10,7 @@ export PATH="$PATH:${GOPATH}/bin"
 # shell autocompletion about uv/uvx
 eval "$(uv generate-shell-completion bash)"
 eval "$(uvx --generate-shell-completion bash)"
+
+# Shared prompt (also sourced automatically for non-login shells via .bashrc)
+# shellcheck source=./.bashrc
+[ -f ~/.bashrc ] && . ~/.bashrc
