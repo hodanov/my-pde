@@ -31,6 +31,14 @@ vim.keymap.set("n", "<leader>fd", function()
 end, { desc = "Diagnostics (current buffer)" })
 vim.keymap.set("n", "<leader>fD", builtin.diagnostics, { desc = "Diagnostics (all buffers)" })
 
+-- 直前のピッカーをクエリ・カーソル位置・マルチ選択ごと復元する。
+-- <CR> で 1 件目に飛ぶとピッカーは閉じて絞り込んだ結果ごと消えるため、
+-- 「読んでから他の候補も見たい」と気づいた時点での復帰口がこれ。
+-- （<C-q> の quickfix 送りは「飛ぶ前に巡回すると気づいている」必要があり事後救済にならない）
+vim.keymap.set("n", "<leader>fr", builtin.resume, { desc = "Resume last picker" })
+-- さらに前のピッカー（別クエリの grep など）はキャッシュ一覧から選んで復帰する。
+vim.keymap.set("n", "<leader>fR", builtin.pickers, { desc = "Resume from cached pickers" })
+
 -- ----------
 -- telescope-file-browser.nvim
 -- ----------
@@ -43,6 +51,10 @@ telescope.setup({
 			prompt_position = "top", -- 検索窓を上に
 		},
 		find_files = { hidden = true },
+		-- 既定は num_pickers = 1（直前の 1 つだけ）。調査中は grep を何本も打つので、
+		-- 数本前のピッカーにも <leader>fR で戻れるように増やす。
+		-- -1（セッション全保持）は青天井なので採らない。
+		cache_picker = { num_pickers = 5 },
 	},
 	pickers = {
 		find_files = {

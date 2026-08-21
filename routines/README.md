@@ -17,7 +17,10 @@ claude.ai のスケジュール Routine（クラウドエージェント / CCR�
 | `weekly-ci-workflows-scan.json`      | `Weekly CI Workflows Scan`      | 毎週金曜 7:00 JST (`0 22 * * 4`) | `.github/workflows/` の CI 改善を Issue 起票（最大1件）      |
 | `monthly-routine-improve.json`       | `Monthly Routine Improve`       | 毎月2日 7:00 JST (`0 22 1 * *`)  | 運用実績からプロンプト改善を draft PR で提案（メタループ）   |
 
-このほか、LLM を使わない定型処理として `.github/workflows/pipeline-digest.yml`（毎週土曜 7:00 JST）が、triage 待ち Issue・滞留 adopted・Open な `auto/*` PR をまとめた digest Issue を更新する。
+このほか、LLM を使わない定型処理として `.github/workflows/pipeline-digest.yml`（毎週土曜 7:00 JST）が、`digest` ラベルの付いた単一 Issue の body を上書き更新する。内容は 2 段構え。
+
+- **滞留（ストック）**: triage 待ち Issue・PR 化待ちの adopted・Open な `auto/*` PR・14 日以上 Open の scan Issue。
+- **フロー指標**: [`scripts/pipeline-metrics`](../scripts/pipeline-metrics/README.md) がスキャン別に集計した採用率・PR 化率・マージ率・リードタイム・月次トレンドと、ラベル運用の異常。閾値を超えると body 冒頭に警告ブロックが出て Issue に `alert` ラベルが付く（回復すると自動で外れる）。末尾には機械可読な JSON ブロックが埋め込まれ、`Monthly Routine Improve` がそれを読んで改善テーマを絞る。
 
 ## プロンプトの間接参照
 
@@ -61,6 +64,18 @@ claude.ai のスケジュール Routine（クラウドエージェント / CCR�
 - スキャンが起票した Issue の採用判定はラベルで記録する: 採用は `adopted`、不採用は **`rejected` を付けて Close**。
 - **rejected で Close するときは、不採用の理由を一言コメントに残す**。`Monthly Routine Improve`（メタループ）がこのコメントを読んでスキャンのプロンプト改善に使う。
 - `adopted` Issue は日曜朝の PR Bot がドラフト PR 化し、`pr-created` ラベルを付ける。月曜朝の PR Care Bot が CI 失敗・コンフリクト・レビュー指摘をケアする。
+
+## ラベル運用の約束（効果測定の前提）
+
+digest のフロー指標はラベルとタイムスタンプだけを入力にしている。**ラベル運用が崩れると数値が崩れる**ので、次を守る。破れたものは digest の「ラベル運用の異常」節に出る。
+
+- **`rejected` は Close と同時に付ける。** 却下までのリードタイムは `closedAt` を判定時刻として使う。後から付けると実際より長く見える。
+- **`adopted` は後から外さない。** 実装まで進めた後に捨てる場合は `adopted` を残したまま `rejected` を足して Close する。集計は rejected に倒し、「PR まで作ってから捨てた最もコストの高い失敗」として `rejected_after_pr_rate` に数える。
+- **`scan:*` は 1 Issue に 1 つ。** 複数付いた場合は辞書順先頭のスキャンに寄せて集計する（異常として記録される）。
+- **scan Issue をラベル無しで Close しない。** 採用でも却下でもない Close は `untracked_close` として運用崩れの指標になる。
+- **PR のブランチ名は `auto/issue-<番号>-<slug>`。** PR と Issue の join はこの命名だけが根拠。`pr-created` ラベルは人間向けの目印で、集計は実際の PR の有無で判定する。
+- **集計起点は 2026-06-28**（`rejected` 運用の定着後）。**遡及ラベル付けはしない**。それ以前の Issue は件数だけ数え、率の分母には入れない。
+- 手動で起票した Issue には `scan:*` を付けない。パイプラインの効果測定という趣旨から外れるため集計対象外にしている。
 
 ## 既知の制約 / TODO
 

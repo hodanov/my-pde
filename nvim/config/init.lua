@@ -55,6 +55,13 @@ vim.opt.splitkeep = "screen"
 vim.opt.switchbuf:append("useopen")
 vim.opt.scrolloff = 8 -- カーソルの上下に常に 8 行の文脈を確保し、画面端への張り付きを防ぐ
 vim.opt.sidescrolloff = 8 -- nowrap 時、カーソルの左右に常に 8 桁の文脈を確保する
+-- スクロールを「バッファ行」ではなく「画面行」単位にする（既定 off）。
+-- off だと <C-e>/<C-y>/<C-d>/<C-u> が 1 バッファ行単位で動くため、wrap + linebreak を
+-- 入れた散文（1 段落 = 1 バッファ行 = 画面十数行）では 1 押しで段落ごと飛び、
+-- 窓の最上行を行の途中から始めることもできない（長い段落の後半と次の見出しを同時に表示できない）。
+-- mouse = "" でスクロール手段がキーボードのみのため影響が大きい。
+-- 部分表示中は行頭に <<< が出る。'display' は Neovim 既定で "lastline" なので追加設定は不要。
+vim.opt.smoothscroll = true
 -- jumplist (<C-o>/<C-i>) / changelist (g;/g,) / alternate-file (<C-^>) / マークジャンプで
 -- 戻った際に、カーソル行だけでなく「カーソル行と topline の距離」= 元の画面スクロール位置まで復元する。
 -- gd / grr / telescope / quickfix から飛んで戻る往復で、毎回 zz を打ち直す手間を消す。
@@ -86,6 +93,23 @@ vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 	nested = true,
 	command = "lwindow",
 })
+
+-- ----------------------------------------
+-- quickfix / location list の絞り込み (:Cfilter / :Lfilter)
+-- Neovim 同梱の opt パッケージ。start/ ではなく opt/ にあるため packadd するまで使えない。
+--
+--   :Cfilter  /{pat}/   … {pat} に一致するエントリだけ残す
+--   :Cfilter! /{pat}/   … {pat} に一致するエントリを落とす
+--   :Lfilter[!] /{pat}/ … location list 版 (q の診断リスト等)
+--
+-- 照合対象は「ファイル名」と「マッチ行の本文」の両方（大文字小文字を区別するので
+-- 無視したいときはパターン側に \c を書く。ignorecase / smartcase は効かない）。
+-- 絞り込みは元リストを壊さず新しいリストを積むので、:colder / :cnewer で行き来できる。
+-- :grep の結果だけでなく、gq (gitsigns setqflist) / grr (LSP 参照) /
+-- telescope の <C-q> のように「再実行で条件を足せない」経路のリストにも効くのが本質。
+-- 将来 runtime から外れても init.lua 全体を巻き添えにしないよう pcall で包む。
+-- ----------------------------------------
+pcall(vim.cmd.packadd, "cfilter")
 
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
@@ -137,10 +161,27 @@ vim.opt.winborder = "rounded" -- Default border for floating windows (hover, sig
 -- ----------------------------------------
 -- Copy to the system clipboard.
 -- ----------------------------------------
+-- 任意のテキストをクリップボードへ送る共通口（ヤンク以外の経路から使う）。
+-- OSC52 が使える端末ではホスト側のクリップボードへ直接送る。
+-- 使えない環境では + レジスタ（clipboard プロバイダがあればその先）へ落とす。
+local copy_to_clipboard = function(text)
+	vim.fn.setreg("+", text)
+end
+
 local has_osc52, osc52 = pcall(require, "vim.ui.clipboard.osc52")
 if has_osc52 then
 	local osc52_copy_plus = osc52.copy("+")
 	local osc52_copy_star = osc52.copy("*")
+
+	copy_to_clipboard = function(text)
+		-- + レジスタにも入れる（nvim 内で "+p したいとき用）。ただしコンテナ内に
+		-- clipboard プロバイダは無い前提なので、ホストへ実際に届けるのは OSC52 送出のほう。
+		-- setreg() は TextYankPost を発火させないので、この二重書きは意図的。
+		vim.fn.setreg("+", text)
+		osc52_copy_plus({ text })
+		osc52_copy_star({ text })
+	end
+
 	local osc52_yank_group = vim.api.nvim_create_augroup("auto_copy_yank_to_osc52", { clear = true })
 	vim.api.nvim_create_autocmd("TextYankPost", {
 		group = osc52_yank_group,
@@ -160,6 +201,58 @@ if has_osc52 then
 elseif vim.fn.has("clipboard") == 1 then
 	vim.opt.clipboard = "unnamedplus"
 end
+
+-- ----------------------------------------
+-- 「相対パス:行番号」参照をクリップボードへ取る
+-- （PR レビューコメント / Issue 本文 / AI CLI へのプロンプト向け）
+--   <leader>y          … カーソル行  → nvim/config/init.lua:55
+--   <leader>y (visual) … 選択範囲    → nvim/config/init.lua:55-62
+-- 参照は cwd 相対に正規化する（絶対パスは他人と共有できず、AI にも渡しにくいため）。
+-- <leader>ai (ai_bridge) とは宛先も送る内容も違うので置き換えではなく併存させる。
+-- ----------------------------------------
+local function location_ref(from, to)
+	-- ターミナル分割 / quickfix 等の特殊バッファは term://... のような無意味な参照になる
+	if vim.bo.buftype ~= "" then
+		vim.notify("Not a file buffer", vim.log.levels.WARN)
+		return nil
+	end
+	local abs = vim.fn.expand("%:p")
+	if abs == "" then
+		vim.notify("Buffer has no file name", vim.log.levels.WARN)
+		return nil
+	end
+	local path = vim.fn.fnamemodify(abs, ":.") -- cwd 配下なら相対、外なら絶対のまま
+	if to and to ~= from then
+		return ("%s:%d-%d"):format(path, from, to)
+	end
+	return ("%s:%d"):format(path, from)
+end
+
+local function yank_location_ref(from, to)
+	local ref = location_ref(from, to)
+	if not ref then
+		return
+	end
+	copy_to_clipboard(ref)
+	vim.notify(ref, vim.log.levels.INFO) -- 何をコピーしたか必ず見せる（無言でコピーしない）
+end
+
+vim.keymap.set("n", "<leader>y", function()
+	yank_location_ref(vim.fn.line("."))
+end, { desc = "Yank <path>:<line> reference to clipboard" })
+
+-- select モードで <leader> が文字入力に化けないよう "v" ではなく "x" に張る。
+vim.keymap.set("x", "<leader>y", function()
+	-- ビジュアルモード実行中の '< / '> は「前回の」選択範囲を指す（:h getpos()）。
+	-- 現在の範囲は "v"（選択開始）と "."（カーソル）から取る。
+	local from, to = vim.fn.line("v"), vim.fn.line(".")
+	if from > to then
+		from, to = to, from
+	end
+	yank_location_ref(from, to)
+	-- 範囲を掴んだら選択は用済みなので抜ける（ai_bridge.lua と同じ作法）
+	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+end, { desc = "Yank <path>:<from>-<to> reference to clipboard" })
 
 -- ----------------------------------------
 -- Highlight yanked text (ヤンク範囲を一瞬フラッシュして視覚フィードバックする)
@@ -296,20 +389,73 @@ vim.api.nvim_set_keymap("n", "<Leader>.", ":vs ~/.config/nvim/init.lua<CR>", { n
 vim.api.nvim_set_keymap("n", "<C-[><C-[>", ":nohlsearch<CR>", { noremap = true, silent = true })
 
 -- ----------------------------------------
--- vimshell setting.
+-- 内蔵ターミナル（同じ端末を出し入れするトグル）
+--
+--   <Leader>- : 水平分割 / <Leader>l : 垂直分割
+--     端末窓が現在の窓         → 隠す（ジョブは生かしたまま）
+--     端末窓が別の窓にある     → そこへフォーカスを移す
+--     端末窓は無いがバッファ有 → 指定の分割で開き直す（cwd/履歴ごと戻る）
+--     バッファも無い           → 新しく term://bash を起動する
+--
+-- :split term://bash を直接叩くと毎回新しい bash が起動する。
+-- term:// バッファは起動後 term://{cwd}//{pid}:bash へ改名される (:h terminal) ため、
+-- 2 回目以降が既存バッファに当たることは無く、プロセスとバッファが増え続ける。
+-- 分割方向は splitbelow / splitright に従うので、従来どおり下・右に出る。
+-- 追跡するのは 1 本だけで、<Leader>- と <Leader>l は同じシェルを共有する。
 -- ----------------------------------------
-if vim.fn.has("nvim") == 1 then
-	vim.api.nvim_set_keymap("n", "<Leader>-", ":split term://bash<CR>", { noremap = true, silent = true })
-	vim.api.nvim_set_keymap("n", "<Leader>l", ":vsplit term://bash<CR>", { noremap = true, silent = true })
-else
-	vim.api.nvim_set_keymap(
-		"n",
-		"<Leader>-",
-		":below terminal ++close ++rows=13 bash<CR>",
-		{ noremap = true, silent = true }
-	)
-	vim.api.nvim_set_keymap("n", "<Leader>l", ":vertical terminal ++close bash<CR>", { noremap = true, silent = true })
+local term_state = { buf = nil }
+
+-- 現在のタブページで、追跡中の端末バッファを表示している窓を返す。
+local function find_term_win()
+	if not term_state.buf then
+		return nil
+	end
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+		if vim.api.nvim_win_get_buf(win) == term_state.buf then
+			return win
+		end
+	end
+	return nil
 end
+
+local function toggle_terminal(split_cmd)
+	-- :bwipeout 等で外から消された場合に備えて、無効なら追跡状態を落とす。
+	if term_state.buf and not vim.api.nvim_buf_is_valid(term_state.buf) then
+		term_state.buf = nil
+	end
+
+	local win = find_term_win()
+	if win then
+		if win == vim.api.nvim_get_current_win() then
+			-- 最後の 1 枚だと閉じられない (E444) ので握りつぶす。
+			-- 'hidden' が既定で有効なため、閉じてもバッファとジョブは残る。
+			pcall(vim.api.nvim_win_close, win, false)
+		else
+			vim.api.nvim_set_current_win(win)
+			vim.cmd("startinsert")
+		end
+		return
+	end
+
+	if term_state.buf then
+		-- 既存の端末を開き直す。TermOpen は再発火しないが、
+		-- バッファローカルな設定はバッファ側に残っているので問題ない。
+		vim.cmd(split_cmd)
+		vim.api.nvim_win_set_buf(0, term_state.buf)
+		vim.cmd("startinsert")
+		return
+	end
+
+	vim.cmd(split_cmd .. " term://bash")
+	term_state.buf = vim.api.nvim_get_current_buf()
+end
+
+vim.keymap.set("n", "<Leader>-", function()
+	toggle_terminal("split")
+end, { desc = "Toggle terminal (horizontal split)" })
+vim.keymap.set("n", "<Leader>l", function()
+	toggle_terminal("vsplit")
+end, { desc = "Toggle terminal (vertical split)" })
 
 -- ----------------------------------------
 -- 内蔵ターミナルの UX 整備
@@ -323,6 +469,24 @@ vim.api.nvim_create_autocmd("TermOpen", {
 		-- ここではあえて "yes" で上書きしてサイン列分の幅を確保し、出力の折り返しずれを防ぐ。
 		vim.opt_local.signcolumn = "yes"
 		vim.cmd("startinsert") -- 開いた瞬間に端末操作モードへ入る
+	end,
+})
+-- bash を exit したら「[Process exited]」の残骸を残さず片付け、
+-- 次の <Leader>- で新しいシェルが起動するように追跡状態も落とす。
+-- 0.12 では終了しても仮想テキストが出るだけでバッファは消えない (:h terminal-config)。
+vim.api.nvim_create_autocmd("TermClose", {
+	group = term_group,
+	callback = function(args)
+		if args.buf ~= term_state.buf then
+			return -- 手動で開いた端末には手を出さない
+		end
+		term_state.buf = nil
+		-- TermClose の中で即 buf_delete するのは避け、次のループへ逃がす。
+		vim.schedule(function()
+			if vim.api.nvim_buf_is_valid(args.buf) then
+				pcall(vim.api.nvim_buf_delete, args.buf, { force = true })
+			end
+		end)
 	end,
 })
 -- terminal-mode からの脱出を簡略化（<Esc><Esc> を <C-\><C-n> の代替に）

@@ -93,7 +93,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
 # Stage 3: Build Go toolchain and tools
 FROM base AS go-builder
 
-ARG GO_VERSION=1.26.5
+ARG GO_VERSION=1.26.6
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH="$(dpkg --print-architecture)" \
@@ -224,6 +224,7 @@ RUN set -eux; \
 FROM base
 
 COPY ./nvim/config/.bash_profile /root/
+COPY ./nvim/config/.bashrc /root/
 
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -1,0 +1,317 @@
+## フロー指標（2026-08-16T00:00:00Z 時点）
+
+集計起点 2026-06-28 / 率の窓 直近 90 日（起点 2026-06-28 以降）/ 母数 5 件未満は率を出さない（集計起点より前の scan Issue 1 件は件数のみで率の分母に入れない）。状態ファイルは持たず毎回全再計算するため、ラベルを編集すると過去の数値も動く。
+
+### スキャン品質
+
+| スキャン | 起票 | 直近 28 日 | 採用 | 却下 | 未 triage | 追跡外 Close | 採用率 | PR 後却下率 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `scan:alpha` | 11 | 11 | 10 | 1 | 0 | 0 | 91% (10/11) | 0.0% (0/11) |
+| `scan:beta` | 11 | 3 | 5 | 5 | 0 | 1 | 45% (5/11) | 9.1% (1/11) |
+| `scan:delta` | 3 | 3 | 1 | 1 | 1 | 0 | — (n=3) | — (n=3) |
+| `scan:gamma` | 8 | 0 | 7 | 1 | 0 | 0 | 88% (7/8) | 0.0% (0/8) |
+| **合計** | **33** | **17** | **23** | **8** | **1** | **1** | **70% (23/33)** | **3.0% (1/33)** |
+
+### triage と PR 化
+
+| スキャン | 最古の未 triage（日） | 却下まで p50（日） | PR 化率 | PR 化待ち | 起票→PR p50（日） |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `scan:alpha` | — | 1 | 70% (7/10) | 3 | 1 |
+| `scan:beta` | — | 2.5 | 100% (5/5) | 0 | 1 |
+| `scan:delta` | 26.6 | 1 | — (n=1) | 0 | 1 |
+| `scan:gamma` | — | 2 | 100% (7/7) | 0 | 1 |
+| **合計** | **26.6** | **2** | **87% (20/23)** | **3** | **1** |
+
+### マージ
+
+| スキャン | PR | マージ | 未マージ Close | Open | マージ率 | PR→マージ p50 | p90 | 起票→マージ p50 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `scan:alpha` | 7 | 6 | 1 | 0 | 86% (6/7) | 1 | 1.8 | 2 |
+| `scan:beta` | 6 | 5 | 1 | 0 | 83% (5/6) | 1 | 1 | 2 |
+| `scan:delta` | 1 | 0 | 0 | 1 | — | — | — | — |
+| `scan:gamma` | 7 | 7 | 0 | 0 | 100% (7/7) | 1 | 1 | 2 |
+| **合計** | **21** | **18** | **2** | **1** | **90% (18/20)** | **1** | **1.2** | **2** |
+
+### 月次トレンド（起票月コホート）
+
+| 月 | 起票 | 採用 | 却下 | 未 triage | 採用率 | マージ済 | 起票→マージ p50 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2026-06 | 2 | 2 | 0 | 0 | — (n=2) | 2 | 2 |
+| 2026-07 | 19 | 12 | 5 | 1 | 63% (12/19) | 12 | 2 |
+| 2026-08 | 12 | 9 | 3 | 0 | 75% (9/12) | 4 | 2 |
+
+### ラベル運用の異常
+
+- `scan:` ラベル重複: #132
+- `adopted` と `rejected` の併存（rejected に倒して集計）: #119
+- ラベル無しで Close（追跡外）: #120
+- `rejected` なのに Open のまま: #133
+- `pr-created` があるが PR が見つからない: #108
+- PR はあるが `pr-created` が無い: #105
+- `scan:` 無しで triage された Issue（集計対象外）: #140
+- issue に紐づかない `auto/*` PR（meta ブランチ）: #250
+- scan Issue に紐づかない `auto/issue-*` PR: #251 #253
+
+<!-- pipeline-metrics:json -->
+
+<details>
+<summary>machine-readable metrics (JSON)</summary>
+
+```json
+{
+  "generated_at": "2026-08-16T00:00:00Z",
+  "since": "2026-06-28",
+  "window_start": "2026-06-28",
+  "window_days": 90,
+  "excluded_before_since": 1,
+  "min_sample": 5,
+  "alert_min_sample": 8,
+  "scans": [
+    {
+      "scan": "scan:alpha",
+      "opened": 11,
+      "opened_last_28d": 11,
+      "adopted": 10,
+      "rejected": 1,
+      "untriaged": 0,
+      "untracked_close": 0,
+      "rejected_after_pr": 0,
+      "adopted_rate": 0.9091,
+      "rejected_after_pr_rate": 0,
+      "oldest_untriaged_days": null,
+      "oldest_untriaged_issue": 0,
+      "reject_latency_days_p50": 1,
+      "adopted_with_pr": 7,
+      "pr_created_rate": 0.7,
+      "pr_pending": 3,
+      "pr_lag_days_p50": 1,
+      "prs": 7,
+      "merged": 6,
+      "closed_unmerged": 1,
+      "open_prs": 0,
+      "merge_rate": 0.8571,
+      "merge_lead_days_p50": 1,
+      "merge_lead_days_p90": 1.8,
+      "e2e_lead_days_p50": 2
+    },
+    {
+      "scan": "scan:beta",
+      "opened": 11,
+      "opened_last_28d": 3,
+      "adopted": 5,
+      "rejected": 5,
+      "untriaged": 0,
+      "untracked_close": 1,
+      "rejected_after_pr": 1,
+      "adopted_rate": 0.4545,
+      "rejected_after_pr_rate": 0.0909,
+      "oldest_untriaged_days": null,
+      "oldest_untriaged_issue": 0,
+      "reject_latency_days_p50": 2.5,
+      "adopted_with_pr": 5,
+      "pr_created_rate": 1,
+      "pr_pending": 0,
+      "pr_lag_days_p50": 1,
+      "prs": 6,
+      "merged": 5,
+      "closed_unmerged": 1,
+      "open_prs": 0,
+      "merge_rate": 0.8333,
+      "merge_lead_days_p50": 1,
+      "merge_lead_days_p90": 1,
+      "e2e_lead_days_p50": 2
+    },
+    {
+      "scan": "scan:delta",
+      "opened": 3,
+      "opened_last_28d": 3,
+      "adopted": 1,
+      "rejected": 1,
+      "untriaged": 1,
+      "untracked_close": 0,
+      "rejected_after_pr": 0,
+      "adopted_rate": null,
+      "rejected_after_pr_rate": null,
+      "oldest_untriaged_days": 26.6,
+      "oldest_untriaged_issue": 129,
+      "reject_latency_days_p50": 1,
+      "adopted_with_pr": 1,
+      "pr_created_rate": null,
+      "pr_pending": 0,
+      "pr_lag_days_p50": 1,
+      "prs": 1,
+      "merged": 0,
+      "closed_unmerged": 0,
+      "open_prs": 1,
+      "merge_rate": null,
+      "merge_lead_days_p50": null,
+      "merge_lead_days_p90": null,
+      "e2e_lead_days_p50": null
+    },
+    {
+      "scan": "scan:gamma",
+      "opened": 8,
+      "opened_last_28d": 0,
+      "adopted": 7,
+      "rejected": 1,
+      "untriaged": 0,
+      "untracked_close": 0,
+      "rejected_after_pr": 0,
+      "adopted_rate": 0.875,
+      "rejected_after_pr_rate": 0,
+      "oldest_untriaged_days": null,
+      "oldest_untriaged_issue": 0,
+      "reject_latency_days_p50": 2,
+      "adopted_with_pr": 7,
+      "pr_created_rate": 1,
+      "pr_pending": 0,
+      "pr_lag_days_p50": 1,
+      "prs": 7,
+      "merged": 7,
+      "closed_unmerged": 0,
+      "open_prs": 0,
+      "merge_rate": 1,
+      "merge_lead_days_p50": 1,
+      "merge_lead_days_p90": 1,
+      "e2e_lead_days_p50": 2
+    }
+  ],
+  "total": {
+    "scan": "all",
+    "opened": 33,
+    "opened_last_28d": 17,
+    "adopted": 23,
+    "rejected": 8,
+    "untriaged": 1,
+    "untracked_close": 1,
+    "rejected_after_pr": 1,
+    "adopted_rate": 0.697,
+    "rejected_after_pr_rate": 0.0303,
+    "oldest_untriaged_days": 26.6,
+    "oldest_untriaged_issue": 129,
+    "reject_latency_days_p50": 2,
+    "adopted_with_pr": 20,
+    "pr_created_rate": 0.8696,
+    "pr_pending": 3,
+    "pr_lag_days_p50": 1,
+    "prs": 21,
+    "merged": 18,
+    "closed_unmerged": 2,
+    "open_prs": 1,
+    "merge_rate": 0.9,
+    "merge_lead_days_p50": 1,
+    "merge_lead_days_p90": 1.2,
+    "e2e_lead_days_p50": 2
+  },
+  "months": [
+    {
+      "month": "2026-06",
+      "opened": 2,
+      "adopted": 2,
+      "rejected": 0,
+      "untriaged": 0,
+      "adopted_rate": null,
+      "merged": 2,
+      "e2e_lead_days_p50": 2
+    },
+    {
+      "month": "2026-07",
+      "opened": 19,
+      "adopted": 12,
+      "rejected": 5,
+      "untriaged": 1,
+      "adopted_rate": 0.6316,
+      "merged": 12,
+      "e2e_lead_days_p50": 2
+    },
+    {
+      "month": "2026-08",
+      "opened": 12,
+      "adopted": 9,
+      "rejected": 3,
+      "untriaged": 0,
+      "adopted_rate": 0.75,
+      "merged": 4,
+      "e2e_lead_days_p50": 2
+    }
+  ],
+  "backlog": {
+    "untriaged": 1,
+    "oldest_untriaged_days": 26.6,
+    "oldest_untriaged_issue": 129,
+    "oldest_untriaged_scan": "scan:delta",
+    "pr_pending": 3
+  },
+  "alerts": [
+    {
+      "kind": "liveness",
+      "scope": "scan:gamma",
+      "value": 0,
+      "threshold": 1,
+      "observed": 0,
+      "sample": 8,
+      "owner_prompt": ""
+    },
+    {
+      "kind": "triage_backlog",
+      "scope": "",
+      "value": 26.6,
+      "threshold": 14,
+      "observed": 129,
+      "sample": 1,
+      "owner_prompt": ""
+    },
+    {
+      "kind": "adopted_rate",
+      "scope": "scan:beta",
+      "value": 0.4545,
+      "threshold": 0.6,
+      "observed": 5,
+      "sample": 11,
+      "owner_prompt": ""
+    },
+    {
+      "kind": "pr_created_rate",
+      "scope": "scan:alpha",
+      "value": 0.7,
+      "threshold": 0.8,
+      "observed": 7,
+      "sample": 10,
+      "owner_prompt": "routines/prompts/weekly-adopted-issue-pr-bot.md"
+    }
+  ],
+  "anomalies": {
+    "duplicate_scan_labels": [
+      132
+    ],
+    "triaged_non_scan": [
+      140
+    ],
+    "adopted_and_rejected": [
+      119
+    ],
+    "untracked_close": [
+      120
+    ],
+    "rejected_still_open": [
+      133
+    ],
+    "pr_label_without_pr": [
+      108
+    ],
+    "pr_without_label": [
+      105
+    ],
+    "meta_branch_prs": [
+      250
+    ],
+    "orphan_prs": [
+      251,
+      253
+    ],
+    "parse_warnings": []
+  }
+}
+```
+
+</details>
