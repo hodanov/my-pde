@@ -3,7 +3,7 @@ local act = wezterm.action
 local mux = wezterm.mux
 
 -- 検知対象の AI CLI。bin/ai-panes.sh の AI_PANES_AGENTS と対応させること。
--- 値はピッカー / ステータスバーでの表示色（Catppuccin Mocha）。
+-- 値はステータスバーでの表示色（Catppuccin Mocha）。
 local AI = {
 	claude = "#cba6f7",
 	codex = "#94e2d5",
@@ -14,6 +14,13 @@ local AI = {
 -- ステータスバーの表示順を固定するための一覧。pairs() の走査順は不定なので、
 -- これを使わないとリフレッシュのたびに並びが入れ替わる。
 local AI_ORDER = { "claude", "codex", "cursor-agent", "copilot" }
+
+-- ピッカーの行はフィールドを空白で並べただけだと workspace 名と CLI 名が地続きに
+-- 読めてしまうので、境目には可視のセパレータを挟む。
+-- ラベルに色は付けない。InputSelector は選択行を Reverse 属性で描くので、前景色を
+-- 指定するとその色が選択時の背景になり、行の背景がフィールドごとにまだらになる。
+-- 色無しにしておけば CMD+s のワークスペース選択と同じ均一な背景が乗る。
+local SEP = " / "
 
 -- AI が 1 本も無いときにピッカーへ出すプレースホルダの id。
 -- トースト通知は macOS の通知設定次第で無音になり「何も起きない」ように見えるため、
@@ -140,25 +147,18 @@ local function select_ai_pane()
 
 		local choices = {}
 		if #rows == 0 then
-			table.insert(choices, {
-				id = NO_PANES_ID,
-				label = wezterm.format({
-					{ Foreground = { Color = "#6c7086" } },
-					{ Text = "no AI panes" },
-				}),
-			})
+			table.insert(choices, { id = NO_PANES_ID, label = "no AI panes" })
 		end
 		for _, row in ipairs(rows) do
+			local label = row.workspace .. SEP .. row.agent
+			-- タブ名は無いことがある。空のまま並べると区切りだけが浮くので出さない。
+			if row.tab_title and row.tab_title ~= "" then
+				label = label .. SEP .. row.tab_title
+			end
+
 			table.insert(choices, {
 				id = tostring(row.pane_id),
-				label = wezterm.format({
-					{ Foreground = { Color = "#cba6f7" } },
-					{ Text = string.format("%-18s", row.workspace) },
-					{ Foreground = { Color = AI[row.agent] } },
-					{ Text = string.format("%-14s", row.agent) },
-					{ Foreground = { Color = "#6c7086" } },
-					{ Text = string.format("%-16s #%d", row.tab_title or "", row.pane_id) },
-				}),
+				label = label .. string.format(" #%d", row.pane_id),
 			})
 		end
 
