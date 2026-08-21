@@ -2,18 +2,28 @@ local wezterm = require("wezterm")
 local act = wezterm.action
 local mux = wezterm.mux
 
--- 検知対象の AI CLI。bin/ai-panes.sh の AI_PANES_AGENTS と対応させること。
+-- 検知対象。bin/ai-panes.sh の AI_PANES_AGENTS と対応させること。
 -- 値はステータスバーでの表示色（Catppuccin Mocha）。
-local AI = {
+-- nvim は AI CLI ではないが「どの workspace で動いているかを把握して飛ぶ」対象としては
+-- 完全に同型なので、専用モジュールを作らずここに同居させる。
+local TRACKED = {
+	nvim = "#89b4fa",
 	claude = "#cba6f7",
 	codex = "#94e2d5",
 	["cursor-agent"] = "#a6e3a1",
 	copilot = "#f9e2af",
 }
 
--- ステータスバーの表示順を固定するための一覧。pairs() の走査順は不定なので、
+-- ステータスバーとピッカーの並びを固定するための一覧。pairs() の走査順は不定なので、
 -- これを使わないとリフレッシュのたびに並びが入れ替わる。
-local AI_ORDER = { "claude", "codex", "cursor-agent", "copilot" }
+-- nvim は「その workspace の主ペイン」なので先頭に置く。
+local TRACKED_ORDER = { "nvim", "claude", "codex", "cursor-agent", "copilot" }
+
+-- ピッカーのソート用に TRACKED_ORDER を逆引きできるようにしておく。
+local TRACKED_RANK = {}
+for i, name in ipairs(TRACKED_ORDER) do
+	TRACKED_RANK[name] = i
+end
 
 -- ピッカーの行はフィールドを空白で並べただけだと workspace 名と CLI 名が地続きに
 -- 読めてしまうので、境目には可視のセパレータを挟む。
@@ -22,7 +32,7 @@ local AI_ORDER = { "claude", "codex", "cursor-agent", "copilot" }
 -- 色無しにしておけば CMD+s のワークスペース選択と同じ均一な背景が乗る。
 local SEP = " / "
 
--- AI が 1 本も無いときにピッカーへ出すプレースホルダの id。
+-- 対象が 1 本も無いときにピッカーへ出すプレースホルダの id。
 -- トースト通知は macOS の通知設定次第で無音になり「何も起きない」ように見えるため、
 -- 空でもセレクタ自体は開いて理由を出す。
 local NO_PANES_ID = "__none__"
@@ -59,17 +69,37 @@ local function pane_cwd(pane)
 	return cwd.file_path
 end
 
+-- .zshrc の nvim() は docker exec でコンテナ内の nvim を起動するので、ホスト側の
+-- foreground プロセスは docker になり名前一致では絶対に拾えない。判定はコンテナ名
+-- （nvim-dev）ではなく argv に素の nvim トークンが現れるかで行う。
+--   `bash --login -c 'nvim "$@"'` → argv の 1 要素が `nvim "$@"` になるので拾える
+--   `docker container exec -it nvim-dev bash --login` → コンテナに入っただけなので拾わない
+-- この判定ルールは bin/ai-panes.sh の awk 側と対になっている。
+local function argv_runs_nvim(argv)
+	if argv == nil then
+		return false
+	end
+	for _, token in ipairs(argv) do
+		if token == "nvim" or token:match("^nvim%s") then
+			return true
+		end
+	end
+	return false
+end
+
 -- 実行ファイルの実パスだけでは判定できない。claude は ~/.local/bin/claude が
 -- ~/.local/share/claude/versions/<version> への symlink で、get_foreground_process_name()
 -- は解決後の実パスを返すため basename がバージョン番号（例 2.1.235）になる。
 -- LocalProcessInfo の name / argv[0] も候補に入れて、どれか 1 つでも一致すれば採用する。
-local function agent_of(pane)
+local function process_of(pane)
 	local candidates = {}
+	local info = nil
 
-	local ok_info, info = pcall(function()
+	local ok_info, got = pcall(function()
 		return pane:get_foreground_process_info()
 	end)
-	if ok_info and info then
+	if ok_info and got then
+		info = got
 		table.insert(candidates, info.name)
 		if info.argv then
 			table.insert(candidates, info.argv[1])
@@ -86,14 +116,23 @@ local function agent_of(pane)
 
 	for _, candidate in ipairs(candidates) do
 		local name = basename(candidate)
-		if name and AI[name] then
+		if name and TRACKED[name] then
 			return name
+		end
+	end
+
+	-- 名前一致が空振りしたときだけ docker ラッパーを疑う。誤検知の面を狭めるため、
+	-- foreground が docker のときに限って argv を舐める。
+	if info then
+		local front = basename(info.name) or basename(info.argv and info.argv[1])
+		if front == "docker" and argv_runs_nvim(info.argv) then
+			return "nvim"
 		end
 	end
 	return nil
 end
 
--- mux 配下の全 window / tab / pane を走査して AI CLI が動いているペインを集める。
+-- mux 配下の全 window / tab / pane を走査して追跡対象が動いているペインを集める。
 -- この wezterm には mux.get_pane() が無いので、後でジャンプできるよう
 -- MuxPane オブジェクトそのものを行に持たせる。
 local function collect()
@@ -102,11 +141,11 @@ local function collect()
 		local workspace = win:get_workspace()
 		for _, tab in ipairs(win:tabs()) do
 			for _, pane in ipairs(tab:panes()) do
-				local agent = agent_of(pane)
-				if agent then
+				local proc = process_of(pane)
+				if proc then
 					table.insert(rows, {
 						workspace = workspace,
-						agent = agent,
+						proc = proc,
 						project = basename(pane_cwd(pane)) or workspace,
 						tab_title = tab:get_title(),
 						pane_id = pane:pane_id(),
@@ -119,6 +158,9 @@ local function collect()
 	table.sort(rows, function(a, b)
 		if a.workspace ~= b.workspace then
 			return a.workspace < b.workspace
+		end
+		if a.proc ~= b.proc then
+			return (TRACKED_RANK[a.proc] or math.huge) < (TRACKED_RANK[b.proc] or math.huge)
 		end
 		return a.pane_id < b.pane_id
 	end)
@@ -141,18 +183,19 @@ local function jump_to(window, row)
 	end
 end
 
-local function select_ai_pane()
+local function select_pane()
 	return wezterm.action_callback(function(window, pane)
 		local rows = collect()
 
 		local choices = {}
 		if #rows == 0 then
-			table.insert(choices, { id = NO_PANES_ID, label = "no AI panes" })
+			table.insert(choices, { id = NO_PANES_ID, label = "no tracked panes" })
 		end
 		for _, row in ipairs(rows) do
-			local label = row.workspace .. SEP .. row.agent
+			local label = row.workspace .. SEP .. row.proc
 			-- タブ名は無いことがある。空のまま並べると区切りだけが浮くので出さない。
-			if row.tab_title and row.tab_title ~= "" then
+			-- プロセス名と同じタブ名（`my-pde / nvim / nvim`）も冗長なだけなので出さない。
+			if row.tab_title and row.tab_title ~= "" and row.tab_title ~= row.proc then
 				label = label .. SEP .. row.tab_title
 			end
 
@@ -164,9 +207,9 @@ local function select_ai_pane()
 
 		window:perform_action(
 			act.InputSelector({
-				title = "Jump to AI pane",
+				title = "Jump to pane",
 				fuzzy = true,
-				fuzzy_description = "AI > ",
+				fuzzy_description = "Pane > ",
 				choices = choices,
 				action = wezterm.action_callback(function(w, _, id)
 					if not id or id == NO_PANES_ID then
@@ -185,9 +228,9 @@ local function select_ai_pane()
 	end)
 end
 
--- タブバー左端に出す `cla:1 cdx:2` 形式のサマリ。
+-- タブバー左端に出す `nvim:2 claude:1` 形式のサマリ。
 -- ダッシュボードペインはそのタブの中でしか見えないので、どのタブ / どの workspace に
--- いても総数だけは分かるようにする補完。AI が 0 本なら何も出さない。
+-- いても総数だけは分かるようにする補完。1 本も動いていなければ何も出さない。
 --
 -- キャッシュはスカラー 2 本で持つ。wezterm.GLOBAL に入れたテーブルはネストした
 -- 書き換えが保持されないことがあるため、テーブルを持たせない。
@@ -200,13 +243,13 @@ local function status_text()
 
 	local counts = {}
 	for _, row in ipairs(collect()) do
-		counts[row.agent] = (counts[row.agent] or 0) + 1
+		counts[row.proc] = (counts[row.proc] or 0) + 1
 	end
 
 	local parts = {}
-	for _, name in ipairs(AI_ORDER) do
+	for _, name in ipairs(TRACKED_ORDER) do
 		if counts[name] then
-			table.insert(parts, { Foreground = { Color = AI[name] } })
+			table.insert(parts, { Foreground = { Color = TRACKED[name] } })
 			table.insert(parts, { Text = string.format(" %s:%d", name, counts[name]) })
 		end
 	end
@@ -266,6 +309,6 @@ return function(config)
 		window:set_left_status(status_text())
 	end)
 
-	table.insert(config.keys, { key = "a", mods = "CMD", action = select_ai_pane() })
+	table.insert(config.keys, { key = "a", mods = "CMD", action = select_pane() })
 	table.insert(config.keys, { key = "A", mods = "CMD|SHIFT", action = toggle_dashboard() })
 end
