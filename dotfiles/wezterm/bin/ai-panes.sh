@@ -7,11 +7,12 @@ export PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:/opt/homebrew/bin:/
 if [ -n "${WEZTERM_EXECUTABLE:-}" ]; then
 	export PATH="${WEZTERM_EXECUTABLE%/*}:$PATH"
 fi
-# WezTerm AI dashboard: list the AI CLIs running across every workspace and pane.
+# WezTerm pane dashboard: list the AI CLIs and the nvim instances running across
+# every workspace and pane.
 # Rendered inside the thin left pane that ai-panes.lua spawns (CMD+SHIFT+A).
 #
 # `wezterm cli list` knows every pane's workspace/cwd/tty but not its foreground
-# process, so the AI CLI is resolved by joining that list with `ps` on the tty.
+# process, so the process is resolved by joining that list with `ps` on the tty.
 #
 #   ai-panes.sh          run the refresh loop (default)
 #   ai-panes.sh --once   render a single frame and exit
@@ -20,13 +21,14 @@ set -uo pipefail
 
 interval="${AI_PANES_INTERVAL:-2}"
 self_pane="${WEZTERM_PANE:--1}"
-# Keep this list in sync with AI_LABELS in dotfiles/wezterm/ai-panes.lua.
-agents="${AI_PANES_AGENTS:-claude codex cursor-agent copilot}"
+# Keep this list in sync with TRACKED in dotfiles/wezterm/ai-panes.lua.
+targets="${AI_PANES_AGENTS:-nvim claude codex cursor-agent copilot}"
 
 # Catppuccin Mocha, matching appearance.lua and the zsh prompt.
 esc=$'\033'
 reset="${esc}[0m"
 mauve="${esc}[38;2;203;166;247m"
+blue="${esc}[38;2;137;180;250m"
 teal="${esc}[38;2;148;226;213m"
 green="${esc}[38;2;166;227;161m"
 yellow="${esc}[38;2;249;226;175m"
@@ -41,8 +43,9 @@ missing_deps() {
 	printf '%s' "$out"
 }
 
-agent_color() {
+proc_color() {
 	case "$1" in
+	nvim) printf '%s' "$blue" ;;
 	claude) printf '%s' "$mauve" ;;
 	codex) printf '%s' "$teal" ;;
 	cursor-agent) printf '%s' "$green" ;;
@@ -50,37 +53,53 @@ agent_color() {
 	esac
 }
 
-# tty -> AI CLI name. Matching on the command name alone (rather than on the
+# tty -> process name. Matching on the command name alone (rather than on the
 # foreground process group) keeps an agent listed while it shells out.
-ai_by_tty() {
-	ps -Ao tty=,comm= | awk -v names="$agents" '
+#
+# nvim is the exception: .zshrc wraps it in `docker exec`, so the host-side command
+# name is `docker`. It is recognised by a bare `nvim` token anywhere in the command
+# line rather than by the container name, so that merely entering the container
+# (`docker container exec -it nvim-dev bash --login`) is not reported as an editor.
+# Same rule as argv_runs_nvim() in dotfiles/wezterm/ai-panes.lua.
+procs_by_tty() {
+	ps -Ao tty=,command= | awk -v names="$targets" '
 		BEGIN {
 			n = split(names, list, " ")
 			for (i = 1; i <= n; i++) {
 				want[list[i]] = 1
 			}
 		}
+		# ttyless processes carry huge argv (Docker Desktop et al) and can never
+		# match a pane, so drop them before looking at the command line.
+		$1 == "??" { next }
 		{
 			m = split($2, seg, "/")
 			cmd = seg[m]
 			if (cmd in want) {
 				print "/dev/" $1 "\t" cmd
+				next
+			}
+			if (cmd == "docker" && $0 ~ /(^| )nvim( |$)/) {
+				print "/dev/" $1 "\tnvim"
 			}
 		}
 	'
 }
 
-# Rows of { ws, pane, agent, project }, sorted by workspace, excluding this pane.
+# Rows of { ws, pane, proc, project }, sorted by workspace then by the order of
+# $targets, excluding this pane.
 collect() {
 	local panes
 	panes=$(wezterm cli list --format json 2>/dev/null) || return 1
 	[ -n "$panes" ] || return 1
 
 	printf '%s' "$panes" | jq -c \
-		--arg procs "$(ai_by_tty)" \
+		--arg procs "$(procs_by_tty)" \
+		--arg targets "$targets" \
 		--arg self "$self_pane" '
 		($procs | split("\n") | map(select(length > 0) | split("\t")
-			| { tty: .[0], agent: .[1] })) as $procs
+			| { tty: .[0], proc: .[1] })) as $procs
+		| ($targets | split(" ")) as $order
 		| [ .[]
 			| select((.pane_id | tostring) != $self)
 			| . as $p
@@ -88,10 +107,10 @@ collect() {
 			| select($hit != null)
 			| { ws: $p.workspace,
 			    pane: $p.pane_id,
-			    agent: $hit.agent,
+			    proc: $hit.proc,
 			    project: (($p.cwd // "") | sub("^file://[^/]*"; "")
 			              | sub("/$"; "") | sub(".*/"; "")) } ]
-		| sort_by(.ws, .pane)'
+		| sort_by(.ws, (.proc as $n | $order | index($n)), .pane)'
 }
 
 workspace_of_self() {
@@ -125,7 +144,7 @@ render() {
 	local cols json count prev_ws marker missing
 	cols=$(term_cols)
 
-	printf ' %sAI%s\n' "$mauve" "$reset"
+	printf ' %sPANES%s\n' "$mauve" "$reset"
 	printf ' %s%s%s\n' "$overlay0" "$(rule $((cols - 2)))" "$reset"
 
 	missing=$(missing_deps)
@@ -141,12 +160,12 @@ render() {
 	count=$(printf '%s' "$json" | jq 'length')
 
 	if [ "$count" -eq 0 ]; then
-		printf ' %sno AI running%s\n' "$overlay0" "$reset"
+		printf ' %snothing running%s\n' "$overlay0" "$reset"
 	else
 		prev_ws=""
 		printf '%s' "$json" |
-			jq -r '.[] | [.ws, .agent, .project, (.pane | tostring)] | @tsv' |
-			while IFS=$'\t' read -r ws agent project pane; do
+			jq -r '.[] | [.ws, .proc, .project, (.pane | tostring)] | @tsv' |
+			while IFS=$'\t' read -r ws proc project pane; do
 				if [ "$ws" != "$prev_ws" ]; then
 					printf ' %s▍%s%s\n' "$mauve" "$ws" "$reset"
 					prev_ws="$ws"
@@ -157,7 +176,7 @@ render() {
 					marker="${overlay0}○"
 				fi
 				printf '   %s%s %s%-13.13s%s%s#%s%s\n' \
-					"$marker" "$reset" "$(agent_color "$agent")" "$agent" \
+					"$marker" "$reset" "$(proc_color "$proc")" "$proc" \
 					"$reset" "$overlay0" "$pane" "$reset"
 				# cwd がワークスペース名と食い違うときだけ実際の場所を補足する
 				if [ -n "$project" ] && [ "$project" != "$ws" ]; then
