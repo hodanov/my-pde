@@ -500,6 +500,11 @@ description = "Build the nvim image with versions injected from mise.toml"
 # `pins:check`, so the build always uses the mise-pinned versions without
 # depending on the host's active go/node. The remaining [env]-sourced args are
 # likewise synced ARG defaults; passing them keeps the injection explicit.
+#
+# DOCKER_BUILD_EXTRA_ARGS is an opt-in escape hatch so CI can add BuildKit cache
+# flags (--cache-from/--cache-to) without forking the build command. It is unset
+# locally, so `mise run docker:build` behaves exactly as before. The unquoted
+# expansion is intentional: the value is meant to split into separate arguments.
 run = '''
 docker build \
   --file environment/docker/nvim.dockerfile \
@@ -507,6 +512,7 @@ docker build \
   --build-arg NPM_VERSION="$NPM_VERSION" \
   --build-arg RUST_TOOLCHAIN="$RUST_TOOLCHAIN" \
   --build-arg TERRAFORM_VERSION="$TERRAFORM_VERSION" \
+  ${DOCKER_BUILD_EXTRA_ARGS:-} \
   --progress=plain .
 '''
 

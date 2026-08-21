@@ -35,5 +35,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # `type=gha` needs ACTIONS_RUNTIME_TOKEN / ACTIONS_RESULTS_URL, which GitHub
+      # only injects into JS actions. This step exports them to later `run:` steps
+      # so the cache backend works when buildx is invoked through `mise run`.
+      - name: Expose GitHub Actions runtime (required by the gha cache backend)
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
+
       - name: Build image with versions from mise.toml
+        env:
+          # Import/export BuildKit layer cache so dependency PRs stop rebuilding
+          # every stage from scratch. mode=max also exports intermediate builder
+          # stages, which is what makes the nvim/rust/go stages reusable across runs.
+          DOCKER_BUILD_EXTRA_ARGS: >-
+            --cache-from type=gha,scope=nvim
+            --cache-to type=gha,scope=nvim,mode=max
         run: mise run docker:build
