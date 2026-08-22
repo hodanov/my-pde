@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -217,26 +216,41 @@ type rawContent struct {
 // exhaust memory; longer lines are skipped by the scanner.
 const maxLineBytes = 16 * 1024 * 1024
 
-// ParseFile parses a single transcript file. It returns an error only when the
-// file cannot be opened; malformed content within is tolerated.
-func ParseFile(path string) (Session, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return Session{}, err
-	}
-	defer func() { _ = f.Close() }()
-	return ParseReader(filepath.Base(path), f), nil
-}
-
-// ParseReader parses a transcript stream, labelling the result with name.
-// It never returns an error: unparseable lines are skipped.
-func ParseReader(name string, r io.Reader) Session {
-	s := Session{
+// NewSession returns an empty session labelled name, ready to be filled by
+// AppendReader or AppendFile.
+func NewSession(name string) Session {
+	return Session{
 		File:           name,
 		Main:           NewScope(),
 		Sub:            NewScope(),
 		seenMessageIDs: map[string]struct{}{},
 	}
+}
+
+// AppendFile folds a transcript file into s. It returns an error only when the
+// file cannot be opened; malformed content within is tolerated.
+func AppendFile(s *Session, path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+	AppendReader(s, f)
+	return nil
+}
+
+// AppendReader folds a transcript stream into s. Claude Code splits one logical
+// session across several files — the session's own transcript plus one per
+// subagent it spawned — so a session is assembled from all of them, sharing one
+// message.id dedupe set.
+//
+// It never returns an error: unparseable lines are skipped.
+func AppendReader(s *Session, r io.Reader) {
+	if s.seenMessageIDs == nil {
+		s.seenMessageIDs = map[string]struct{}{}
+	}
+	s.Main.ensure()
+	s.Sub.ensure()
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 64*1024), maxLineBytes)
 	for sc.Scan() {
@@ -248,8 +262,15 @@ func ParseReader(name string, r io.Reader) Session {
 		if err := json.Unmarshal(line, &raw); err != nil {
 			continue
 		}
-		applyLine(&s, &raw)
+		applyLine(s, &raw)
 	}
+}
+
+// ParseReader parses a whole transcript stream into its own session, labelling
+// the result with name.
+func ParseReader(name string, r io.Reader) Session {
+	s := NewSession(name)
+	AppendReader(&s, r)
 	return s
 }
 
