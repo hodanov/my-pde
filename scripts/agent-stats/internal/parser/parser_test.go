@@ -241,6 +241,178 @@ func TestParseReaderActiveDuration(t *testing.T) {
 	}
 }
 
+func TestLeadingCommand(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		cmd     string
+		want    string
+		wantCd  bool
+		comment string
+	}{
+		{name: "bare", cmd: "ls", want: "ls"},
+		{name: "with args", cmd: "git status --short", want: "git"},
+		{name: "cd prefix", cmd: "cd /home/u/proj && rg -n foo", want: "rg", wantCd: true,
+			comment: "attributed to the command doing the work, not to the cd"},
+		{name: "cd only", cmd: "cd /home/u/proj", want: "cd", wantCd: true},
+		{name: "cd with semicolon", cmd: "cd /a; ls -la", want: "ls", wantCd: true},
+		{name: "subshell", cmd: "(cd /a && ls)", want: "ls", wantCd: true},
+		{name: "env assignment", cmd: "FOO=1 BAR=2 go test ./...", want: "go"},
+		{name: "env command", cmd: "env FOO=1 mise run lint", want: "mise"},
+		{name: "absolute path", cmd: "/usr/bin/grep -n foo x.go", want: "grep",
+			comment: "same bucket as a bare grep"},
+		{name: "pipeline", cmd: "git log | grep fix", want: "git",
+			comment: "the grep filters another command; only the leading command counts"},
+		{name: "heredoc", cmd: "cat <<'EOF' > /tmp/x\n# a comment\ngrep not-a-call\nEOF", want: "cat",
+			comment: "only the first line is a command; the body is data"},
+		{name: "substitution", cmd: "$TMPDIR/bin/tool --flag", want: "",
+			comment: "an unexpanded variable names no command we can attribute"},
+		{name: "empty", cmd: "   ", want: ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, gotCd := LeadingCommand(tc.cmd)
+			if got != tc.want || gotCd != tc.wantCd {
+				t.Errorf("LeadingCommand(%q) = %q/%v, want %q/%v (%s)",
+					tc.cmd, got, gotCd, tc.want, tc.wantCd, tc.comment)
+			}
+		})
+	}
+}
+
+// bashFixture exercises the shapes that make a naive breakdown wrong: a heredoc
+// whose body looks like commands, a cd prefix, and a Bash call with no command
+// field at all.
+const bashFixture = `
+{"type":"assistant","timestamp":"2026-08-22T10:00:00Z","message":{"id":"m1","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","name":"Bash","input":{"command":"cat <<'EOF' > /tmp/x\n# a comment\ngrep not-a-call\nEOF"}}]}}
+{"type":"assistant","timestamp":"2026-08-22T10:00:01Z","message":{"id":"m2","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","name":"Bash","input":{"command":"cd /home/u/proj && rg -n foo"}}]}}
+{"type":"assistant","timestamp":"2026-08-22T10:00:02Z","message":{"id":"m3","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","name":"Bash","input":{"command":"git status"}}]}}
+{"type":"assistant","timestamp":"2026-08-22T10:00:03Z","message":{"id":"m4","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","name":"Bash","input":{"command":"cd /home/u/proj && git diff"}}]}}
+{"type":"assistant","timestamp":"2026-08-22T10:00:04Z","message":{"id":"m5","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","name":"Bash","input":{}}]}}
+`
+
+func TestParseReaderBashBreakdown(t *testing.T) {
+	t.Parallel()
+	s := ParseReader("bash.jsonl", strings.NewReader(bashFixture))
+
+	// Every call still counts as a Bash call, including the one we cannot
+	// attribute, so the breakdown never poses as the whole.
+	if s.Main.ToolCounts["Bash"] != 5 {
+		t.Errorf("ToolCounts[Bash] = %d, want 5", s.Main.ToolCounts["Bash"])
+	}
+	want := map[string]int{"cat": 1, "rg": 1, "git": 2}
+	if len(s.Main.BashCounts) != len(want) {
+		t.Fatalf("BashCounts = %v, want %v", s.Main.BashCounts, want)
+	}
+	for name, n := range want {
+		if s.Main.BashCounts[name] != n {
+			t.Errorf("BashCounts[%s] = %d, want %d", name, s.Main.BashCounts[name], n)
+		}
+	}
+	// The heredoc body must not be mistaken for commands.
+	for _, leaked := range []string{"grep", "#", "EOF", "cd"} {
+		if _, ok := s.Main.BashCounts[leaked]; ok {
+			t.Errorf("BashCounts must not contain %q: %v", leaked, s.Main.BashCounts)
+		}
+	}
+	if s.Main.BashWithCd != 2 {
+		t.Errorf("BashWithCd = %d, want 2", s.Main.BashWithCd)
+	}
+}
+
+// errorFixture covers the tool results the CLI feeds back. The content is
+// usually a plain string but can be an array of blocks, and a user turn may
+// carry no tool result at all.
+const errorFixture = `
+{"type":"user","timestamp":"2026-08-22T10:00:00Z","message":{"content":[{"type":"tool_result","content":"ok"}]}}
+{"type":"user","timestamp":"2026-08-22T10:00:01Z","message":{"content":[{"type":"tool_result","is_error":true,"content":"The user doesn't want to proceed with this tool use. The tool use was rejected."}]}}
+{"type":"user","timestamp":"2026-08-22T10:00:02Z","message":{"content":[{"type":"tool_result","is_error":true,"content":"PreToolUse:Bash hook blocked this call"}]}}
+{"type":"user","timestamp":"2026-08-22T10:00:03Z","message":{"content":[{"type":"tool_result","is_error":true,"content":[{"type":"text","text":"exit code 1: no such file"}]}]}}
+{"type":"user","timestamp":"2026-08-22T10:00:04Z","isSidechain":true,"message":{"content":[{"type":"tool_result","is_error":true,"content":"boom"}]}}
+{"type":"user","timestamp":"2026-08-22T10:00:05Z","message":{"content":"a plain string, no tool result"}}
+`
+
+func TestParseReaderToolErrors(t *testing.T) {
+	t.Parallel()
+	s := ParseReader("errors.jsonl", strings.NewReader(errorFixture))
+
+	if s.Main.ToolResults != 4 {
+		t.Errorf("Main.ToolResults = %d, want 4", s.Main.ToolResults)
+	}
+	wantMain := map[string]int{ErrPermission: 1, ErrHook: 1, ErrFailure: 1}
+	if len(s.Main.ToolErrors) != len(wantMain) {
+		t.Fatalf("Main.ToolErrors = %v, want %v", s.Main.ToolErrors, wantMain)
+	}
+	for kind, n := range wantMain {
+		if s.Main.ToolErrors[kind] != n {
+			t.Errorf("Main.ToolErrors[%s] = %d, want %d", kind, s.Main.ToolErrors[kind], n)
+		}
+	}
+	// A subagent's failures belong to the subagent scope.
+	if s.Sub.ToolResults != 1 || s.Sub.ToolErrors[ErrFailure] != 1 {
+		t.Errorf("Sub results/errors = %d/%v, want 1/failure:1", s.Sub.ToolResults, s.Sub.ToolErrors)
+	}
+	// A user turn is never an assistant turn, whatever it carries.
+	if s.AssistantTurns() != 0 {
+		t.Errorf("AssistantTurns = %d, want 0", s.AssistantTurns())
+	}
+}
+
+func TestClassifyToolErrorFallsBackToFailure(t *testing.T) {
+	t.Parallel()
+	// The classification matches on CLI prose, so unrecognised wording must land
+	// in failure rather than be dropped: the total stays exact even as the
+	// breakdown degrades.
+	if got := classifyToolError("some wording the CLI has since changed"); got != ErrFailure {
+		t.Errorf("classifyToolError = %q, want %q", got, ErrFailure)
+	}
+	if got := classifyToolError(""); got != ErrFailure {
+		t.Errorf("classifyToolError of empty text = %q, want %q", got, ErrFailure)
+	}
+}
+
+// compactFixture records context compactions. A boundary line without metadata
+// carries no measurement and must be ignored rather than counted as a zero.
+const compactFixture = `
+{"type":"system","subtype":"compact_boundary","timestamp":"2026-08-22T10:00:00Z","compactMetadata":{"trigger":"manual","preTokens":200000,"postTokens":50000,"cumulativeDroppedTokens":150000}}
+{"type":"system","subtype":"compact_boundary","timestamp":"2026-08-22T11:00:00Z","compactMetadata":{"trigger":"auto","preTokens":180000,"postTokens":60000,"cumulativeDroppedTokens":270000}}
+{"type":"system","subtype":"compact_boundary","timestamp":"2026-08-22T12:00:00Z"}
+{"type":"system","subtype":"stop_hook_summary","timestamp":"2026-08-22T12:00:01Z"}
+`
+
+func TestParseReaderCompactions(t *testing.T) {
+	t.Parallel()
+	s := ParseReader("compact.jsonl", strings.NewReader(compactFixture))
+
+	if len(s.Compactions) != 2 {
+		t.Fatalf("Compactions = %+v, want 2 (the metadata-less boundary is not a measurement)", s.Compactions)
+	}
+	want := []Compaction{
+		{Trigger: "manual", PreTokens: 200000, PostTokens: 50000},
+		{Trigger: "auto", PreTokens: 180000, PostTokens: 60000},
+	}
+	for i := range want {
+		if s.Compactions[i] != want[i] {
+			t.Errorf("Compactions[%d] = %+v, want %+v", i, s.Compactions[i], want[i])
+		}
+	}
+	// Dropped is per event. The transcript's own cumulativeDroppedTokens is a
+	// running session total and would multiply-count if summed, so it is unused.
+	if got := s.Compactions[0].Dropped() + s.Compactions[1].Dropped(); got != 270000 {
+		t.Errorf("dropped total = %d, want 270000", got)
+	}
+}
+
+func TestCompactionDroppedGuard(t *testing.T) {
+	t.Parallel()
+	// A compaction that did not shrink the context dropped nothing; never report
+	// a negative.
+	if got := (Compaction{PreTokens: 10, PostTokens: 20}).Dropped(); got != 0 {
+		t.Errorf("Dropped with post>pre = %d, want 0", got)
+	}
+}
+
 func TestSpanGuards(t *testing.T) {
 	t.Parallel()
 	end := time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC)
@@ -262,6 +434,10 @@ func TestScopeMergeIntoZeroValue(t *testing.T) {
 	src.ToolCounts["Bash"] = 4
 	src.FileCounts["a.go"] = 1
 	src.SkillCounts["review"] = 1
+	src.BashCounts["grep"] = 3
+	src.BashWithCd = 2
+	src.ToolResults = 5
+	src.ToolErrors[ErrFailure] = 1
 
 	var dst Scope
 	dst.Merge(&src)
@@ -276,5 +452,11 @@ func TestScopeMergeIntoZeroValue(t *testing.T) {
 	}
 	if dst.ToolCounts["Bash"] != 8 || dst.FileCounts["a.go"] != 2 || dst.SkillCounts["review"] != 2 {
 		t.Errorf("merged counts = %v/%v/%v", dst.ToolCounts, dst.FileCounts, dst.SkillCounts)
+	}
+	if dst.BashCounts["grep"] != 6 || dst.BashWithCd != 4 {
+		t.Errorf("merged bash = %v / withCd %d, want grep:6 / 4", dst.BashCounts, dst.BashWithCd)
+	}
+	if dst.ToolResults != 10 || dst.ToolErrors[ErrFailure] != 2 {
+		t.Errorf("merged results/errors = %d/%v, want 10/failure:2", dst.ToolResults, dst.ToolErrors)
 	}
 }

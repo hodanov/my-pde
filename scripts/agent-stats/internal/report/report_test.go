@@ -2,6 +2,7 @@ package report
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -19,9 +20,13 @@ func sessions() []parser.Session {
 				ByModel: map[string]parser.Usage{
 					"claude-opus-4-8": {Turns: 2, Tokens: parser.Tokens{Input: 100, Output: 40, CacheRead: 10}},
 				},
-				ToolCounts:  map[string]int{"Edit": 3, "Bash": 1, "Skill": 2},
+				ToolCounts:  map[string]int{"Edit": 3, "Bash": 2, "Skill": 2},
 				FileCounts:  map[string]int{"a.go": 2, "b.go": 1},
 				SkillCounts: map[string]int{"dev-workflow": 2},
+				BashCounts:  map[string]int{"git": 1, "grep": 1},
+				BashWithCd:  1,
+				ToolResults: 10,
+				ToolErrors:  map[string]int{parser.ErrFailure: 2, parser.ErrPermission: 1},
 			},
 			Sub: parser.Scope{
 				Tokens:         parser.Tokens{Input: 8, Output: 4},
@@ -29,13 +34,20 @@ func sessions() []parser.Session {
 				ByModel: map[string]parser.Usage{
 					"claude-sonnet-5": {Turns: 1, Tokens: parser.Tokens{Input: 8, Output: 4}},
 				},
-				ToolCounts: map[string]int{"Grep": 2},
+				ToolCounts:  map[string]int{"Grep": 2, "Bash": 1},
+				BashCounts:  map[string]int{"ls": 1},
+				ToolResults: 3,
+				ToolErrors:  map[string]int{parser.ErrHook: 1},
 			},
 			ActiveDuration: 90 * time.Second,
 			ActiveTurns:    2,
 			SyntheticTurns: 1,
 			Start:          time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC),
 			End:            time.Date(2026, 7, 30, 10, 5, 0, 0, time.UTC),
+			Compactions: []parser.Compaction{
+				{Trigger: "manual", PreTokens: 200000, PostTokens: 50000},
+				{Trigger: "auto", PreTokens: 180000, PostTokens: 60000},
+			},
 		},
 		{
 			File: "s2.jsonl",
@@ -48,11 +60,15 @@ func sessions() []parser.Session {
 				ToolCounts:  map[string]int{"Edit": 1, "Read": 4, "Skill": 1},
 				FileCounts:  map[string]int{"a.go": 1},
 				SkillCounts: map[string]int{"review": 1},
+				ToolResults: 6,
 			},
 			ActiveDuration: 30 * time.Second,
 			ActiveTurns:    1,
 			Start:          time.Date(2026, 7, 30, 11, 0, 0, 0, time.UTC),
 			End:            time.Date(2026, 7, 30, 11, 10, 0, 0, time.UTC),
+			Compactions: []parser.Compaction{
+				{Trigger: "manual", PreTokens: 220000, PostTokens: 40000},
+			},
 		},
 	}
 }
@@ -112,6 +128,117 @@ func TestSummarize(t *testing.T) {
 		if s.ModelTokens[i] != wantModels[i] {
 			t.Errorf("ModelTokens[%d] = %+v, want %+v", i, s.ModelTokens[i], wantModels[i])
 		}
+	}
+}
+
+func TestSummarizeBash(t *testing.T) {
+	t.Parallel()
+	s := Summarize(sessions())
+
+	// Every Bash call counts, main loop and subagent alike.
+	if s.BashCalls != 3 {
+		t.Errorf("BashCalls = %d, want 3", s.BashCalls)
+	}
+	if len(s.Bash) != 3 || s.Bash[0].Name != "git" {
+		t.Errorf("Bash = %+v, want [git grep ls]", s.Bash)
+	}
+	if s.BashWithCd != 1 {
+		t.Errorf("BashWithCd = %d, want 1", s.BashWithCd)
+	}
+	// grep -> Grep and ls -> Glob are replaceable; git is not.
+	if s.RedundantBashTotal != 2 {
+		t.Errorf("RedundantBashTotal = %d, want 2 (git is not replaceable)", s.RedundantBashTotal)
+	}
+	want := []Count{{Name: "Glob", Count: 1}, {Name: "Grep", Count: 1}}
+	if len(s.RedundantBash) != len(want) {
+		t.Fatalf("RedundantBash = %+v, want %+v", s.RedundantBash, want)
+	}
+	for i := range want {
+		if s.RedundantBash[i] != want[i] {
+			t.Errorf("RedundantBash[%d] = %+v, want %+v", i, s.RedundantBash[i], want[i])
+		}
+	}
+}
+
+func TestRedundantBash(t *testing.T) {
+	t.Parallel()
+	byTool, total := redundantBash(map[string]int{
+		"cat": 1, "head": 2, "tail": 3, // -> Read
+		"grep": 4, "rg": 5, // -> Grep
+		"find": 6, "ls": 7, // -> Glob
+		"git": 100, "go": 100, // no tool equivalent
+	})
+	if total != 28 {
+		t.Errorf("total = %d, want 28 (git and go excluded)", total)
+	}
+	want := []Count{{Name: "Glob", Count: 13}, {Name: "Grep", Count: 9}, {Name: "Read", Count: 6}}
+	if len(byTool) != len(want) {
+		t.Fatalf("byTool = %+v, want %+v", byTool, want)
+	}
+	for i := range want {
+		if byTool[i] != want[i] {
+			t.Errorf("byTool[%d] = %+v, want %+v", i, byTool[i], want[i])
+		}
+	}
+}
+
+func TestSummarizeToolResults(t *testing.T) {
+	t.Parallel()
+	s := Summarize(sessions())
+
+	if s.ToolResults != 19 {
+		t.Errorf("ToolResults = %d, want 19", s.ToolResults)
+	}
+	if s.ToolErrorTotal != 4 {
+		t.Errorf("ToolErrorTotal = %d, want 4", s.ToolErrorTotal)
+	}
+	want := []Count{
+		{Name: parser.ErrFailure, Count: 2},
+		{Name: parser.ErrHook, Count: 1},
+		{Name: parser.ErrPermission, Count: 1},
+	}
+	if len(s.ToolErrors) != len(want) {
+		t.Fatalf("ToolErrors = %+v, want %+v", s.ToolErrors, want)
+	}
+	for i := range want {
+		if s.ToolErrors[i] != want[i] {
+			t.Errorf("ToolErrors[%d] = %+v, want %+v", i, s.ToolErrors[i], want[i])
+		}
+	}
+}
+
+func TestSummarizeCompactions(t *testing.T) {
+	t.Parallel()
+	s := Summarize(sessions())
+
+	// Grouped by trigger, count desc: manual twice across both sessions, auto once.
+	want := []CompactionStats{
+		{Trigger: "manual", Count: 2, AvgPreTokens: 210000, Dropped: 330000},
+		{Trigger: "auto", Count: 1, AvgPreTokens: 180000, Dropped: 120000},
+	}
+	if len(s.Compactions) != len(want) {
+		t.Fatalf("Compactions = %+v, want %+v", s.Compactions, want)
+	}
+	for i := range want {
+		if s.Compactions[i] != want[i] {
+			t.Errorf("Compactions[%d] = %+v, want %+v", i, s.Compactions[i], want[i])
+		}
+	}
+}
+
+func TestSummarizeUnlabelledCompaction(t *testing.T) {
+	t.Parallel()
+	// A compaction with no trigger still happened; it must not be filed under an
+	// empty label.
+	s := Summarize([]parser.Session{{
+		File:        "x.jsonl",
+		Compactions: []parser.Compaction{{PreTokens: 100, PostTokens: 40}},
+	}})
+	if len(s.Compactions) != 1 || s.Compactions[0].Trigger != "unknown" {
+		t.Fatalf("Compactions = %+v, want one entry triggered \"unknown\"", s.Compactions)
+	}
+	if s.Compactions[0].Dropped != 60 {
+		t.Errorf("Dropped = %d, want 60", s.Compactions[0].Dropped)
 	}
 }
 
@@ -200,10 +327,28 @@ func TestRenderTable(t *testing.T) {
 		"Origin", "subagent", "Model tokens", "claude-opus-4-8",
 		"Edit", "a.go", "Skills", "dev-workflow", "Claude Code",
 		"1 turns excluded",
+		"Bash breakdown (3 calls)", "replaceable by a dedicated tool", "prefixed with cd",
+		"Tool results", "errors   4 (21.1%)", "permission",
+		"Compactions", "manual", "avg pre-tokens 210000", "dropped 330000",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("table missing %q\n%s", want, out)
 		}
+	}
+}
+
+func TestRenderTableSaysWhatItTruncated(t *testing.T) {
+	t.Parallel()
+	// A cut-off list must say so; silently showing the top N reads as the whole
+	// set.
+	counts := make([]Count, 0, topFiles+3)
+	for i := range topFiles + 3 {
+		counts = append(counts, Count{Name: fmt.Sprintf("f%02d.go", i), Count: 1})
+	}
+	var b strings.Builder
+	writeCounts(&b, "Top files", counts, topFiles)
+	if !strings.Contains(b.String(), "(3 more not shown)") {
+		t.Errorf("truncated list must report what it hid:\n%s", b.String())
 	}
 }
 

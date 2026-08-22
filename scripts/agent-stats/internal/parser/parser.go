@@ -49,6 +49,17 @@ type Scope struct {
 	ToolCounts     map[string]int   `json:"tool_counts"`
 	FileCounts     map[string]int   `json:"file_counts"`
 	SkillCounts    map[string]int   `json:"skill_counts"`
+
+	// BashCounts breaks the single largest tool bucket down by the shell command
+	// each call actually runs, keyed by LeadingCommand. BashWithCd counts the
+	// calls that prefix a cd, which the CLI warns triggers permission prompts.
+	BashCounts map[string]int `json:"bash_counts"`
+	BashWithCd int            `json:"bash_with_cd"`
+
+	// ToolResults is every tool_result seen, the denominator for ToolErrors,
+	// which buckets the failed ones by ErrPermission / ErrHook / ErrFailure.
+	ToolResults int            `json:"tool_results"`
+	ToolErrors  map[string]int `json:"tool_errors"`
 }
 
 // NewScope returns a Scope whose maps are ready to be written to.
@@ -73,6 +84,12 @@ func (s *Scope) ensure() {
 	if s.SkillCounts == nil {
 		s.SkillCounts = map[string]int{}
 	}
+	if s.BashCounts == nil {
+		s.BashCounts = map[string]int{}
+	}
+	if s.ToolErrors == nil {
+		s.ToolErrors = map[string]int{}
+	}
 }
 
 // Merge accumulates src into s, used to fold per-session scopes into totals.
@@ -89,6 +106,10 @@ func (s *Scope) Merge(src *Scope) {
 	mergeCounts(s.ToolCounts, src.ToolCounts)
 	mergeCounts(s.FileCounts, src.FileCounts)
 	mergeCounts(s.SkillCounts, src.SkillCounts)
+	mergeCounts(s.BashCounts, src.BashCounts)
+	mergeCounts(s.ToolErrors, src.ToolErrors)
+	s.BashWithCd += src.BashWithCd
+	s.ToolResults += src.ToolResults
 }
 
 func mergeCounts(dst, src map[string]int) {
@@ -106,7 +127,29 @@ func (s *Scope) addModelUsage(model string, t Tokens) {
 	s.ByModel[model] = u
 }
 
-// Session is the aggregated view of a single transcript file.
+// Compaction is one context-compaction event. Trigger is "auto" when the CLI
+// compacted on its own because the context filled up, or "manual" when it was
+// asked to.
+type Compaction struct {
+	Trigger string `json:"trigger"`
+	// PreTokens and PostTokens are the context size either side of the
+	// compaction. Dropped is derived from them rather than from the
+	// transcript's cumulativeDroppedTokens, which is a running total for the
+	// whole session and would multiply-count if summed per event.
+	PreTokens  int `json:"pre_tokens"`
+	PostTokens int `json:"post_tokens"`
+}
+
+// Dropped returns how many tokens this single compaction discarded.
+func (c Compaction) Dropped() int {
+	if c.PreTokens <= c.PostTokens {
+		return 0
+	}
+	return c.PreTokens - c.PostTokens
+}
+
+// Session is the aggregated view of one logical session, assembled from its own
+// transcript file plus any subagent transcripts belonging to it.
 type Session struct {
 	File      string `json:"file"`
 	Cwd       string `json:"cwd"`
@@ -130,6 +173,11 @@ type Session struct {
 	// as "<synthetic>" (CLI-generated, not a real inference). They are excluded
 	// from per-model attribution but counted here so the omission is visible.
 	SyntheticTurns int `json:"synthetic_turns"`
+
+	// Compactions records each time the session's context was compacted, in
+	// transcript order. An automatic one means the session ran into the context
+	// limit rather than being wound down deliberately.
+	Compactions []Compaction `json:"compactions"`
 
 	// seenMessageIDs dedupes assistant turns and their token usage. Claude Code
 	// writes one logical turn (thinking -> text -> tool_use) as multiple JSONL
@@ -182,14 +230,21 @@ var fileEditTools = map[string]bool{
 }
 
 type rawLine struct {
-	Type        string  `json:"type"`
-	Subtype     string  `json:"subtype"`
-	Timestamp   string  `json:"timestamp"`
-	Cwd         string  `json:"cwd"`
-	GitBranch   string  `json:"gitBranch"`
-	IsSidechain bool    `json:"isSidechain"`
-	DurationMs  int64   `json:"durationMs"`
-	Message     *rawMsg `json:"message"`
+	Type            string      `json:"type"`
+	Subtype         string      `json:"subtype"`
+	Timestamp       string      `json:"timestamp"`
+	Cwd             string      `json:"cwd"`
+	GitBranch       string      `json:"gitBranch"`
+	IsSidechain     bool        `json:"isSidechain"`
+	DurationMs      int64       `json:"durationMs"`
+	CompactMetadata *rawCompact `json:"compactMetadata"`
+	Message         *rawMsg     `json:"message"`
+}
+
+type rawCompact struct {
+	Trigger    string `json:"trigger"`
+	PreTokens  int    `json:"preTokens"`
+	PostTokens int    `json:"postTokens"`
 }
 
 type rawMsg struct {
@@ -207,9 +262,11 @@ type rawUsage struct {
 }
 
 type rawContent struct {
-	Type  string          `json:"type"`
-	Name  string          `json:"name"`
-	Input json.RawMessage `json:"input"`
+	Type    string          `json:"type"`
+	Name    string          `json:"name"`
+	Input   json.RawMessage `json:"input"`
+	IsError bool            `json:"is_error"`
+	Content json.RawMessage `json:"content"`
 }
 
 // maxLineBytes caps a single JSONL line so an unexpectedly huge record cannot
@@ -292,6 +349,8 @@ func applyLine(s *Session, raw *rawLine) {
 	switch raw.Type {
 	case "assistant":
 		applyAssistant(s, raw)
+	case "user":
+		applyUser(s, raw)
 	case "system":
 		applySystem(s, raw)
 	}
@@ -349,16 +408,198 @@ func applyAssistant(s *Session, raw *rawLine) {
 				sc.SkillCounts[skill]++
 			}
 		}
+		if c.Name == "Bash" {
+			addBashCall(sc, commandOf(c.Input))
+		}
+	}
+}
+
+func addBashCall(sc *Scope, cmd string) {
+	if cmd == "" {
+		return
+	}
+	name, withCd := LeadingCommand(cmd)
+	if name != "" {
+		sc.BashCounts[name]++
+	}
+	if withCd {
+		sc.BashWithCd++
+	}
+}
+
+// applyUser reads the results the CLI feeds back to the assistant. Tool
+// outcomes only appear here, so this is the only place failures, permission
+// denials and hook blocks can be counted.
+func applyUser(s *Session, raw *rawLine) {
+	if raw.Message == nil {
+		return
+	}
+	sc := s.scope(raw.IsSidechain)
+	for _, c := range decodeContent(raw.Message.Content) {
+		if c.Type != "tool_result" {
+			continue
+		}
+		sc.ToolResults++
+		if c.IsError {
+			sc.ToolErrors[classifyToolError(toolResultText(c.Content))]++
+		}
 	}
 }
 
 // applySystem reads the CLI's own bookkeeping lines. They carry measurements
 // the assistant lines cannot supply, such as how long a turn actually took.
 func applySystem(s *Session, raw *rawLine) {
-	if raw.Subtype == "turn_duration" && raw.DurationMs > 0 {
-		s.ActiveDuration += time.Duration(raw.DurationMs) * time.Millisecond
-		s.ActiveTurns++
+	switch raw.Subtype {
+	case "turn_duration":
+		if raw.DurationMs > 0 {
+			s.ActiveDuration += time.Duration(raw.DurationMs) * time.Millisecond
+			s.ActiveTurns++
+		}
+	case "compact_boundary":
+		if m := raw.CompactMetadata; m != nil {
+			s.Compactions = append(s.Compactions, Compaction{
+				Trigger:    m.Trigger,
+				PreTokens:  m.PreTokens,
+				PostTokens: m.PostTokens,
+			})
+		}
 	}
+}
+
+// Error kinds recorded in Scope.ToolErrors.
+const (
+	// ErrPermission is a tool call the user declined.
+	ErrPermission = "permission"
+	// ErrHook is a tool call a PreToolUse or PostToolUse hook blocked.
+	ErrHook = "hook"
+	// ErrFailure is everything else: a non-zero exit, a missing file, an MCP
+	// error, and anything the patterns below no longer recognise.
+	ErrFailure = "failure"
+)
+
+// classifyToolError buckets a failed tool_result by the prose the CLI puts in
+// it. There is no machine-readable field for the reason, so this matches on
+// wording and will drift as the CLI is reworded; unrecognised text falls back to
+// ErrFailure so the total stays exact even when the breakdown degrades.
+func classifyToolError(text string) string {
+	switch {
+	case strings.Contains(text, "PreToolUse:"), strings.Contains(text, "PostToolUse:"):
+		return ErrHook
+	case strings.HasPrefix(text, "The user doesn't want to"),
+		strings.Contains(text, "tool use was rejected"):
+		return ErrPermission
+	default:
+		return ErrFailure
+	}
+}
+
+// toolResultText flattens a tool_result's content for classification. It is
+// either a plain string or an array of blocks, and only the leading text
+// matters, so decoding stops at the first usable piece.
+func toolResultText(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var text string
+	if err := json.Unmarshal(raw, &text); err == nil {
+		return text
+	}
+	var blocks []struct {
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(raw, &blocks); err != nil {
+		return ""
+	}
+	for _, b := range blocks {
+		if b.Text != "" {
+			return b.Text
+		}
+	}
+	return ""
+}
+
+// maxBashPrefixHops bounds how many wrapper tokens LeadingCommand steps over,
+// so a pathological command string cannot spin.
+const maxBashPrefixHops = 8
+
+// LeadingCommand returns the shell command a Bash call actually runs, plus
+// whether the call prefixed a cd.
+//
+// Only the first line is examined. Multi-line calls are typically a command
+// followed by a heredoc body, and tokenising the whole string counts heredoc
+// content — EOF markers, comments, prose — as if it were commands.
+//
+// Wrapper tokens are stepped over so a call is attributed to the command doing
+// the work: `cd /x && rg foo` is an rg call, not a cd call. The cd itself is
+// still reported, because prefixing one is what triggers permission prompts.
+func LeadingCommand(cmd string) (name string, withCd bool) {
+	rest, _, _ := strings.Cut(cmd, "\n")
+	for range maxBashPrefixHops {
+		rest = strings.TrimLeft(rest, "( \t")
+		if rest == "" {
+			return "", withCd
+		}
+		tok, tail := splitToken(rest)
+		switch {
+		case tok == "cd":
+			withCd = true
+			next, ok := afterSeparator(tail)
+			if !ok {
+				// Nothing but the cd itself.
+				return "cd", true
+			}
+			rest = next
+		case tok == "env", isEnvAssignment(tok):
+			rest = tail
+		default:
+			return normalizeCommand(tok), withCd
+		}
+	}
+	return "", withCd
+}
+
+// splitToken returns the first whitespace-delimited token of s and the remainder.
+func splitToken(s string) (tok, tail string) {
+	if i := strings.IndexAny(s, " \t"); i >= 0 {
+		return s[:i], s[i+1:]
+	}
+	return s, ""
+}
+
+// afterSeparator returns what follows the first shell command separator in s,
+// so a leading cd can be stepped over.
+func afterSeparator(s string) (tail string, ok bool) {
+	at, width := -1, 0
+	for _, sep := range []string{"&&", "||", ";", "|"} {
+		if i := strings.Index(s, sep); i >= 0 && (at < 0 || i < at) {
+			at, width = i, len(sep)
+		}
+	}
+	if at < 0 {
+		return "", false
+	}
+	return s[at+width:], true
+}
+
+// isEnvAssignment reports whether tok is a VAR=value prefix rather than a
+// command. A path or a substitution containing "=" is not one.
+func isEnvAssignment(tok string) bool {
+	i := strings.Index(tok, "=")
+	return i > 0 && !strings.ContainsAny(tok[:i], `/.$'"`)
+}
+
+// normalizeCommand reduces a command token to its bare name, so /usr/bin/grep
+// and grep land in the same bucket. Quoting and grouping punctuation is
+// stripped: no command name legitimately begins or ends with it.
+func normalizeCommand(tok string) string {
+	tok = strings.Trim(tok, "'\"`();")
+	if tok == "" || strings.HasPrefix(tok, "$") {
+		return ""
+	}
+	if i := strings.LastIndexByte(tok, '/'); i >= 0 {
+		tok = tok[i+1:]
+	}
+	return tok
 }
 
 // isRealModel reports whether a message.model value names an actual model.
@@ -406,6 +647,19 @@ func skillNameOf(input json.RawMessage) string {
 		return ""
 	}
 	return fields.Skill
+}
+
+func commandOf(input json.RawMessage) string {
+	if len(input) == 0 {
+		return ""
+	}
+	var fields struct {
+		Command string `json:"command"`
+	}
+	if err := json.Unmarshal(input, &fields); err != nil {
+		return ""
+	}
+	return fields.Command
 }
 
 func parseTime(s string) time.Time {
