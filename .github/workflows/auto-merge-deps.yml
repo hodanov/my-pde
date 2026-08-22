@@ -11,8 +11,10 @@ permissions:
 jobs:
   auto-merge:
     if: |
-      github.actor == 'dependabot[bot]' ||
-      startsWith(github.head_ref, 'chore/bump-tool-versions')
+      github.event.pull_request.draft == false && (
+        github.actor == 'dependabot[bot]' ||
+        startsWith(github.head_ref, 'chore/bump-tool-versions')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
