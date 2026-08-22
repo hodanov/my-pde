@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -55,8 +56,8 @@ func TestParseReaderEmpty(t *testing.T) {
 	if s.AssistantTurns() != 0 {
 		t.Errorf("AssistantTurns = %d, want 0", s.AssistantTurns())
 	}
-	if s.Span() != 0 || s.ActiveDuration != 0 {
-		t.Errorf("Span/ActiveDuration = %s/%s, want 0/0", s.Span(), s.ActiveDuration)
+	if s.Span() != 0 || s.ActiveDuration() != 0 {
+		t.Errorf("Span/ActiveDuration = %s/%s, want 0/0", s.Span(), s.ActiveDuration())
 	}
 	if len(s.Main.ToolCounts) != 0 || len(s.Main.FileCounts) != 0 {
 		t.Errorf("expected empty maps, got tools=%v files=%v", s.Main.ToolCounts, s.Main.FileCounts)
@@ -229,12 +230,18 @@ func TestParseReaderActiveDuration(t *testing.T) {
 	t.Parallel()
 	s := ParseReader("duration.jsonl", strings.NewReader(durationFixture))
 
-	if s.ActiveDuration != 4*time.Second {
-		t.Errorf("ActiveDuration = %s, want 4s (1.5s + 2.5s)", s.ActiveDuration)
+	if s.ActiveDuration() != 4*time.Second {
+		t.Errorf("ActiveDuration = %s, want 4s (1.5s + 2.5s)", s.ActiveDuration())
 	}
 	// A zero duration is no measurement, and stop_hook_summary is not a turn.
-	if s.ActiveTurns != 2 {
-		t.Errorf("ActiveTurns = %d, want 2", s.ActiveTurns)
+	if s.ActiveTurns() != 2 {
+		t.Errorf("ActiveTurns = %d, want 2", s.ActiveTurns())
+	}
+	// The individual timings are kept, not just their sum: they are far too
+	// skewed for the sum alone to be meaningful.
+	want := []time.Duration{1500 * time.Millisecond, 2500 * time.Millisecond}
+	if !slices.Equal(s.TurnDurations, want) {
+		t.Errorf("TurnDurations = %v, want %v", s.TurnDurations, want)
 	}
 	if s.Span() != time.Minute {
 		t.Errorf("Span = %s, want 1m0s", s.Span())
@@ -410,6 +417,50 @@ func TestCompactionDroppedGuard(t *testing.T) {
 	// a negative.
 	if got := (Compaction{PreTokens: 10, PostTokens: 20}).Dropped(); got != 0 {
 		t.Errorf("Dropped with post>pre = %d, want 0", got)
+	}
+}
+
+// labelFixture carries every label the CLI records for a session, plus a
+// subagent line whose own label must not be mistaken for the session's.
+const labelFixture = `
+{"type":"user","timestamp":"2026-08-22T10:00:00Z","slug":"84-pr-terraform-plan-ci","message":{"content":"hi"}}
+{"type":"agent-name","agentName":"bedrock-cost-interview-sheet","sessionId":"s1"}
+{"type":"ai-title","aiTitle":"Bedrock 日次コストの棚卸し","sessionId":"s1"}
+{"type":"user","timestamp":"2026-08-22T10:01:00Z","isSidechain":true,"slug":"a-subagent-slug","message":{"content":"sub"}}
+`
+
+func TestParseReaderLabel(t *testing.T) {
+	t.Parallel()
+	s := ParseReader("6f1d-uuid.jsonl", strings.NewReader(labelFixture))
+
+	if s.AITitle != "Bedrock 日次コストの棚卸し" || s.AgentName != "bedrock-cost-interview-sheet" {
+		t.Errorf("title/agent = %q/%q", s.AITitle, s.AgentName)
+	}
+	// A subagent's slug describes the subagent, not the session it ran under.
+	if s.Slug != "84-pr-terraform-plan-ci" {
+		t.Errorf("Slug = %q, want the main-loop slug", s.Slug)
+	}
+	if got := s.Label(); got != "Bedrock 日次コストの棚卸し" {
+		t.Errorf("Label = %q, want the ai-title", got)
+	}
+}
+
+func TestSessionLabelFallback(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		s    Session
+		want string
+	}{
+		{name: "ai title wins", want: "t", s: Session{File: "f", Slug: "s", AgentName: "a", AITitle: "t"}},
+		{name: "then agent name", want: "a", s: Session{File: "f", Slug: "s", AgentName: "a"}},
+		{name: "then slug", want: "s", s: Session{File: "f", Slug: "s"}},
+		{name: "filename last", want: "f", s: Session{File: "f"}},
+	}
+	for _, tc := range cases {
+		if got := tc.s.Label(); got != tc.want {
+			t.Errorf("%s: Label = %q, want %q", tc.name, got, tc.want)
+		}
 	}
 }
 

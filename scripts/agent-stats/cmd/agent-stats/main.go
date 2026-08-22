@@ -36,6 +36,7 @@ func run(args []string) error {
 	since := fset.Duration("since", 0, "only include sessions active within this window (e.g. 24h); 0 = all")
 	project := fset.String("project", "", "only include sessions whose cwd or file path contains this substring")
 	asJSON := fset.Bool("json", false, "emit machine-readable JSON instead of a table")
+	detail := fset.Bool("detail", false, "with --json, include the full per-session list (much larger output)")
 	if err := fset.Parse(args); err != nil {
 		return err
 	}
@@ -47,7 +48,7 @@ func run(args []string) error {
 	summary := report.Summarize(sessions)
 
 	if *asJSON {
-		out, err := report.RenderJSON(&summary)
+		out, err := report.RenderJSON(&summary, *detail)
 		if err != nil {
 			return err
 		}

@@ -3,6 +3,7 @@ package report
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -39,8 +40,7 @@ func sessions() []parser.Session {
 				ToolResults: 3,
 				ToolErrors:  map[string]int{parser.ErrHook: 1},
 			},
-			ActiveDuration: 90 * time.Second,
-			ActiveTurns:    2,
+			TurnDurations:  []time.Duration{60 * time.Second, 30 * time.Second},
 			SyntheticTurns: 1,
 			Start:          time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC),
 			End:            time.Date(2026, 7, 30, 10, 5, 0, 0, time.UTC),
@@ -62,10 +62,9 @@ func sessions() []parser.Session {
 				SkillCounts: map[string]int{"review": 1},
 				ToolResults: 6,
 			},
-			ActiveDuration: 30 * time.Second,
-			ActiveTurns:    1,
-			Start:          time.Date(2026, 7, 30, 11, 0, 0, 0, time.UTC),
-			End:            time.Date(2026, 7, 30, 11, 10, 0, 0, time.UTC),
+			TurnDurations: []time.Duration{30 * time.Second},
+			Start:         time.Date(2026, 7, 30, 11, 0, 0, 0, time.UTC),
+			End:           time.Date(2026, 7, 30, 11, 10, 0, 0, time.UTC),
 			Compactions: []parser.Compaction{
 				{Trigger: "manual", PreTokens: 220000, PostTokens: 40000},
 			},
@@ -99,6 +98,10 @@ func TestSummarize(t *testing.T) {
 	}
 	if s.ActiveDuration != 2*time.Minute || s.ActiveTurns != 3 {
 		t.Errorf("Active = %s over %d turns, want 2m over 3", s.ActiveDuration, s.ActiveTurns)
+	}
+	// [30s 30s 60s] pooled across both sessions.
+	if s.MedianTurn != 30*time.Second || s.LongestTurn != time.Minute {
+		t.Errorf("median/longest = %s/%s, want 30s/1m", s.MedianTurn, s.LongestTurn)
 	}
 	if s.SyntheticTurns != 1 {
 		t.Errorf("SyntheticTurns = %d, want 1", s.SyntheticTurns)
@@ -302,7 +305,7 @@ func TestRankedModelsOrdering(t *testing.T) {
 func TestRenderJSONRoundTrip(t *testing.T) {
 	t.Parallel()
 	summary := Summarize(sessions())
-	out, err := RenderJSON(&summary)
+	out, err := RenderJSON(&summary, true)
 	if err != nil {
 		t.Fatalf("RenderJSON: %v", err)
 	}
@@ -315,6 +318,137 @@ func TestRenderJSONRoundTrip(t *testing.T) {
 	}
 	if back.Sub.AssistantTurns != 1 || back.ActiveDuration != 2*time.Minute {
 		t.Errorf("round-trip lost the scope split or active time: %+v", back)
+	}
+	if len(back.List) != 2 {
+		t.Errorf("detail should carry the per-session list, got %d entries", len(back.List))
+	}
+}
+
+func TestRenderJSONOmitsListWithoutDetail(t *testing.T) {
+	t.Parallel()
+	summary := Summarize(sessions())
+	out, err := RenderJSON(&summary, false)
+	if err != nil {
+		t.Fatalf("RenderJSON: %v", err)
+	}
+	if strings.Contains(string(out), `"list"`) {
+		t.Errorf("the per-session list must be opt-in:\n%s", out)
+	}
+	// Dropping it from the output must not clear it on the caller's summary.
+	if len(summary.List) != 2 {
+		t.Errorf("RenderJSON must not mutate the summary, List = %d", len(summary.List))
+	}
+	// The aggregate is still there, and so is the per-session top-N.
+	var back Summary
+	if err := json.Unmarshal(out, &back); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if back.Sessions != 2 || len(back.TopSessions) != 2 {
+		t.Errorf("aggregate lost without detail: %+v", back)
+	}
+}
+
+func TestSummarizeTurnStatsDoesNotReorderInput(t *testing.T) {
+	t.Parallel()
+	// Summarize is documented as pure; computing the median must not sort the
+	// caller's own slices.
+	ss := sessions()
+	ss[0].TurnDurations = []time.Duration{60 * time.Second, 30 * time.Second}
+	before := slices.Clone(ss[0].TurnDurations)
+	s := Summarize(ss)
+	if !slices.Equal(ss[0].TurnDurations, before) {
+		t.Errorf("Summarize reordered its input: %v, was %v", ss[0].TurnDurations, before)
+	}
+	if s.MedianTurn != 30*time.Second {
+		t.Errorf("MedianTurn = %s, want 30s", s.MedianTurn)
+	}
+}
+
+func TestSummarizeNoTurnTimings(t *testing.T) {
+	t.Parallel()
+	// Older CLI versions record no turn timings at all; the summary must say
+	// zero rather than divide by it.
+	s := Summarize([]parser.Session{{File: "x.jsonl"}})
+	if s.ActiveTurns != 0 || s.ActiveDuration != 0 || s.MedianTurn != 0 || s.LongestTurn != 0 {
+		t.Errorf("timings without data = %+v", s)
+	}
+}
+
+func TestSummarizeProjects(t *testing.T) {
+	t.Parallel()
+	ss := sessions()
+	ss[0].Cwd = "/w/proj-a"
+	ss[1].Cwd = "/w/proj-b"
+	extra := ss[1]
+	extra.File = "s3.jsonl"
+	extra.Cwd = "/w/proj-a"
+	s := Summarize(append(ss, extra))
+
+	// proj-a: s1 (output 44) + s3 (output 20) = 64; proj-b: 20.
+	want := []ProjectStats{
+		{Cwd: "/w/proj-a", Sessions: 2, Turns: 4, Output: 64},
+		{Cwd: "/w/proj-b", Sessions: 1, Turns: 1, Output: 20},
+	}
+	if len(s.Projects) != len(want) {
+		t.Fatalf("Projects = %+v, want %+v", s.Projects, want)
+	}
+	for i := range want {
+		if s.Projects[i] != want[i] {
+			t.Errorf("Projects[%d] = %+v, want %+v", i, s.Projects[i], want[i])
+		}
+	}
+}
+
+func TestSummarizeProjectsWithoutCwd(t *testing.T) {
+	t.Parallel()
+	// A transcript that never recorded a cwd still ran somewhere; it must be
+	// grouped under a visible label rather than an empty string.
+	s := Summarize([]parser.Session{{File: "x.jsonl"}})
+	if len(s.Projects) != 1 || s.Projects[0].Cwd != "(unknown)" {
+		t.Fatalf("Projects = %+v, want one entry labelled (unknown)", s.Projects)
+	}
+}
+
+func TestSummarizeTopSessions(t *testing.T) {
+	t.Parallel()
+	ss := sessions()
+	ss[0].AITitle = "the heavy one"
+	s := Summarize(ss)
+
+	// s1 output 40+4=44 outranks s2's 20.
+	want := []SessionStats{
+		{Title: "the heavy one", File: "s1.jsonl", Turns: 3, Output: 44, ActiveDuration: 90 * time.Second},
+		{Title: "s2.jsonl", File: "s2.jsonl", Turns: 1, Output: 20, ActiveDuration: 30 * time.Second},
+	}
+	if len(s.TopSessions) != len(want) {
+		t.Fatalf("TopSessions = %+v, want %+v", s.TopSessions, want)
+	}
+	for i := range want {
+		if s.TopSessions[i] != want[i] {
+			t.Errorf("TopSessions[%d] = %+v, want %+v", i, s.TopSessions[i], want[i])
+		}
+	}
+}
+
+func TestSummarizeTopSessionsCaps(t *testing.T) {
+	t.Parallel()
+	all := make([]parser.Session, 0, topSessions+5)
+	for i := range topSessions + 5 {
+		all = append(all, parser.Session{
+			File: fmt.Sprintf("s%02d.jsonl", i),
+			Main: parser.Scope{Tokens: parser.Tokens{Output: i}},
+		})
+	}
+	s := Summarize(all)
+	if len(s.TopSessions) != topSessions {
+		t.Fatalf("TopSessions = %d entries, want %d", len(s.TopSessions), topSessions)
+	}
+	// Heaviest first, and the count printed alongside says how many were left out.
+	if s.TopSessions[0].Output != topSessions+4 {
+		t.Errorf("TopSessions[0] = %+v, want the heaviest session", s.TopSessions[0])
+	}
+	if out := RenderTable(&s); !strings.Contains(out, fmt.Sprintf("(%d of %d)", topSessions, topSessions+5)) {
+		t.Errorf("table must say how many sessions the top-N covers:\n%s", out)
 	}
 }
 
@@ -330,6 +464,7 @@ func TestRenderTable(t *testing.T) {
 		"Bash breakdown (3 calls)", "replaceable by a dedicated tool", "prefixed with cd",
 		"Tool results", "errors   4 (21.1%)", "permission",
 		"Compactions", "manual", "avg pre-tokens 210000", "dropped 330000",
+		"By project (session cwd)", "Top sessions by output tokens (2 of 2)",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("table missing %q\n%s", want, out)

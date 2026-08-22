@@ -152,4 +152,7 @@ func TestRunSmoke(t *testing.T) {
 	if err := run([]string{"--dir", root, "--json"}); err != nil {
 		t.Fatalf("run json: %v", err)
 	}
+	if err := run([]string{"--dir", root, "--json", "--detail"}); err != nil {
+		t.Fatalf("run json detail: %v", err)
+	}
 }

@@ -155,19 +155,29 @@ type Session struct {
 	Cwd       string `json:"cwd"`
 	GitBranch string `json:"git_branch"`
 
+	// Label candidates, most descriptive first. A transcript's filename is a
+	// UUID, so without these a session cannot be told apart by eye. Each holds
+	// the most recently recorded value: the CLI rewrites the line as the label
+	// changes, and the latest one describes the session as it ended up.
+	AITitle   string `json:"ai_title"`
+	AgentName string `json:"agent_name"`
+	Slug      string `json:"slug"`
+
 	Main Scope `json:"main"`
 	Sub  Scope `json:"sub"`
 
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
 
-	// ActiveDuration sums the turns Claude Code timed itself (system lines with
-	// subtype turn_duration). Only newer CLI versions write them, so
-	// ActiveTurns records how many turns the figure actually covers; report it
-	// alongside the duration rather than passing it off as the whole session's
-	// working time.
-	ActiveDuration time.Duration `json:"active_duration_ns"`
-	ActiveTurns    int           `json:"active_turns"`
+	// TurnDurations holds every turn Claude Code timed itself (system lines with
+	// subtype turn_duration), in transcript order.
+	//
+	// The whole distribution is kept, not just the sum, for two reasons. Only
+	// newer CLI versions write these lines, so the count says how much of the
+	// session the figure covers at all; and the values are extremely skewed — a
+	// session left open records one turn spanning hours — so a sum presented on
+	// its own reads as working time when it is nothing of the kind.
+	TurnDurations []time.Duration `json:"turn_durations_ns"`
 
 	// SyntheticTurns counts assistant turns whose model is a placeholder such
 	// as "<synthetic>" (CLI-generated, not a real inference). They are excluded
@@ -196,6 +206,33 @@ func (s *Session) Span() time.Duration {
 		return 0
 	}
 	return s.End.Sub(s.Start)
+}
+
+// ActiveDuration sums the turns the CLI timed. Read it together with
+// ActiveTurns and the spread of TurnDurations: it is a sum over a skewed
+// distribution, not a session's working time.
+func (s *Session) ActiveDuration() time.Duration {
+	var total time.Duration
+	for _, d := range s.TurnDurations {
+		total += d
+	}
+	return total
+}
+
+// ActiveTurns returns how many turns ActiveDuration actually covers.
+func (s *Session) ActiveTurns() int {
+	return len(s.TurnDurations)
+}
+
+// Label returns the most descriptive name available for the session, falling
+// back to the transcript filename when the CLI recorded no label at all.
+func (s *Session) Label() string {
+	for _, c := range []string{s.AITitle, s.AgentName, s.Slug} {
+		if c != "" {
+			return c
+		}
+	}
+	return s.File
 }
 
 // AssistantTurns returns the session's main-loop and subagent turns combined.
@@ -235,6 +272,9 @@ type rawLine struct {
 	Timestamp       string      `json:"timestamp"`
 	Cwd             string      `json:"cwd"`
 	GitBranch       string      `json:"gitBranch"`
+	Slug            string      `json:"slug"`
+	AITitle         string      `json:"aiTitle"`
+	AgentName       string      `json:"agentName"`
 	IsSidechain     bool        `json:"isSidechain"`
 	DurationMs      int64       `json:"durationMs"`
 	CompactMetadata *rawCompact `json:"compactMetadata"`
@@ -346,6 +386,20 @@ func applyLine(s *Session, raw *rawLine) {
 	if raw.GitBranch != "" {
 		s.GitBranch = raw.GitBranch
 	}
+	// Labels are taken from main-loop lines only. A session is assembled from its
+	// own transcript plus its subagents', and a subagent's label names the
+	// subagent, not the session it was spawned from.
+	if !raw.IsSidechain {
+		if raw.AITitle != "" {
+			s.AITitle = raw.AITitle
+		}
+		if raw.AgentName != "" {
+			s.AgentName = raw.AgentName
+		}
+		if raw.Slug != "" {
+			s.Slug = raw.Slug
+		}
+	}
 	switch raw.Type {
 	case "assistant":
 		applyAssistant(s, raw)
@@ -451,9 +505,9 @@ func applyUser(s *Session, raw *rawLine) {
 func applySystem(s *Session, raw *rawLine) {
 	switch raw.Subtype {
 	case "turn_duration":
+		// A zero duration is an absent measurement, not a turn that took no time.
 		if raw.DurationMs > 0 {
-			s.ActiveDuration += time.Duration(raw.DurationMs) * time.Millisecond
-			s.ActiveTurns++
+			s.TurnDurations = append(s.TurnDurations, time.Duration(raw.DurationMs)*time.Millisecond)
 		}
 	case "compact_boundary":
 		if m := raw.CompactMetadata; m != nil {
