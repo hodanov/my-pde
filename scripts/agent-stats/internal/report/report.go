@@ -19,52 +19,70 @@ type Count struct {
 	Count int    `json:"count"`
 }
 
+// ModelUsage attributes turns and tokens to one model.
+type ModelUsage struct {
+	Name   string        `json:"name"`
+	Turns  int           `json:"turns"`
+	Tokens parser.Tokens `json:"tokens"`
+}
+
 // Summary is the aggregate over a set of sessions.
 type Summary struct {
-	Sessions       int              `json:"sessions"`
-	Tokens         parser.Tokens    `json:"tokens"`
-	AssistantTurns int              `json:"assistant_turns"`
-	Duration       time.Duration    `json:"duration_ns"`
-	Models         []Count          `json:"models"`
-	Tools          []Count          `json:"tools"`
-	Files          []Count          `json:"files"`
-	Skills         []Count          `json:"skills"`
-	List           []parser.Session `json:"list"`
+	Sessions       int           `json:"sessions"`
+	Tokens         parser.Tokens `json:"tokens"`
+	AssistantTurns int           `json:"assistant_turns"`
+
+	// ActiveDuration is time the CLI measured itself, over ActiveTurns turns;
+	// Span is the first-to-last timestamp distance, idle gaps included. The two
+	// answer different questions and neither substitutes for the other.
+	ActiveDuration time.Duration `json:"active_duration_ns"`
+	ActiveTurns    int           `json:"active_turns"`
+	Span           time.Duration `json:"span_ns"`
+
+	// SyntheticTurns are turns left out of ModelTokens because their model is a
+	// CLI-generated placeholder rather than a real one.
+	SyntheticTurns int `json:"synthetic_turns"`
+
+	Main parser.Scope `json:"main"`
+	Sub  parser.Scope `json:"sub"`
+
+	ModelTokens []ModelUsage     `json:"model_tokens"`
+	Tools       []Count          `json:"tools"`
+	Files       []Count          `json:"files"`
+	Skills      []Count          `json:"skills"`
+	List        []parser.Session `json:"list"`
 }
 
 // Summarize folds sessions into a Summary. It is a pure function: identical
 // input always yields identical, deterministically ordered output.
 func Summarize(sessions []parser.Session) Summary {
-	models := map[string]int{}
-	tools := map[string]int{}
-	files := map[string]int{}
-	skills := map[string]int{}
-	sum := Summary{Sessions: len(sessions), List: sessions}
+	sum := Summary{
+		Sessions: len(sessions),
+		Main:     parser.NewScope(),
+		Sub:      parser.NewScope(),
+		List:     sessions,
+	}
 	for i := range sessions {
 		s := &sessions[i]
-		sum.Tokens.Input += s.Tokens.Input
-		sum.Tokens.Output += s.Tokens.Output
-		sum.Tokens.CacheRead += s.Tokens.CacheRead
-		sum.Tokens.CacheCreation += s.Tokens.CacheCreation
-		sum.AssistantTurns += s.AssistantTurns
-		sum.Duration += s.Duration()
-		if s.Model != "" {
-			models[s.Model]++
-		}
-		for name, n := range s.ToolCounts {
-			tools[name] += n
-		}
-		for path, n := range s.FileCounts {
-			files[path] += n
-		}
-		for name, n := range s.SkillCounts {
-			skills[name] += n
-		}
+		sum.Main.Merge(&s.Main)
+		sum.Sub.Merge(&s.Sub)
+		sum.ActiveDuration += s.ActiveDuration
+		sum.ActiveTurns += s.ActiveTurns
+		sum.Span += s.Span()
+		sum.SyntheticTurns += s.SyntheticTurns
 	}
-	sum.Models = ranked(models, 0)
-	sum.Tools = ranked(tools, 0)
-	sum.Files = ranked(files, 0)
-	sum.Skills = ranked(skills, 0)
+
+	// The headline figures and the ranked lists are the two scopes combined;
+	// Main and Sub stay available for anyone asking how much was delegated.
+	total := parser.NewScope()
+	total.Merge(&sum.Main)
+	total.Merge(&sum.Sub)
+	sum.Tokens = total.Tokens
+	sum.AssistantTurns = total.AssistantTurns
+	sum.ModelTokens = rankedModels(total.ByModel)
+	sum.Tools = ranked(total.ToolCounts, 0)
+	sum.Files = ranked(total.FileCounts, 0)
+	sum.Skills = ranked(total.SkillCounts, 0)
 	return sum
 }
 
@@ -87,6 +105,23 @@ func ranked(m map[string]int, limit int) []Count {
 	return out
 }
 
+// rankedModels orders per-model usage by output tokens desc then name asc.
+// Output tokens rank it because they are what the model actually generated;
+// input and cache volume mostly track context size rather than work done.
+func rankedModels(m map[string]parser.Usage) []ModelUsage {
+	out := make([]ModelUsage, 0, len(m))
+	for name, u := range m {
+		out = append(out, ModelUsage{Name: name, Turns: u.Turns, Tokens: u.Tokens})
+	}
+	slices.SortFunc(out, func(a, b ModelUsage) int {
+		if c := cmp.Compare(b.Tokens.Output, a.Tokens.Output); c != 0 {
+			return c
+		}
+		return strings.Compare(a.Name, b.Name)
+	})
+	return out
+}
+
 // RenderJSON serialises the summary as indented JSON for tool-to-tool use.
 func RenderJSON(s *Summary) ([]byte, error) {
 	return json.MarshalIndent(s, "", "  ")
@@ -99,21 +134,57 @@ const topFiles = 10
 func RenderTable(s *Summary) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Sessions:        %d\n", s.Sessions)
-	fmt.Fprintf(&b, "Assistant turns: %d\n", s.AssistantTurns)
-	fmt.Fprintf(&b, "Duration:        %s (sum of each session's first-to-last timestamp span, including idle gaps in resumed sessions)\n", s.Duration.Round(time.Second))
+	fmt.Fprintf(&b, "Assistant turns: %d (main %d / subagent %d)\n",
+		s.AssistantTurns, s.Main.AssistantTurns, s.Sub.AssistantTurns)
+	fmt.Fprintf(&b, "Active time:     %s (sum of turn_duration over %d recorded turns)\n",
+		s.ActiveDuration.Round(time.Second), s.ActiveTurns)
+	fmt.Fprintf(&b, "Session span:    %s (first-to-last timestamp, includes idle gaps in resumed sessions)\n",
+		s.Span.Round(time.Second))
+
 	b.WriteString("\nTokens\n")
 	fmt.Fprintf(&b, "  input          %d\n", s.Tokens.Input)
 	fmt.Fprintf(&b, "  output         %d\n", s.Tokens.Output)
 	fmt.Fprintf(&b, "  cache read     %d\n", s.Tokens.CacheRead)
 	fmt.Fprintf(&b, "  cache creation %d\n", s.Tokens.CacheCreation)
 
-	writeCounts(&b, "Models", s.Models, 0)
+	writeOrigin(&b, s)
+	writeModels(&b, s.ModelTokens, s.SyntheticTurns)
 	writeCounts(&b, "Tool calls", s.Tools, 0)
 	writeCounts(&b, "Skills", s.Skills, 0)
 	writeCounts(&b, "Top files", s.Files, topFiles)
 
 	b.WriteString("\nNote: only Claude Code transcripts are parsed; other AI CLIs are not yet supported.\n")
 	return b.String()
+}
+
+// writeOrigin shows how much of the work ran in the main loop versus in
+// subagents, which is what makes under- or over-delegation visible.
+func writeOrigin(b *strings.Builder, s *Summary) {
+	b.WriteString("\nOrigin\n")
+	writeUsageRow(b, 8, "main", s.Main.AssistantTurns, s.Main.Tokens)
+	writeUsageRow(b, 8, "subagent", s.Sub.AssistantTurns, s.Sub.Tokens)
+}
+
+func writeModels(b *strings.Builder, models []ModelUsage, synthetic int) {
+	b.WriteString("\nModel tokens\n")
+	if len(models) == 0 {
+		b.WriteString("  (none)\n")
+	} else {
+		width := 0
+		for _, m := range models {
+			width = max(width, len(m.Name))
+		}
+		for _, m := range models {
+			writeUsageRow(b, width, m.Name, m.Turns, m.Tokens)
+		}
+	}
+	if synthetic > 0 {
+		fmt.Fprintf(b, "  (%d turns excluded: CLI-generated placeholder model)\n", synthetic)
+	}
+}
+
+func writeUsageRow(b *strings.Builder, width int, name string, turns int, t parser.Tokens) {
+	fmt.Fprintf(b, "  %-*s  turns %-7d output %-10d cache read %d\n", width, name, turns, t.Output, t.CacheRead)
 }
 
 func writeCounts(b *strings.Builder, title string, counts []Count, limit int) {

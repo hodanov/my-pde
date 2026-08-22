@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -24,19 +25,112 @@ type Tokens struct {
 	CacheCreation int `json:"cache_creation"`
 }
 
+// Add accumulates o into t.
+func (t *Tokens) Add(o Tokens) {
+	t.Input += o.Input
+	t.Output += o.Output
+	t.CacheRead += o.CacheRead
+	t.CacheCreation += o.CacheCreation
+}
+
+// Usage is a turn count paired with the tokens those turns consumed.
+type Usage struct {
+	Turns  int    `json:"turns"`
+	Tokens Tokens `json:"tokens"`
+}
+
+// Scope is the aggregate for one origin of work. Claude Code flags every
+// subagent line with isSidechain, so main-loop and delegated work can be told
+// apart; keeping them in separate scopes is what makes "how much was
+// delegated, and at what cost" answerable.
+type Scope struct {
+	Tokens         Tokens           `json:"tokens"`
+	AssistantTurns int              `json:"assistant_turns"`
+	ByModel        map[string]Usage `json:"by_model"`
+	ToolCounts     map[string]int   `json:"tool_counts"`
+	FileCounts     map[string]int   `json:"file_counts"`
+	SkillCounts    map[string]int   `json:"skill_counts"`
+}
+
+// NewScope returns a Scope whose maps are ready to be written to.
+func NewScope() Scope {
+	s := Scope{}
+	s.ensure()
+	return s
+}
+
+// ensure initialises the maps a zero-value or JSON-restored Scope lacks, so
+// callers can accumulate into one without constructing it first.
+func (s *Scope) ensure() {
+	if s.ByModel == nil {
+		s.ByModel = map[string]Usage{}
+	}
+	if s.ToolCounts == nil {
+		s.ToolCounts = map[string]int{}
+	}
+	if s.FileCounts == nil {
+		s.FileCounts = map[string]int{}
+	}
+	if s.SkillCounts == nil {
+		s.SkillCounts = map[string]int{}
+	}
+}
+
+// Merge accumulates src into s, used to fold per-session scopes into totals.
+func (s *Scope) Merge(src *Scope) {
+	s.ensure()
+	s.Tokens.Add(src.Tokens)
+	s.AssistantTurns += src.AssistantTurns
+	for model, u := range src.ByModel {
+		cur := s.ByModel[model]
+		cur.Turns += u.Turns
+		cur.Tokens.Add(u.Tokens)
+		s.ByModel[model] = cur
+	}
+	mergeCounts(s.ToolCounts, src.ToolCounts)
+	mergeCounts(s.FileCounts, src.FileCounts)
+	mergeCounts(s.SkillCounts, src.SkillCounts)
+}
+
+func mergeCounts(dst, src map[string]int) {
+	for name, n := range src {
+		dst[name] += n
+	}
+}
+
+// addModelUsage credits one turn and its tokens to model.
+func (s *Scope) addModelUsage(model string, t Tokens) {
+	s.ensure()
+	u := s.ByModel[model]
+	u.Turns++
+	u.Tokens.Add(t)
+	s.ByModel[model] = u
+}
+
 // Session is the aggregated view of a single transcript file.
 type Session struct {
-	File           string         `json:"file"`
-	Model          string         `json:"model"`
-	Cwd            string         `json:"cwd"`
-	GitBranch      string         `json:"git_branch"`
-	Tokens         Tokens         `json:"tokens"`
-	AssistantTurns int            `json:"assistant_turns"`
-	ToolCounts     map[string]int `json:"tool_counts"`
-	FileCounts     map[string]int `json:"file_counts"`
-	SkillCounts    map[string]int `json:"skill_counts"`
-	Start          time.Time      `json:"start"`
-	End            time.Time      `json:"end"`
+	File      string `json:"file"`
+	Cwd       string `json:"cwd"`
+	GitBranch string `json:"git_branch"`
+
+	Main Scope `json:"main"`
+	Sub  Scope `json:"sub"`
+
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
+
+	// ActiveDuration sums the turns Claude Code timed itself (system lines with
+	// subtype turn_duration). Only newer CLI versions write them, so
+	// ActiveTurns records how many turns the figure actually covers; report it
+	// alongside the duration rather than passing it off as the whole session's
+	// working time.
+	ActiveDuration time.Duration `json:"active_duration_ns"`
+	ActiveTurns    int           `json:"active_turns"`
+
+	// SyntheticTurns counts assistant turns whose model is a placeholder such
+	// as "<synthetic>" (CLI-generated, not a real inference). They are excluded
+	// from per-model attribution but counted here so the omission is visible.
+	SyntheticTurns int `json:"synthetic_turns"`
 
 	// seenMessageIDs dedupes assistant turns and their token usage. Claude Code
 	// writes one logical turn (thinking -> text -> tool_use) as multiple JSONL
@@ -46,13 +140,37 @@ type Session struct {
 	seenMessageIDs map[string]struct{}
 }
 
-// Duration returns the wall-clock span between the first and last timestamped
-// entry, or zero when it cannot be determined.
-func (s *Session) Duration() time.Duration {
+// Span returns the wall-clock distance between the first and last timestamped
+// entry, or zero when it cannot be determined. A resumed session's span
+// includes the idle gaps, so it is an upper bound on working time rather than a
+// measure of it; ActiveDuration is the measure.
+func (s *Session) Span() time.Duration {
 	if s.Start.IsZero() || s.End.IsZero() || s.End.Before(s.Start) {
 		return 0
 	}
 	return s.End.Sub(s.Start)
+}
+
+// AssistantTurns returns the session's main-loop and subagent turns combined.
+func (s *Session) AssistantTurns() int {
+	return s.Main.AssistantTurns + s.Sub.AssistantTurns
+}
+
+// Tokens returns the session's main-loop and subagent token usage combined.
+func (s *Session) Tokens() Tokens {
+	t := s.Main.Tokens
+	t.Add(s.Sub.Tokens)
+	return t
+}
+
+// scope selects which origin's aggregate a line belongs to. A line without the
+// isSidechain flag is treated as main-loop work (the lenient default; in
+// practice only a handful of lines omit it).
+func (s *Session) scope(isSidechain bool) *Scope {
+	if isSidechain {
+		return &s.Sub
+	}
+	return &s.Main
 }
 
 // fileEditTools are the tool names whose input carries a file_path we count as
@@ -65,11 +183,14 @@ var fileEditTools = map[string]bool{
 }
 
 type rawLine struct {
-	Type      string  `json:"type"`
-	Timestamp string  `json:"timestamp"`
-	Cwd       string  `json:"cwd"`
-	GitBranch string  `json:"gitBranch"`
-	Message   *rawMsg `json:"message"`
+	Type        string  `json:"type"`
+	Subtype     string  `json:"subtype"`
+	Timestamp   string  `json:"timestamp"`
+	Cwd         string  `json:"cwd"`
+	GitBranch   string  `json:"gitBranch"`
+	IsSidechain bool    `json:"isSidechain"`
+	DurationMs  int64   `json:"durationMs"`
+	Message     *rawMsg `json:"message"`
 }
 
 type rawMsg struct {
@@ -112,9 +233,8 @@ func ParseFile(path string) (Session, error) {
 func ParseReader(name string, r io.Reader) Session {
 	s := Session{
 		File:           name,
-		ToolCounts:     map[string]int{},
-		FileCounts:     map[string]int{},
-		SkillCounts:    map[string]int{},
+		Main:           NewScope(),
+		Sub:            NewScope(),
 		seenMessageIDs: map[string]struct{}{},
 	}
 	sc := bufio.NewScanner(r)
@@ -148,12 +268,19 @@ func applyLine(s *Session, raw *rawLine) {
 	if raw.GitBranch != "" {
 		s.GitBranch = raw.GitBranch
 	}
-	if raw.Type != "assistant" || raw.Message == nil {
+	switch raw.Type {
+	case "assistant":
+		applyAssistant(s, raw)
+	case "system":
+		applySystem(s, raw)
+	}
+}
+
+func applyAssistant(s *Session, raw *rawLine) {
+	if raw.Message == nil {
 		return
 	}
-	if raw.Message.Model != "" {
-		s.Model = raw.Message.Model
-	}
+	sc := s.scope(raw.IsSidechain)
 	// A turn split across multiple lines shares one message.id and repeats the
 	// same usage on every line; count the turn and its tokens once per id. A
 	// line without an id can't be deduped, so it is always counted (lenient
@@ -168,30 +295,56 @@ func applyLine(s *Session, raw *rawLine) {
 		}
 	}
 	if !alreadyCounted {
-		s.AssistantTurns++
+		sc.AssistantTurns++
+		var t Tokens
 		if u := raw.Message.Usage; u != nil {
-			s.Tokens.Input += u.InputTokens
-			s.Tokens.Output += u.OutputTokens
-			s.Tokens.CacheRead += u.CacheReadInputTokens
-			s.Tokens.CacheCreation += u.CacheCreationInputTokens
+			t = Tokens{
+				Input:         u.InputTokens,
+				Output:        u.OutputTokens,
+				CacheRead:     u.CacheReadInputTokens,
+				CacheCreation: u.CacheCreationInputTokens,
+			}
+		}
+		sc.Tokens.Add(t)
+		switch model := raw.Message.Model; {
+		case isRealModel(model):
+			sc.addModelUsage(model, t)
+		case model != "":
+			s.SyntheticTurns++
 		}
 	}
 	for _, c := range decodeContent(raw.Message.Content) {
 		if c.Type != "tool_use" || c.Name == "" {
 			continue
 		}
-		s.ToolCounts[c.Name]++
+		sc.ToolCounts[c.Name]++
 		if fileEditTools[c.Name] {
 			if fp := filePathOf(c.Input); fp != "" {
-				s.FileCounts[fp]++
+				sc.FileCounts[fp]++
 			}
 		}
 		if c.Name == "Skill" {
 			if skill := skillNameOf(c.Input); skill != "" {
-				s.SkillCounts[skill]++
+				sc.SkillCounts[skill]++
 			}
 		}
 	}
+}
+
+// applySystem reads the CLI's own bookkeeping lines. They carry measurements
+// the assistant lines cannot supply, such as how long a turn actually took.
+func applySystem(s *Session, raw *rawLine) {
+	if raw.Subtype == "turn_duration" && raw.DurationMs > 0 {
+		s.ActiveDuration += time.Duration(raw.DurationMs) * time.Millisecond
+		s.ActiveTurns++
+	}
+}
+
+// isRealModel reports whether a message.model value names an actual model.
+// Claude Code uses angle-bracketed placeholders (notably "<synthetic>") for
+// turns it generated itself, which carry no real inference cost.
+func isRealModel(model string) bool {
+	return model != "" && !strings.HasPrefix(model, "<")
 }
 
 // decodeContent extracts tool_use blocks from a message's content. Content may
