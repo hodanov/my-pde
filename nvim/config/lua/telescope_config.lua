@@ -20,6 +20,28 @@ vim.keymap.set("n", "<Leader>fg", function()
 	})
 end, { desc = "Live Grep (include hidden)" })
 
+-- カーソル下の語（ノーマル）/ 選択範囲（ビジュアル）をプロジェクト全文検索する。
+-- <Leader>fg (live_grep) が「空プロンプトから手で打つ」のに対し、こちらは検索語を
+-- カーソル位置から取るので「いま見ている識別子/文字列がどこで使われているか」を手打ちなしで辿れる。
+-- LSP の grr（参照）と違い、filetype や LSP の有無に依らずテキストとして横断検索できる
+-- （設定ファイルの変数名・Markdown のキーワード・コメント/文字列リテラル等にも届く）。
+vim.keymap.set("n", "<Leader>fw", function()
+	builtin.grep_string({
+		additional_args = function()
+			return { "--hidden" } -- live_grep と揃えて隠しファイルも対象に
+		end,
+	})
+end, { desc = "Grep word under cursor (project)" })
+
+-- ビジュアル選択範囲をそのまま検索語にする（複数語のフレーズ・エラー文字列に有効）。
+vim.keymap.set("x", "<Leader>fw", function()
+	builtin.grep_string({
+		additional_args = function()
+			return { "--hidden" }
+		end,
+	})
+end, { desc = "Grep visual selection (project)" })
+
 vim.keymap.set("n", "<leader>fb", builtin.buffers, { desc = "Telescope buffers" })
 vim.keymap.set("n", "<leader>fh", builtin.help_tags, { desc = "Telescope help tags" })
 
