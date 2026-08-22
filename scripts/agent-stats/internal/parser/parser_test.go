@@ -464,6 +464,32 @@ func TestSessionLabelFallback(t *testing.T) {
 	}
 }
 
+func TestAppendLinesSurvivesAnOversizedLine(t *testing.T) {
+	t.Parallel()
+	// bufio.Scanner abandons the whole stream at a token it cannot fit. One
+	// pathological record must cost us that record only — losing every record
+	// after it would silently understate the session.
+	const maxLine = 256
+	var b strings.Builder
+	b.WriteString(`{"type":"assistant","timestamp":"2026-08-22T10:00:00Z","message":{"id":"m1","model":"claude-sonnet-5","usage":{"output_tokens":10},"content":[{"type":"text","text":"first"}]}}` + "\n")
+	b.WriteString(`{"type":"assistant","message":{"id":"huge","model":"claude-sonnet-5","usage":{"output_tokens":999},"content":[{"type":"text","text":"` +
+		strings.Repeat("x", 4*maxLine) + `"}]}}` + "\n")
+	b.WriteString(`{"type":"assistant","timestamp":"2026-08-22T10:01:00Z","message":{"id":"m2","model":"claude-sonnet-5","usage":{"output_tokens":20},"content":[{"type":"text","text":"last"}]}}` + "\n")
+
+	s := NewSession("huge.jsonl")
+	appendLines(&s, strings.NewReader(b.String()), maxLine)
+
+	if s.AssistantTurns() != 2 {
+		t.Errorf("AssistantTurns = %d, want 2 (the lines either side of the oversized one)", s.AssistantTurns())
+	}
+	if got := s.Tokens().Output; got != 30 {
+		t.Errorf("output = %d, want 30 (the oversized line contributes nothing)", got)
+	}
+	if s.Span() != time.Minute {
+		t.Errorf("Span = %s, want 1m0s", s.Span())
+	}
+}
+
 func TestSpanGuards(t *testing.T) {
 	t.Parallel()
 	end := time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC)

@@ -10,6 +10,7 @@ package parser
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -310,8 +311,12 @@ type rawContent struct {
 }
 
 // maxLineBytes caps a single JSONL line so an unexpectedly huge record cannot
-// exhaust memory; longer lines are skipped by the scanner.
+// exhaust memory. A longer line is skipped; the lines after it are not.
 const maxLineBytes = 16 * 1024 * 1024
+
+// initialLineBytes is where the line buffer starts. It grows on demand up to
+// maxLineBytes, so the common case of short lines costs one small allocation.
+const initialLineBytes = 64 * 1024
 
 // NewSession returns an empty session labelled name, ready to be filled by
 // AppendReader or AppendFile.
@@ -348,18 +353,36 @@ func AppendReader(s *Session, r io.Reader) {
 	}
 	s.Main.ensure()
 	s.Sub.ensure()
-	sc := bufio.NewScanner(r)
-	sc.Buffer(make([]byte, 0, 64*1024), maxLineBytes)
-	for sc.Scan() {
-		line := sc.Bytes()
-		if len(line) == 0 {
-			continue
+	appendLines(s, r, maxLineBytes)
+}
+
+// appendLines folds every parseable line of r into s, tolerating lines longer
+// than maxLine.
+//
+// bufio.Scanner stops for good at a token it cannot fit, so one oversized record
+// would otherwise hide every record after it — a silent truncation, which is
+// worse than a skipped line. Restarting the scanner on the same reader resumes
+// past that record: everything buffered when the scanner gave up belongs to the
+// oversized line, and its tail comes back as one unparseable line that is
+// skipped like any other.
+func appendLines(s *Session, r io.Reader, maxLine int) {
+	for {
+		sc := bufio.NewScanner(r)
+		sc.Buffer(make([]byte, 0, min(initialLineBytes, maxLine)), maxLine)
+		for sc.Scan() {
+			line := sc.Bytes()
+			if len(line) == 0 {
+				continue
+			}
+			var raw rawLine
+			if err := json.Unmarshal(line, &raw); err != nil {
+				continue
+			}
+			applyLine(s, &raw)
 		}
-		var raw rawLine
-		if err := json.Unmarshal(line, &raw); err != nil {
-			continue
+		if !errors.Is(sc.Err(), bufio.ErrTooLong) {
+			return
 		}
-		applyLine(s, &raw)
 	}
 }
 
