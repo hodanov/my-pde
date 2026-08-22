@@ -19,53 +19,297 @@ type Count struct {
 	Count int    `json:"count"`
 }
 
+// ModelUsage attributes turns and tokens to one model.
+type ModelUsage struct {
+	Name   string        `json:"name"`
+	Turns  int           `json:"turns"`
+	Tokens parser.Tokens `json:"tokens"`
+}
+
+// ProjectStats aggregates the sessions that ran in one directory. Grouping is
+// by the session's recorded cwd rather than a derived repository name: worktrees
+// and subdirectories are separate working contexts, and inferring a shared
+// project from the path would mislabel them.
+type ProjectStats struct {
+	Cwd      string `json:"cwd"`
+	Sessions int    `json:"sessions"`
+	Turns    int    `json:"turns"`
+	Output   int    `json:"output_tokens"`
+}
+
+// SessionStats is one session reduced to what the table shows.
+type SessionStats struct {
+	Title          string        `json:"title"`
+	File           string        `json:"file"`
+	Turns          int           `json:"turns"`
+	Output         int           `json:"output_tokens"`
+	ActiveDuration time.Duration `json:"active_duration_ns"`
+}
+
+// CompactionStats aggregates every compaction that shared one trigger. An
+// "auto" trigger means the session ran into the context limit rather than being
+// compacted deliberately, so its count is the signal worth watching.
+type CompactionStats struct {
+	Trigger      string `json:"trigger"`
+	Count        int    `json:"count"`
+	AvgPreTokens int    `json:"avg_pre_tokens"`
+	Dropped      int    `json:"dropped_tokens"`
+}
+
+// bashRedundant maps a shell command to the dedicated tool that should have run
+// instead. Whether a shell command is redundant is a tool-selection judgement,
+// not part of the transcript schema, so it lives here rather than in the parser.
+//
+// Only the leading command counts: `rg foo` is a Grep call written by hand, but
+// the grep in `git log | grep foo` is filtering another command's output and has
+// no tool equivalent. Counting the latter would overstate the problem.
+var bashRedundant = map[string]string{
+	"cat":  "Read",
+	"head": "Read",
+	"tail": "Read",
+	"grep": "Grep",
+	"rg":   "Grep",
+	"find": "Glob",
+	"ls":   "Glob",
+}
+
 // Summary is the aggregate over a set of sessions.
 type Summary struct {
-	Sessions       int              `json:"sessions"`
-	Tokens         parser.Tokens    `json:"tokens"`
-	AssistantTurns int              `json:"assistant_turns"`
-	Duration       time.Duration    `json:"duration_ns"`
-	Models         []Count          `json:"models"`
-	Tools          []Count          `json:"tools"`
-	Files          []Count          `json:"files"`
-	Skills         []Count          `json:"skills"`
-	List           []parser.Session `json:"list"`
+	Sessions       int           `json:"sessions"`
+	Tokens         parser.Tokens `json:"tokens"`
+	AssistantTurns int           `json:"assistant_turns"`
+
+	// ActiveDuration is time the CLI measured itself, over ActiveTurns turns;
+	// Span is the first-to-last timestamp distance, idle gaps included. The two
+	// answer different questions and neither substitutes for the other.
+	ActiveDuration time.Duration `json:"active_duration_ns"`
+	ActiveTurns    int           `json:"active_turns"`
+	Span           time.Duration `json:"span_ns"`
+
+	// MedianTurn and LongestTurn describe the distribution ActiveDuration was
+	// summed over. It is severely skewed in practice — a session left open
+	// records a single turn spanning hours — so the sum on its own would be read
+	// as working time. Reporting the two together makes the skew impossible to
+	// miss.
+	MedianTurn  time.Duration `json:"median_turn_ns"`
+	LongestTurn time.Duration `json:"longest_turn_ns"`
+
+	// SyntheticTurns are turns left out of ModelTokens because their model is a
+	// CLI-generated placeholder rather than a real one.
+	SyntheticTurns int `json:"synthetic_turns"`
+
+	Main parser.Scope `json:"main"`
+	Sub  parser.Scope `json:"sub"`
+
+	ModelTokens []ModelUsage `json:"model_tokens"`
+	Tools       []Count      `json:"tools"`
+	Files       []Count      `json:"files"`
+	Skills      []Count      `json:"skills"`
+
+	// BashCalls is every Bash call, and Bash breaks them down by leading
+	// command. The breakdown can total less than BashCalls when a command string
+	// has no recognisable leading command, so both are reported.
+	BashCalls  int     `json:"bash_calls"`
+	Bash       []Count `json:"bash"`
+	BashWithCd int     `json:"bash_with_cd"`
+
+	// RedundantBash counts, per replacing tool, the Bash calls a dedicated tool
+	// should have handled. This is the before/after measure for tool-selection
+	// guidance.
+	RedundantBash      []Count `json:"redundant_bash"`
+	RedundantBashTotal int     `json:"redundant_bash_total"`
+
+	// ToolResults is every tool result seen — the denominator for the error
+	// rate — and ToolErrors the failures by kind.
+	ToolResults    int     `json:"tool_results"`
+	ToolErrors     []Count `json:"tool_errors"`
+	ToolErrorTotal int     `json:"tool_error_total"`
+
+	Compactions []CompactionStats `json:"compactions"`
+
+	Projects    []ProjectStats `json:"projects"`
+	TopSessions []SessionStats `json:"top_sessions"`
+
+	// List is every session in full. It dwarfs the rest of the output, so
+	// RenderJSON only includes it when detail is asked for.
+	List []parser.Session `json:"list,omitempty"`
 }
 
 // Summarize folds sessions into a Summary. It is a pure function: identical
 // input always yields identical, deterministically ordered output.
 func Summarize(sessions []parser.Session) Summary {
-	models := map[string]int{}
-	tools := map[string]int{}
-	files := map[string]int{}
-	skills := map[string]int{}
-	sum := Summary{Sessions: len(sessions), List: sessions}
+	sum := Summary{
+		Sessions: len(sessions),
+		Main:     parser.NewScope(),
+		Sub:      parser.NewScope(),
+		List:     sessions,
+	}
+	compactions := map[string]CompactionStats{}
+	projects := map[string]ProjectStats{}
+	var turns []time.Duration
 	for i := range sessions {
 		s := &sessions[i]
-		sum.Tokens.Input += s.Tokens.Input
-		sum.Tokens.Output += s.Tokens.Output
-		sum.Tokens.CacheRead += s.Tokens.CacheRead
-		sum.Tokens.CacheCreation += s.Tokens.CacheCreation
-		sum.AssistantTurns += s.AssistantTurns
-		sum.Duration += s.Duration()
-		if s.Model != "" {
-			models[s.Model]++
+		sum.Main.Merge(&s.Main)
+		sum.Sub.Merge(&s.Sub)
+		sum.Span += s.Span()
+		sum.SyntheticTurns += s.SyntheticTurns
+		turns = append(turns, s.TurnDurations...)
+		for _, c := range s.Compactions {
+			addCompaction(compactions, c)
 		}
-		for name, n := range s.ToolCounts {
-			tools[name] += n
-		}
-		for path, n := range s.FileCounts {
-			files[path] += n
-		}
-		for name, n := range s.SkillCounts {
-			skills[name] += n
-		}
+		addProject(projects, s)
+		sum.TopSessions = append(sum.TopSessions, SessionStats{
+			Title:          s.Label(),
+			File:           s.File,
+			Turns:          s.AssistantTurns(),
+			Output:         s.Tokens().Output,
+			ActiveDuration: s.ActiveDuration(),
+		})
 	}
-	sum.Models = ranked(models, 0)
-	sum.Tools = ranked(tools, 0)
-	sum.Files = ranked(files, 0)
-	sum.Skills = ranked(skills, 0)
+	sum.ActiveTurns = len(turns)
+	sum.ActiveDuration, sum.MedianTurn, sum.LongestTurn = turnStats(turns)
+	sum.Projects = rankedProjects(projects)
+	sum.TopSessions = rankSessions(sum.TopSessions)
+
+	// The headline figures and the ranked lists are the two scopes combined;
+	// Main and Sub stay available for anyone asking how much was delegated.
+	total := parser.NewScope()
+	total.Merge(&sum.Main)
+	total.Merge(&sum.Sub)
+	sum.Tokens = total.Tokens
+	sum.AssistantTurns = total.AssistantTurns
+	sum.ModelTokens = rankedModels(total.ByModel)
+	sum.Tools = ranked(total.ToolCounts, 0)
+	sum.Files = ranked(total.FileCounts, 0)
+	sum.Skills = ranked(total.SkillCounts, 0)
+
+	sum.BashCalls = total.ToolCounts["Bash"]
+	sum.Bash = ranked(total.BashCounts, 0)
+	sum.BashWithCd = total.BashWithCd
+	sum.RedundantBash, sum.RedundantBashTotal = redundantBash(total.BashCounts)
+
+	sum.ToolResults = total.ToolResults
+	sum.ToolErrors = ranked(total.ToolErrors, 0)
+	for _, c := range sum.ToolErrors {
+		sum.ToolErrorTotal += c.Count
+	}
+
+	sum.Compactions = rankedCompactions(compactions)
 	return sum
+}
+
+// turnStats reduces the pooled turn timings to the three figures that describe
+// them together. The median is the typical turn; the longest exposes the
+// outliers that dominate the total. Sorting a copy keeps Summarize pure — it
+// must not reorder its caller's session data.
+func turnStats(turns []time.Duration) (total, median, longest time.Duration) {
+	if len(turns) == 0 {
+		return 0, 0, 0
+	}
+	sorted := slices.Clone(turns)
+	slices.Sort(sorted)
+	for _, d := range sorted {
+		total += d
+	}
+	return total, sorted[len(sorted)/2], sorted[len(sorted)-1]
+}
+
+// addProject folds one session into its directory's aggregate.
+func addProject(into map[string]ProjectStats, s *parser.Session) {
+	cwd := s.Cwd
+	if cwd == "" {
+		cwd = "(unknown)"
+	}
+	cur := into[cwd]
+	cur.Cwd = cwd
+	cur.Sessions++
+	cur.Turns += s.AssistantTurns()
+	cur.Output += s.Tokens().Output
+	into[cwd] = cur
+}
+
+// rankedProjects orders directories by output tokens desc then cwd asc. Output
+// tokens rank them for the same reason they rank models: they track work done
+// rather than context size.
+func rankedProjects(m map[string]ProjectStats) []ProjectStats {
+	out := make([]ProjectStats, 0, len(m))
+	for _, p := range m {
+		out = append(out, p)
+	}
+	slices.SortFunc(out, func(a, b ProjectStats) int {
+		if c := cmp.Compare(b.Output, a.Output); c != 0 {
+			return c
+		}
+		return strings.Compare(a.Cwd, b.Cwd)
+	})
+	return out
+}
+
+// rankSessions keeps the heaviest sessions by output tokens, so "which session
+// cost that much" is answerable without dumping every session.
+func rankSessions(all []SessionStats) []SessionStats {
+	slices.SortFunc(all, func(a, b SessionStats) int {
+		if c := cmp.Compare(b.Output, a.Output); c != 0 {
+			return c
+		}
+		return strings.Compare(a.File, b.File)
+	})
+	if len(all) > topSessions {
+		all = all[:topSessions]
+	}
+	return all
+}
+
+// addCompaction folds one event into the per-trigger aggregate. Dropped tokens
+// come from each event's own pre/post sizes, never from the transcript's
+// cumulative counter, which is a running per-session total and would
+// multiply-count if summed.
+func addCompaction(into map[string]CompactionStats, c parser.Compaction) {
+	trigger := c.Trigger
+	if trigger == "" {
+		trigger = "unknown"
+	}
+	cur := into[trigger]
+	cur.Trigger = trigger
+	cur.Count++
+	// AvgPreTokens holds the running sum until rankedCompactions divides it.
+	cur.AvgPreTokens += c.PreTokens
+	cur.Dropped += c.Dropped()
+	into[trigger] = cur
+}
+
+// rankedCompactions orders the aggregates by count desc then trigger asc, and
+// turns the accumulated pre-token sums into averages.
+func rankedCompactions(m map[string]CompactionStats) []CompactionStats {
+	out := make([]CompactionStats, 0, len(m))
+	for _, c := range m {
+		if c.Count > 0 {
+			c.AvgPreTokens /= c.Count
+		}
+		out = append(out, c)
+	}
+	slices.SortFunc(out, func(a, b CompactionStats) int {
+		if c := cmp.Compare(b.Count, a.Count); c != 0 {
+			return c
+		}
+		return strings.Compare(a.Trigger, b.Trigger)
+	})
+	return out
+}
+
+// redundantBash groups the Bash calls that a dedicated tool should have handled
+// by the tool that replaces them, and returns their total.
+func redundantBash(counts map[string]int) (byTool []Count, total int) {
+	grouped := map[string]int{}
+	for cmd, n := range counts {
+		tool, ok := bashRedundant[cmd]
+		if !ok {
+			continue
+		}
+		grouped[tool] += n
+		total += n
+	}
+	return ranked(grouped, 0), total
 }
 
 // ranked turns a name->count map into a slice ordered by count desc then name
@@ -87,33 +331,104 @@ func ranked(m map[string]int, limit int) []Count {
 	return out
 }
 
-// RenderJSON serialises the summary as indented JSON for tool-to-tool use.
-func RenderJSON(s *Summary) ([]byte, error) {
-	return json.MarshalIndent(s, "", "  ")
+// rankedModels orders per-model usage by output tokens desc then name asc.
+// Output tokens rank it because they are what the model actually generated;
+// input and cache volume mostly track context size rather than work done.
+func rankedModels(m map[string]parser.Usage) []ModelUsage {
+	out := make([]ModelUsage, 0, len(m))
+	for name, u := range m {
+		out = append(out, ModelUsage{Name: name, Turns: u.Turns, Tokens: u.Tokens})
+	}
+	slices.SortFunc(out, func(a, b ModelUsage) int {
+		if c := cmp.Compare(b.Tokens.Output, a.Tokens.Output); c != 0 {
+			return c
+		}
+		return strings.Compare(a.Name, b.Name)
+	})
+	return out
 }
 
-// topFiles is how many touched files the table shows.
-const topFiles = 10
+// RenderJSON serialises the summary as indented JSON for tool-to-tool use.
+// detail adds the full per-session list, which is far larger than everything
+// else combined, so callers that only want the aggregate are not made to pay
+// for it.
+func RenderJSON(s *Summary, detail bool) ([]byte, error) {
+	out := *s
+	if !detail {
+		out.List = nil
+	}
+	return json.MarshalIndent(out, "", "  ")
+}
+
+// How many entries the longer-tailed sections keep.
+const (
+	topFiles    = 10
+	topBash     = 15
+	topProjects = 10
+	topSessions = 10
+)
 
 // RenderTable renders the summary as a plain-text report.
 func RenderTable(s *Summary) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Sessions:        %d\n", s.Sessions)
-	fmt.Fprintf(&b, "Assistant turns: %d\n", s.AssistantTurns)
-	fmt.Fprintf(&b, "Duration:        %s (sum of each session's first-to-last timestamp span, including idle gaps in resumed sessions)\n", s.Duration.Round(time.Second))
+	fmt.Fprintf(&b, "Assistant turns: %d (main %d / subagent %d)\n",
+		s.AssistantTurns, s.Main.AssistantTurns, s.Sub.AssistantTurns)
+	fmt.Fprintf(&b, "Active time:     %s (sum of turn_duration over %d recorded turns; median %s, longest %s)\n",
+		s.ActiveDuration.Round(time.Second), s.ActiveTurns,
+		s.MedianTurn.Round(time.Second), s.LongestTurn.Round(time.Second))
+	fmt.Fprintf(&b, "Session span:    %s (first-to-last timestamp, includes idle gaps in resumed sessions)\n",
+		s.Span.Round(time.Second))
+
 	b.WriteString("\nTokens\n")
 	fmt.Fprintf(&b, "  input          %d\n", s.Tokens.Input)
 	fmt.Fprintf(&b, "  output         %d\n", s.Tokens.Output)
 	fmt.Fprintf(&b, "  cache read     %d\n", s.Tokens.CacheRead)
 	fmt.Fprintf(&b, "  cache creation %d\n", s.Tokens.CacheCreation)
 
-	writeCounts(&b, "Models", s.Models, 0)
+	writeOrigin(&b, s)
+	writeModels(&b, s.ModelTokens, s.SyntheticTurns)
 	writeCounts(&b, "Tool calls", s.Tools, 0)
+	writeBash(&b, s)
+	writeToolResults(&b, s)
 	writeCounts(&b, "Skills", s.Skills, 0)
 	writeCounts(&b, "Top files", s.Files, topFiles)
+	writeCompactions(&b, s.Compactions)
+	writeProjects(&b, s.Projects)
+	writeTopSessions(&b, s.TopSessions, s.Sessions)
 
 	b.WriteString("\nNote: only Claude Code transcripts are parsed; other AI CLIs are not yet supported.\n")
 	return b.String()
+}
+
+// writeOrigin shows how much of the work ran in the main loop versus in
+// subagents, which is what makes under- or over-delegation visible.
+func writeOrigin(b *strings.Builder, s *Summary) {
+	b.WriteString("\nOrigin\n")
+	writeUsageRow(b, 8, "main", s.Main.AssistantTurns, s.Main.Tokens)
+	writeUsageRow(b, 8, "subagent", s.Sub.AssistantTurns, s.Sub.Tokens)
+}
+
+func writeModels(b *strings.Builder, models []ModelUsage, synthetic int) {
+	b.WriteString("\nModel tokens\n")
+	if len(models) == 0 {
+		b.WriteString("  (none)\n")
+	} else {
+		width := 0
+		for _, m := range models {
+			width = max(width, len(m.Name))
+		}
+		for _, m := range models {
+			writeUsageRow(b, width, m.Name, m.Turns, m.Tokens)
+		}
+	}
+	if synthetic > 0 {
+		fmt.Fprintf(b, "  (%d turns excluded: CLI-generated placeholder model)\n", synthetic)
+	}
+}
+
+func writeUsageRow(b *strings.Builder, width int, name string, turns int, t parser.Tokens) {
+	fmt.Fprintf(b, "  %-*s  turns %-7d output %-10d cache read %d\n", width, name, turns, t.Output, t.CacheRead)
 }
 
 func writeCounts(b *strings.Builder, title string, counts []Count, limit int) {
@@ -122,7 +437,9 @@ func writeCounts(b *strings.Builder, title string, counts []Count, limit int) {
 		b.WriteString("  (none)\n")
 		return
 	}
+	hidden := 0
 	if limit > 0 && len(counts) > limit {
+		hidden = len(counts) - limit
 		counts = counts[:limit]
 	}
 	width := 0
@@ -131,5 +448,99 @@ func writeCounts(b *strings.Builder, title string, counts []Count, limit int) {
 	}
 	for _, c := range counts {
 		fmt.Fprintf(b, "  %-*s  %d\n", width, c.Name, c.Count)
+	}
+	// Say what was cut rather than let a truncated list read as the whole set.
+	if hidden > 0 {
+		fmt.Fprintf(b, "  (%d more not shown)\n", hidden)
+	}
+}
+
+// writeBash opens up the single largest tool bucket. Bash dwarfs every other
+// tool, so "Bash: 5145" on its own says nothing about what the time went on.
+func writeBash(b *strings.Builder, s *Summary) {
+	writeCounts(b, fmt.Sprintf("Bash breakdown (%d calls)", s.BashCalls), s.Bash, topBash)
+	if s.BashCalls == 0 {
+		return
+	}
+	if s.RedundantBashTotal > 0 {
+		parts := make([]string, 0, len(s.RedundantBash))
+		for _, c := range s.RedundantBash {
+			parts = append(parts, fmt.Sprintf("%s %d", c.Name, c.Count))
+		}
+		fmt.Fprintf(b, "  -> %d replaceable by a dedicated tool (%s)\n",
+			s.RedundantBashTotal, strings.Join(parts, ", "))
+	}
+	if s.BashWithCd > 0 {
+		fmt.Fprintf(b, "  -> %d prefixed with cd (risks a permission prompt; pass absolute paths)\n", s.BashWithCd)
+	}
+}
+
+// writeToolResults reports how often tool calls failed and why. Failures only
+// appear in the results fed back to the assistant, never in its own turns.
+func writeToolResults(b *strings.Builder, s *Summary) {
+	b.WriteString("\nTool results\n")
+	if s.ToolResults == 0 {
+		b.WriteString("  (none)\n")
+		return
+	}
+	fmt.Fprintf(b, "  results  %d\n", s.ToolResults)
+	fmt.Fprintf(b, "  errors   %d (%.1f%%)\n",
+		s.ToolErrorTotal, 100*float64(s.ToolErrorTotal)/float64(s.ToolResults))
+	for _, c := range s.ToolErrors {
+		fmt.Fprintf(b, "    %-11s%d\n", c.Name, c.Count)
+	}
+}
+
+// writeProjects shows where the work went, grouped by the directory each
+// session ran in.
+func writeProjects(b *strings.Builder, projects []ProjectStats) {
+	b.WriteString("\nBy project (session cwd)\n")
+	if len(projects) == 0 {
+		b.WriteString("  (none)\n")
+		return
+	}
+	hidden := 0
+	if len(projects) > topProjects {
+		hidden = len(projects) - topProjects
+		projects = projects[:topProjects]
+	}
+	for _, p := range projects {
+		fmt.Fprintf(b, "  sessions %-5d turns %-6d output %-10d %s\n", p.Sessions, p.Turns, p.Output, p.Cwd)
+	}
+	if hidden > 0 {
+		fmt.Fprintf(b, "  (%d more not shown)\n", hidden)
+	}
+}
+
+// writeTopSessions names the heaviest sessions. Transcript filenames are UUIDs,
+// so the label is what makes a row actionable; it goes last because a title can
+// be any width and must not push the figures out of alignment.
+func writeTopSessions(b *strings.Builder, top []SessionStats, total int) {
+	fmt.Fprintf(b, "\nTop sessions by output tokens (%d of %d)\n", len(top), total)
+	if len(top) == 0 {
+		b.WriteString("  (none)\n")
+		return
+	}
+	for _, s := range top {
+		fmt.Fprintf(b, "  output %-10d turns %-6d active %-10s %s\n",
+			s.Output, s.Turns, s.ActiveDuration.Round(time.Second), s.Title)
+	}
+}
+
+// writeCompactions shows the context pressure each session ran under. An auto
+// trigger is direct evidence of hitting the context limit.
+func writeCompactions(b *strings.Builder, stats []CompactionStats) {
+	b.WriteString("\nCompactions\n")
+	if len(stats) == 0 {
+		b.WriteString("  (none)\n")
+		return
+	}
+	width := 0
+	for _, c := range stats {
+		width = max(width, len(c.Trigger))
+	}
+	for _, c := range stats {
+		fmt.Fprintf(b, "  %-*s  %-5d avg pre-tokens %-8d dropped %d\n",
+			width, c.Trigger, c.Count, c.AvgPreTokens, c.Dropped)
 	}
 }

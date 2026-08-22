@@ -26,4 +26,27 @@
         the relevant linters on changed files when a turn ends.
     </guidance>
   </workflow>
+
+  <tool_selection>
+    <principle>
+      Reach for the dedicated tool. Bash is for things that must actually execute, not for
+      reading and searching a repository by hand.
+    </principle>
+    <guidance>
+      - To read a file's contents, use `Read` — not `cat`, `head` or `tail`.
+      - To search code, use `Grep` — not `grep` or `rg`. To find files by name, use `Glob` — not
+        `find` or `ls`. A `grep` mid-pipeline (`git log | grep`) is filtering another command's
+        output and is fine; a `grep` that starts the command is a `Grep` call written by hand.
+      - Do NOT prefix `cd`. Pass absolute paths instead. A `cd` prefix triggers permission prompts
+        and resets the shell's working directory.
+      - Use Bash for work that genuinely runs: git / gh, mise tasks, go / terraform, tests,
+        formatters.
+    </guidance>
+    <rationale>
+      Measured with `scripts/agent-stats` over the local transcripts: 5,198 Bash calls against 27
+      `Grep` and 6 `Glob`. Of those Bash calls 1,895 had a leading command a dedicated tool
+      replaces, and 1,033 prefixed a `cd`. Re-run `agent-stats` and read `Bash breakdown` to see
+      whether this guidance is actually landing.
+    </rationale>
+  </tool_selection>
 </agents_config>
