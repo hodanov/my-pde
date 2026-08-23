@@ -148,41 +148,6 @@ func TestSummarizeBash(t *testing.T) {
 	if s.BashWithCd != 1 {
 		t.Errorf("BashWithCd = %d, want 1", s.BashWithCd)
 	}
-	// grep -> Grep and ls -> Glob are replaceable; git is not.
-	if s.RedundantBashTotal != 2 {
-		t.Errorf("RedundantBashTotal = %d, want 2 (git is not replaceable)", s.RedundantBashTotal)
-	}
-	want := []Count{{Name: "Glob", Count: 1}, {Name: "Grep", Count: 1}}
-	if len(s.RedundantBash) != len(want) {
-		t.Fatalf("RedundantBash = %+v, want %+v", s.RedundantBash, want)
-	}
-	for i := range want {
-		if s.RedundantBash[i] != want[i] {
-			t.Errorf("RedundantBash[%d] = %+v, want %+v", i, s.RedundantBash[i], want[i])
-		}
-	}
-}
-
-func TestRedundantBash(t *testing.T) {
-	t.Parallel()
-	byTool, total := redundantBash(map[string]int{
-		"cat": 1, "head": 2, "tail": 3, // -> Read
-		"grep": 4, "rg": 5, // -> Grep
-		"find": 6, "ls": 7, // -> Glob
-		"git": 100, "go": 100, // no tool equivalent
-	})
-	if total != 28 {
-		t.Errorf("total = %d, want 28 (git and go excluded)", total)
-	}
-	want := []Count{{Name: "Glob", Count: 13}, {Name: "Grep", Count: 9}, {Name: "Read", Count: 6}}
-	if len(byTool) != len(want) {
-		t.Fatalf("byTool = %+v, want %+v", byTool, want)
-	}
-	for i := range want {
-		if byTool[i] != want[i] {
-			t.Errorf("byTool[%d] = %+v, want %+v", i, byTool[i], want[i])
-		}
-	}
 }
 
 func TestSummarizeToolResults(t *testing.T) {
@@ -461,7 +426,7 @@ func TestRenderTable(t *testing.T) {
 		"Origin", "subagent", "Model tokens", "claude-opus-4-8",
 		"Edit", "a.go", "Skills", "dev-workflow", "Claude Code",
 		"1 turns excluded",
-		"Bash breakdown (3 calls)", "replaceable by a dedicated tool", "prefixed with cd",
+		"Bash breakdown (3 calls)", "prefixed with cd",
 		"Tool results", "errors   4 (21.1%)", "permission",
 		"Compactions", "manual", "avg pre-tokens 210000", "dropped 330000",
 		"By project (session cwd)", "Top sessions by output tokens (2 of 2)",

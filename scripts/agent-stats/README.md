@@ -13,7 +13,7 @@ Claude Code の `~/.claude/projects/**/*.jsonl` を 1 行ずつ寛容にパー�
 - アシスタントターン数と、それを **main loop / subagent** に分けた内訳（`Origin`）
 - **モデル別**の turn 数と output / cache read トークン（`Model tokens`）
 - tool 別呼び出し回数（Edit / Write / Bash / 各 MCP / skill など）
-- **Bash の内訳**（先頭コマンド別）と、専用ツールで代替可能な件数（`Bash breakdown`）
+- **Bash の内訳**（先頭コマンド別）と、`cd` を前置した件数（`Bash breakdown`）
 - **tool_result のエラー率**と内訳（permission 拒否 / hook ブロック / それ以外）
 - **コンテキスト compaction** の trigger 別回数・平均 preTokens・drop 量
 - Edit / Write / MultiEdit / NotebookEdit の `file_path` から頻出編集ファイル top-N
@@ -51,9 +51,11 @@ dedupe できないため、そのまま1行1カウントとして扱う）。
 ### 集計の読み方の注意
 
 - `Bash breakdown` は `input.command` の**1 行目の先頭コマンド**で分類する。heredoc の本文を
-  コマンドと誤認しないため、また `cmd | grep` のようなパイプ途中の `grep`（専用ツールに代替手段が
-  ない）を「代替可能」に数えないため。`cd` や `VAR=value` の前置は読み飛ばして実コマンドに帰属させ、
-  `cd` 前置自体は permission prompt を誘発するパターンとして別途カウントする。
+  コマンドと誤認しないため、また `cmd | grep` のようなパイプ途中の `grep` を `grep` 呼び出しとして
+  数えないため（それは別コマンドの出力を絞り込んでいるだけで、その呼び出しの仕事ではない）。
+  `cd` や `VAR=value` の前置は読み飛ばして実コマンドに帰属させ、`cd` 前置自体は別途カウントする。
+  この内訳は「Bash が何に使われたか」を見るための生データであり、どの呼び出しが望ましいかの
+  判断は含まない。
 - tool_result のエラー分類は CLI の**文言マッチによるヒューリスティック**（機械可読な理由フィールド
   が無い）。文言が変わると内訳は劣化するが、分類不能は `failure` に落ちるので総数は常に正確。
 - compaction の drop 量は各イベントの `preTokens - postTokens` から求める。transcript の
@@ -72,7 +74,7 @@ go run ./cmd/agent-stats
 
 # 対象ディレクトリ・期間・プロジェクトを絞る／JSON 出力
 go run ./cmd/agent-stats summary --dir ~/.claude/projects --since 24h --project my-pde
-go run ./cmd/agent-stats --json | jq '.tokens, .model_tokens, .redundant_bash'
+go run ./cmd/agent-stats --json | jq '.tokens, .model_tokens, .bash'
 
 # セッション 1 件ずつの明細まで含める（出力サイズは約 3 倍）
 go run ./cmd/agent-stats --json --detail | jq '.list[0]'

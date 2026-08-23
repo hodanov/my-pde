@@ -1,12 +1,12 @@
-# Plan: agent-stats の観測範囲拡張と Bash 偏重の是正
+# Plan: agent-stats の観測範囲拡張
 
 ## Background
 
 `scripts/agent-stats/` を全 transcript（234 ファイル / 7,772 turns / output 7.76M tokens）に対して実行し、生 transcript との突き合わせ調査を行った。結論は 2 つある。
 
-第一に、PDE 側に明確な非効率がある。最大のものは「専用ツールで済む操作を Bash で代替している」こと。Bash 5,145 回に対し Grep 27 回 / Glob 6 回。Bash コマンド文字列に含まれる数は `grep` 1,530 / `head -` 994 / `cat` 844 / `tail -` 725 / `find` 525 / `sed` 283。さらに先頭 `cd` が 1,008 件あり、これは harness が「permission prompt を誘発する」と明示的に警告しているパターンである。実際に権限拒否 31 件、`guard-dangerous` hook ブロック 11 件、非 0 exit 約 234 件が発生している。
+第一に、最大のツールバケツが単一の不透明な数になっている。Bash 5,145 回に対し Grep 27 回 / Glob 6 回だが、「Bash 5,145」からはその時間が何に使われたのかが一切読めない。Bash コマンド文字列に含まれる数は `grep` 1,530 / `head -` 994 / `cat` 844 / `tail -` 725 / `find` 525 / `sed` 283、先頭 `cd` が 1,008 件。権限拒否 31 件、`guard-dangerous` hook ブロック 11 件、非 0 exit 約 234 件も、どのコマンドで起きているのか紐付かない。
 
-第二に、その非効率を agent-stats では追跡できない。transcript には未使用の信号が大量にあり、改善を打っても効果を定点観測できない。
+第二に、transcript には未使用の信号が大量にある。turn 所要時間、compaction、tool_result のエラー、モデル別のトークン按分、subagent の分離。いずれも記録されているのに集計されておらず、PDE に手を入れても効果を定点観測できない。
 
 よって「計測を先に直し、そのうえで PDE を直す」順で進める。計測のない改善は効果検証ができず、このツールを作った目的（ローカル観測）に反する。
 
@@ -51,7 +51,7 @@ resume / compact による transcript 間の二重カウントを疑ったが、
 ## Design policy
 
 - **parser 隔離を守る。** transcript スキーマを知るのは `internal/parser` だけ。新しい行種（`system` / `user` / `ai-title` / `agent-name`）の解釈もここに閉じ、レポート層へ波及させない。寛容パースの方針（未知フィールド無視・壊れ行 skip）は維持する。
-- **過大申告しない。** `turn_duration` は新しめの CLI しか書かないため、カバーした turn 数を必ず併記する。分布が極端に歪むので合算値を単独で出さず median と最長を添える。Bash の「専用ツールで代替可能」判定は、先頭コマンドが該当する場合のみ数える（`cmd | grep` のような正当なパイプラインを誤検出しない）。打ち切った一覧には残件数を出す。
+- **過大申告しない。** `turn_duration` は新しめの CLI しか書かないため、カバーした turn 数を必ず併記する。分布が極端に歪むので合算値を単独で出さず median と最長を添える。Bash の内訳は先頭コマンドにのみ帰属させる（`cmd | grep` の `grep` を `grep` 呼び出しとして数えない）。打ち切った一覧には残件数を出す。
 - **単価をコードに焼き込まない。** コスト概算は有用だが単価は腐る。かつこの環境は `CLAUDE_CODE_USE_BEDROCK=1` で Bedrock 課金であり API 価格と異なる。`--prices <file>` を渡したときだけ算出する任意機能に留め、単価表はリポジトリにコミットしない。
 - **PDE 側の是正は非破壊から始める。** Bash 偏重には、まず `agents.xml` のソフトな誘導と計測指標を入れる。PreToolUse hook による強制は正当なパイプラインまで阻害しうるため、効果を測ってから次サイクルで判断する。
 
@@ -90,21 +90,13 @@ Active time:     165h26m54s (sum of turn_duration over 505 recorded turns; media
 Session span:    1255h29m32s (first-to-last timestamp, includes idle gaps in resumed sessions)
 ```
 
-### 2. 非効率の可視化
+### 2. 最大バケツの内訳化
 
 Bash の `tool_use` から `input.command` を取り、**1 行目の先頭トークン**を正規化キーにして `Scope.BashCounts` に積む。複数行 heredoc で `EOF` や `###` を拾う誤集計を避けるため先頭行のみを見る（調査時に実際に踏んだ罠）。`cd` / `env VAR=…` のような前置は読み飛ばして実コマンドまで進める。
 
-併せて「専用ツールで代替可能」判定を別カウンタで持つ。
+`Bash breakdown` セクションとして先頭コマンド別の件数を出す。`cd` 前置は実コマンド側に帰属させるので、それ自体は `Scope.BashWithCd` として別に数える。
 
-```go
-// bashRedundant maps a shell command to the dedicated tool that should replace it.
-var bashRedundant = map[string]string{
-    "cat": "Read", "head": "Read", "tail": "Read",
-    "grep": "Grep", "rg": "Grep", "find": "Glob", "ls": "Glob",
-}
-```
-
-`Bash breakdown` セクションと `Redundant Bash: N (Read: n, Grep: n, Glob: n)` の 1 行サマリを出す。これがステップ 5 の before / after 指標になる。`cd` 前置は実コマンド側に帰属させるので、それ自体は `Scope.BashWithCd` として別に数える（permission prompt を誘発するパターンとして追う）。
+**この内訳に価値判断は載せない。** 当初は `cat` / `grep` / `find` を「専用ツールで代替可能」と数える `Redundant Bash` 指標を置く設計だったが、ステップ 5 の見直し（後述）に伴って撤回した。指標が下がっても実コストが下がらないため、観測ループとして空回りする。出すのはコマンド別の生データと `cd` 前置件数だけとし、どの呼び出しが望ましいかの判断は含めない。
 
 parser に `type=="user"` の `tool_result` 処理を追加し `is_error==true` を数える。内訳は content 先頭のパターンで `permission`（`The user doesn't want to` で始まる）/ `hook`（`PreToolUse:` / `PostToolUse:` を含む）/ `failure`（それ以外）に 3 分類する。文字列マッチはヒューリスティックなのでその旨を `parser.go` にコメントし、分類不能は `failure` に落とす。
 
@@ -133,22 +125,25 @@ parser に `type=="user"` の `tool_result` 処理を追加し `is_error==true` 
 
 `internal/report/report_test.go` の `TestSummarize` / `TestRenderTable` を新スキーマに追随させる。加えて `Summarize` が入力の `TurnDurations` を並べ替えないこと（median 計算のための sort が呼び出し側のスライスを壊さないこと）と、打ち切った一覧が `(N more not shown)` を出すことを押さえる。
 
-### 5. PDE 側の是正
+### 5. PDE 側の是正 — 検討したが取り下げ
 
-`ai-agents/agents.xml` に `<tool_selection>` セクションを追加する。`~/.claude/CLAUDE.md` は `mise run claude-link` でこのファイルの symlink になっているため、ここを直せば全プロジェクトに効く。要点は次の 4 点。
+当初は `ai-agents/agents.xml` に `<tool_selection>` セクションを追加し、`cat` / `head` / `tail` → `Read`、`grep` / `rg` → `Grep`、`find` / `ls` → `Glob` への誘導を常設ルールとして重ねる設計だった。レビューで前提が崩れたため**追加しない**。理由は次の 6 点。
 
-- ファイル内容を見る目的の `cat` / `head` / `tail` は `Read` を使う
-- コード検索の `grep` / `rg` は `Grep`、ファイル名探索の `find` / `ls` は `Glob` を使う
-- `cd` を前置せず絶対パスを渡す（permission prompt を誘発する）
-- Bash は実行が必要な処理（git / gh / mise / go / terraform / テスト実行）に限る
+- **速度差がない。** 専用ツールも Bash も 1 往復。パフォーマンスはこの話の論点ではなかった。
+- **permission prompt の削減にならない。** `ai-agents/settings/claude/settings.json` の allow に `cat *` / `grep *` / `find *` / `ls *` / `head *` / `tail *` / `rg *` / `sed -n *` / `cd *` がすべて入っており、さらに `sandbox.enabled: true` + `autoAllowBashIfSandboxed: true`。自分で許可済みにしたコマンドを、ルールで使うなと書くことになる。
+- **Bash の方が効率的な場面が多い。** パイプライン、`sed -n '130,160p'` のような範囲指定、1 回の呼び出しで複数コマンド。専用ツール 3〜5 回分が 1 往復で済み、往復もトークンも少ない。
+- **`agents.xml` は 4 CLI 共有。** `~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` / `~/.cursor/AGENTS.md` / `~/.copilot/copilot-instructions.md` の symlink 元。`Read` / `Grep` / `Glob` は Claude Code のツール名であり、shell 中心の Codex には存在しないツールの使用を指示することになる。
+- **harness のモード指示と衝突する。** auto mode は「`cat` / `head` / `sed -n` で読め」と明示的に指示してくる。常設ルールとモードが正面から矛盾する。
+- **`<rationale>` の実測値が腐る。** 伸び続けるカウンタのスナップショットを常設ルールに焼くと、書いた瞬間から古くなる（実際、同一 PR 内でこの指標が 3 つの異なる値を持つ状態になった）。かつ `scripts/agent-stats` は my-pde ローカルのパスで、全プロジェクトに効くファイルからは参照できない。
 
-harness 自身も同趣旨の指示を持つが実測で守られていないため、プロジェクト横断の常設ルールとして重ねる。指針には `<rationale>` として実測値（Bash 件数・`Redundant Bash`・`cd` 前置件数）と「`agent-stats` を再実行して `Bash breakdown` を読め」を書き添える。守る理由が数字で示されていない指針は守られない、というのが今回の出発点そのものだから。
+実害が確認できたのは 1 点のみ。**Bash 経由のファイル書き込み（`sed -i` / `>` / heredoc / `tee`）は PostToolUse hook が発火しない。** hook の matcher が `Write|Edit|MultiEdit` で、`ai-agents/settings/claude/hooks/goimports.sh` などは `tool_input.file_path` を読む実装のため、shell 書き込みでは goimports / prettier / shfmt / stylua / tombi が素通りする。ただし Stop hook の `lint-changed.sh` が git diff ベースで拾う backstop があるため、本サイクルでは着手しない（ステップ 6 参照）。
 
 `AGENTS.md` にも実態との乖離がある（`AGENTS.md:32` の Go apps 一覧に `agent-stats` / `scaffold` が漏れている、`AGENTS.md:10-19` の Project Structure に `scripts/agent-stats/` の行がない、`AGENTS.md:68,74` が空になった `~/.claude/rules/` を参照したまま）。ただし AGENTS.md の更新は専用の `ai-agents/skills/update-agents-md/` 経由で別途対応する方針のため、本計画では `AGENTS.md` を変更しない。
 
 ### 6. 今回やらないこと（計測してから決める）
 
-- **Bash 誘導の hook 強制。** ステップ 5 のソフトな誘導とステップ 2 の `Redundant Bash` 指標で効果を見る。不十分なら次サイクルで PreToolUse hook を検討する。
+- **Bash 誘導の hook 強制。** ステップ 5 で前提ごと取り下げたため、PreToolUse hook による強制も検討しない。専用ツールへの誘導そのものを行わない。
+- **shell 経由のファイル書き込みの検知。** PostToolUse の整形 hook が発火しない実害は実在するが、検知には `>` / `>>` / `2>&1` / `/dev/null` / heredoc / `sed -i` の切り分けを含むヒューリスティックが要る。誤検出の設計とテストを詰めてから次サイクルで入れる。
 - **`dev-workflow` skill の発火率。** `agents.xml` は非自明な実装で必須と書いているが実測は 115 セッション中 35 回。ただし「非自明な実装だったセッション」の分母が現状のデータでは取れない。既存の `skill-observe` / `skill-improve` を回して分母付きで評価する。
 - **auto compaction 16 回への対処。** ステップ 2 でプロジェクト別・セッション別に出してから原因（大きいファイルの全読み、subagent 未活用など）を特定する。
 - **`stop_hook_summary` の集計。** 盲点としては挙げたが本サイクルでは採らない。`hookErrors` 42 件の中身（どの hook がなぜ落ちたか）を見ずに件数だけ出しても打ち手にならない。`lint-changed.sh` の失敗内容と紐付けられる形にしてから入れる。
@@ -164,9 +159,8 @@ harness 自身も同趣旨の指示を持つが実測で守られていないた
 | `scripts/agent-stats/internal/report/report_test.go` | 新スキーマ追随                                                                                                                                                                          |
 | `scripts/agent-stats/cmd/agent-stats/main.go`        | subagent transcript の session キー畳み込み、`--detail` 追加、WalkDir のエラー扱い修正                                                                                                  |
 | `scripts/agent-stats/README.md`                      | 集計項目の追記、1 セッション = 複数ファイル・時間の 2 指標・読み方の注意の各節を追加                                                                                                    |
-| `ai-agents/agents.xml`                               | `<tool_selection>` 追加                                                                                                                                                                 |
 
-コミット単位は、ステップ 1 + 4（スキーマ変更のため parser / report のテストが同時に動くので分割しない）→ subagent 畳み込みの修正 → ステップ 2 + 4 → ステップ 3 + README → ステップ 5 の 5 本。畳み込みは他と独立した不具合修正なので単独で切る。
+コミット単位は、ステップ 1 + 4（スキーマ変更のため parser / report のテストが同時に動くので分割しない）→ subagent 畳み込みの修正 → ステップ 2 + 4 → ステップ 3 + README の 4 本。畳み込みは他と独立した不具合修正なので単独で切る。ステップ 5 は取り下げたため成果物を持たない。
 
 ## Risks and mitigations
 
@@ -210,17 +204,11 @@ go run ./cmd/agent-stats --json --detail | jq '.list[0]'
 
 Bash の先頭コマンドだけは jq の素朴な「1 トークン目を数える」集計と一致しない。`LeadingCommand` は `cd` / `env` / `VAR=value` の前置を読み飛ばして実際に仕事をするコマンドへ帰属させるため、jq が `cd` に数える分（先頭 `cd` 1,008 件）が `grep` / `cat` 側へ移る。`cd` 前置そのものは `BashWithCd` として別に数えているので情報は失われない。この差は設計どおりであり、jq 側を正とみなして直してはならない。
 
-ステップ 5 のデプロイ確認。`~/.claude/CLAUDE.md` の symlink が既に `ai-agents/agents.xml` を指していれば `mise run claude-link` は不要（sandbox はホームディレクトリへの書き込みを拒否するため実行しても失敗する）。
-
-```sh
-readlink ~/.claude/CLAUDE.md   # ai-agents/agents.xml を指していること
-```
-
-ステップ 5 の効果は次回以降のセッションで `Redundant Bash` と `Grep` / `Glob` の比率が改善しているかで判定する。
+ステップ 5 を取り下げたため `ai-agents/agents.xml` は変更しない。`git diff main -- ai-agents/agents.xml` が空であることを確認する（このファイルは `~/.claude/CLAUDE.md` の symlink 元で全プロジェクトに即時反映されるため、意図しない差分を残さない）。
 
 ## Open questions
 
 着手前に確認した 2 点はいずれも確定済み。残る未解決の問いはない。
 
 - **`AGENTS.md` の追随は本計画では行わない。** `ai-agents/settings/claude/rules/` の 5 ファイル削除により `~/.claude/rules/` が空になった一方 `AGENTS.md:68,74` は参照を残しているが、AGENTS.md の更新は専用の `ai-agents/skills/update-agents-md/` 経由で別途対応する。Go apps 一覧の漏れも同様に扱う。
-- **Bash 偏重への対処は指針 + 計測に留める。** PreToolUse hook による強制は本サイクルでは行わず、ステップ 5 の指針とステップ 2 の `Redundant Bash` 指標で効果を測ってから次サイクルで判断する。
+- **Bash 偏重そのものは是正対象としない。** レビューを経て、専用ツールへの誘導は速度・permission・効率のいずれの面でも正当化できないと結論した（ステップ 5）。本サイクルの成果物は観測の拡張のみとし、`agents.xml` は変更しない。

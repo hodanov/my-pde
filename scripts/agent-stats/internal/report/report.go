@@ -56,23 +56,6 @@ type CompactionStats struct {
 	Dropped      int    `json:"dropped_tokens"`
 }
 
-// bashRedundant maps a shell command to the dedicated tool that should have run
-// instead. Whether a shell command is redundant is a tool-selection judgement,
-// not part of the transcript schema, so it lives here rather than in the parser.
-//
-// Only the leading command counts: `rg foo` is a Grep call written by hand, but
-// the grep in `git log | grep foo` is filtering another command's output and has
-// no tool equivalent. Counting the latter would overstate the problem.
-var bashRedundant = map[string]string{
-	"cat":  "Read",
-	"head": "Read",
-	"tail": "Read",
-	"grep": "Grep",
-	"rg":   "Grep",
-	"find": "Glob",
-	"ls":   "Glob",
-}
-
 // Summary is the aggregate over a set of sessions.
 type Summary struct {
 	Sessions       int           `json:"sessions"`
@@ -112,12 +95,6 @@ type Summary struct {
 	BashCalls  int     `json:"bash_calls"`
 	Bash       []Count `json:"bash"`
 	BashWithCd int     `json:"bash_with_cd"`
-
-	// RedundantBash counts, per replacing tool, the Bash calls a dedicated tool
-	// should have handled. This is the before/after measure for tool-selection
-	// guidance.
-	RedundantBash      []Count `json:"redundant_bash"`
-	RedundantBashTotal int     `json:"redundant_bash_total"`
 
 	// ToolResults is every tool result seen — the denominator for the error
 	// rate — and ToolErrors the failures by kind.
@@ -186,7 +163,6 @@ func Summarize(sessions []parser.Session) Summary {
 	sum.BashCalls = total.ToolCounts["Bash"]
 	sum.Bash = ranked(total.BashCounts, 0)
 	sum.BashWithCd = total.BashWithCd
-	sum.RedundantBash, sum.RedundantBashTotal = redundantBash(total.BashCounts)
 
 	sum.ToolResults = total.ToolResults
 	sum.ToolErrors = ranked(total.ToolErrors, 0)
@@ -295,21 +271,6 @@ func rankedCompactions(m map[string]CompactionStats) []CompactionStats {
 		return strings.Compare(a.Trigger, b.Trigger)
 	})
 	return out
-}
-
-// redundantBash groups the Bash calls that a dedicated tool should have handled
-// by the tool that replaces them, and returns their total.
-func redundantBash(counts map[string]int) (byTool []Count, total int) {
-	grouped := map[string]int{}
-	for cmd, n := range counts {
-		tool, ok := bashRedundant[cmd]
-		if !ok {
-			continue
-		}
-		grouped[tool] += n
-		total += n
-	}
-	return ranked(grouped, 0), total
 }
 
 // ranked turns a name->count map into a slice ordered by count desc then name
@@ -462,16 +423,8 @@ func writeBash(b *strings.Builder, s *Summary) {
 	if s.BashCalls == 0 {
 		return
 	}
-	if s.RedundantBashTotal > 0 {
-		parts := make([]string, 0, len(s.RedundantBash))
-		for _, c := range s.RedundantBash {
-			parts = append(parts, fmt.Sprintf("%s %d", c.Name, c.Count))
-		}
-		fmt.Fprintf(b, "  -> %d replaceable by a dedicated tool (%s)\n",
-			s.RedundantBashTotal, strings.Join(parts, ", "))
-	}
 	if s.BashWithCd > 0 {
-		fmt.Fprintf(b, "  -> %d prefixed with cd (risks a permission prompt; pass absolute paths)\n", s.BashWithCd)
+		fmt.Fprintf(b, "  -> %d prefixed with cd (resets the shell's working directory; pass absolute paths)\n", s.BashWithCd)
 	}
 }
 
