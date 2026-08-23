@@ -122,12 +122,22 @@ $files
 EOF
 
 # Tests first, then linters. Go apps under scripts/ ship <app>:test / <app>:lint
-# mise tasks by repo convention (AGENTS.md).
+# mise tasks by repo convention (AGENTS.md). Cloud sessions (routines) ship Go
+# but no mise, so fall back to the underlying commands rather than reporting a
+# blanket SKIP there.
 for app in $go_apps; do
-	run_check mise mise run "$app:test"
+	if command -v mise >/dev/null 2>&1; then
+		run_check mise mise run "$app:test"
+	else
+		run_check go go -C "scripts/$app" test ./...
+	fi
 done
 for app in $go_apps; do
-	run_check mise mise run "$app:lint"
+	if command -v mise >/dev/null 2>&1; then
+		run_check mise mise run "$app:lint"
+	else
+		run_check golangci-lint sh -c "cd 'scripts/$app' && golangci-lint run ./..."
+	fi
 done
 if [ "${#lua_files[@]}" -gt 0 ]; then
 	run_check stylua stylua --check "${lua_files[@]}"

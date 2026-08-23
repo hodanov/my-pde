@@ -15,9 +15,9 @@
 
 ## リポジトリ構成（提案の土台。ここを実際に読んで現状を把握する）
 
-- skills: `ai-agents/skills/<name>/SKILL.md`。frontmatter は name / description（任意で argument-hint, disable-model-invocation, metadata.version）、本文は『# /\<name\> スキル』→ `## Goal` / `## Workflow` / `## Notes` の構成。既存スキルと重複させない。
+- skills: `ai-agents/skills/<name>/SKILL.md`。書式規約は `.claude/rules/skill-authoring.md` に従う（`ai-agents/skills/**` を触ると自動で載る）。既存スキルと重複させない。
 - hooks: `ai-agents/settings/{claude,cursor,copilot}/hooks/*.sh` と、配線先の settings.json（claude は `settings/claude/settings.json` の hooks: PostToolUse の matcher="Write|Edit|MultiEdit" / Stop / Notification）。既存 hook と重複させない（実体は各 hooks/ ディレクトリを読んで確認する）。
-- デプロイ経路: ルートの `ai-agents/Makefile` と `ai-agents/scripts/copy-entries.sh` が skills/agents/settings を `~/.{codex,claude,cursor,copilot}` へ配布する。新規 hook は 3 エディタ（claude/cursor/copilot）分の配線と Makefile/copy 経路への影響も考慮する。
+- デプロイ経路: ルートの `mise.toml` のタスク（`skills-copy` / `agents-copy` / `settings-copy`、実体は `ai-agents/scripts/copy-entries.sh`）が skills/agents/settings を `~/.{codex,claude,cursor,copilot}` へ配布する。新規 hook は 3 エディタ（claude/cursor/copilot）分の配線と配布経路への影響も考慮する。
 
 ## 今日のタスク
 
@@ -38,7 +38,7 @@
    - (a) 何を・なぜ
    - (b) hook か skill かと、その機構を選ぶ理由（上記ブログのフレームワークに沿って）
    - (c) 出典 URL（あれば）
-   - (d) どこにどう置くか — skill なら `ai-agents/skills/<name>/SKILL.md` の frontmatter 雛形、hook なら `ai-agents/settings/{claude,cursor,copilot}/hooks/<name>.sh` と settings.json の配線、および Makefile/copy-entries への影響
+   - (d) どこにどう置くか — skill なら `ai-agents/skills/<name>/SKILL.md` の frontmatter 雛形、hook なら `ai-agents/settings/{claude,cursor,copilot}/hooks/<name>.sh` と settings.json の配線、および mise タスク / copy-entries への影響
    - (e) リスク・留意点
 6. コード変更や PR 作成はしない。Issue 起票のみ。既存（Open 提案済み / Close 済み rejected）と被らない新しい改善提案がどうしても見つからない場合に限り、起票せず終了してよい。
 
