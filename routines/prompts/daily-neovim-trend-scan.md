@@ -13,7 +13,7 @@
 
 ## リポジトリ構成
 
-- Neovim 設定は `nvim/config/` 配下。`init.lua` がエントリ、プラグインは lazy.nvim（`nvim/config/lua/lazy_nvim.lua`, `plugins.lua`）で管理。LSP 設定は `nvim/config/lua/lsp/`。主なプラグイン: blink.cmp, conform, nvim-lint, treesitter, telescope, gitsigns, lualine, nvim-dap, indent-blankline, textlint。
+- Neovim 設定は `nvim/config/` 配下。`init.lua` がエントリ、プラグインは lazy.nvim（`nvim/config/lua/lazy_nvim.lua`, `plugins.lua`）で管理。LSP 設定は `nvim/config/lua/lsp/`。主なプラグイン: blink.cmp, conform, nvim-lint, treesitter, telescope, gitsigns, lualine, nvim-dap, textlint。
 
 ## 今日のタスク
 

@@ -19,11 +19,6 @@ return {
 		end,
 	},
 	{ -- Appearance
-		"lukas-reineke/indent-blankline.nvim",
-		lazy = true,
-		event = { "BufRead", "BufNewFile" },
-	},
-	{ -- Appearance
 		"nvim-lualine/lualine.nvim",
 		lazy = true,
 		event = { "BufRead", "BufNewFile" },
