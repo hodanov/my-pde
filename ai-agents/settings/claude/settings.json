@@ -208,7 +208,14 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
-    "excludedCommands": ["mise", "terraform", "tflint", "go", "git", "gh"],
+    "excludedCommands": [
+      "mise *",
+      "terraform *",
+      "tflint *",
+      "go *",
+      "git *",
+      "gh *"
+    ],
     "filesystem": {
       "allowWrite": [
         "~/Library/Caches/go-build",
