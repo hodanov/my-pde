@@ -25,6 +25,21 @@ require("gitsigns").setup({
 		map("n", "<leader>gp", gs.preview_hunk, "Preview hunk")
 		map("n", "<leader>gi", gs.preview_hunk_inline, "Preview hunk inline")
 
+		-- 変更前/変更後を並べたネイティブ diff（ハンク断片では判断できない変更用）。
+		-- <leader>gp / <leader>gi はハンク 1 個の中しか見えないため、関数の並び替え
+		-- （移動なのか書き直しなのか）や大部分が書き換わったファイルは読めない。
+		-- diffthis は base 側の内容をバッファとして起こすので、スクロール同期付きで
+		-- 並べて読めるうえ、変更前の側でも / 検索や yank がそのまま効く。
+		-- 比較対象は <leader>gb で設定中の base に自動追従する
+		-- （既定 = index / トグル後 = ベースブランチとの merge-base）。
+		-- split = "aboveleft" で「変更前(base)を左・現在のバッファを右」に並べ、
+		-- GitHub の PR diff と同じ並びにする（splitright = true のままだと base が右に出る）。
+		-- diff モードに入ると上の ]c / [c はネイティブ実装へ委譲される。
+		-- 閉じるのは :q。diffopt の closeoff（既定で有効）により残った側の diff も解除される。
+		map("n", "<leader>gd", function()
+			gs.diffthis(nil, { split = "aboveleft" })
+		end, "Diff current file against gitsigns base (side-by-side)")
+
 		-- blame（レビュー中に「この行はいつ・なぜ入ったか」を辿る導線）
 		-- <leader>gB: ファイル全体の blame をスクロール同期の縦分割で開く。
 		--   窓内で s = そのコミットの詳細(メッセージ＋差分)を縦分割 / S = 新規タブ /
