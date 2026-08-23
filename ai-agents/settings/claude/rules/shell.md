@@ -5,5 +5,6 @@ paths:
 
 # Shell script rules
 
-- Lint with `shellcheck`; format with `shfmt`.
 - New scripts use `#!/usr/bin/env bash` and `set -eu`.
+
+<!-- lint/format (shellcheck, shfmt) is enforced by hooks, not by this rule. -->
