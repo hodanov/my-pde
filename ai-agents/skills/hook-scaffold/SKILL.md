@@ -9,7 +9,7 @@ description: >-
 disable-model-invocation: true
 argument-hint: "<フック名> [用途の一言]"
 metadata:
-  version: 2
+  version: 3
 ---
 
 # /hook-scaffold スキル
@@ -44,6 +44,7 @@ formatter 系は 1 ファイル種別 1 スクリプトで揃っているので�
 | 用途                   | claude のイベント                                 | 現行の配線                |
 | ---------------------- | ------------------------------------------------- | ------------------------- |
 | 起動時の環境チェック   | `SessionStart`                                    | `toolchain-doctor.sh`     |
+| 毎プロンプトの文脈注入 | `UserPromptSubmit`                                | `git-state.sh`            |
 | Bash 実行前の遮断      | `PreToolUse`（matcher `Bash`）                    | `guard-dangerous-bash.sh` |
 | ファイル編集後の整形   | `PostToolUse`（matcher `Write\|Edit\|MultiEdit`） | formatter 6 本            |
 | 応答終了時のまとめ処理 | `Stop`                                            | `lint-changed.sh` ほか    |
@@ -64,6 +65,7 @@ report-only（報告のみで止めない）で足りるなら、`exit 0` + stde
 
 - **展開する**: `PostToolUse`（Write/Edit）相当のファイル編集フック。cursor の `afterFileEdit`、copilot の `postToolUse` に同じ意味で載る（既存 formatter 6 本がこの形）。
 - **展開しない**: `Stop` / `SessionStart` / `WorktreeCreate` / macOS 通知など Claude 固有機構に依存するもの。既存の `lint-changed` / `guard-dangerous-bash` / `toolchain-doctor` / `notify-macos` は claude 専用。
+- **展開しない（他 CLI 側の機能不足）**: `UserPromptSubmit` のコンテキスト注入。cursor の `beforeSubmitPrompt` は allow/deny のみで注入できず、copilot の `userPromptSubmitted` は `additionalContext` を無視する（プロンプト本文を差し替える `modifiedPrompt` しかない）。`git-state` は claude 専用。
 - cursor CLI（cursor-agent）は定義しても一部イベントしか実際に飛ばさないという報告がある。迷ったら claude だけに配線し、必要になってから広げる。
 
 ### Step 5: スクリプト生成
