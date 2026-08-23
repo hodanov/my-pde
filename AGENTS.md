@@ -7,7 +7,8 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 
 - `environment/`: Docker image and toolchain pins.
 - `nvim/`: Neovim configuration (`init.lua` + modular Lua).
-- `scripts/ai-bridge/`: Go daemon bridging Neovim to host-side AI CLIs. See `scripts/ai-bridge/AGENTS.md`.
+- `scripts/`: Go apps, one module per directory (`agent-stats`, `ai-bridge`, `config-diff`, `go-verify`, `nvim-sync`, `pipeline-metrics`, `scaffold`). Each has its own `README.md`.
+  - `scripts/ai-bridge/`: Go daemon bridging Neovim to host-side AI CLIs. See `scripts/ai-bridge/AGENTS.md`.
 - `ai-agents/`: AI agent/skill definitions and settings deployed to `~/.claude`, `~/.cursor`, `~/.codex`.
   - `ai-agents/agents/`: subagent definitions (review, investigation).
   - `ai-agents/skills/`: reusable skills (commit, review, blog, log export, etc.).
@@ -29,7 +30,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 
 Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mise.toml` at the repo root. Run `mise tasks ls` for the full list.
 
-### Go apps under `scripts/` (ai-bridge, nvim-sync, config-diff, go-verify)
+### Go apps under `scripts/` (agent-stats, ai-bridge, config-diff, go-verify, nvim-sync, pipeline-metrics, scaffold)
 
 - `mise run <app>:build` — build the binary (e.g. `mise run ai-bridge:build`).
 - `mise run <app>:test` — run Go tests; `mise run go:test` runs all apps.
@@ -65,14 +66,14 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 
 ## Coding Style
 
-- Per-language lint/format conventions load on demand from path-scoped rules in `.claude/rules/` (and personal rules in `~/.claude/rules/`) when you touch matching files.
+- Per-language conventions that a linter cannot check load on demand from path-scoped rules in `.claude/rules/` (and personal rules in `~/.claude/rules/`) when you touch matching files. Conventions a formatter/linter _can_ enforce are left to hooks rather than duplicated as rules.
 - Dockerfile/toolchain version constraints live in `.claude/rules/dockerfile-versions.md`; tool versions are pinned and updated via workflows or scripts, not manual edits. For Claude this is enforced by the `guard-version-pins.sh` PreToolUse hook.
 - For sub-directory conventions, see each directory's `AGENTS.md`. (`scripts/ai-bridge/` also has a `CLAUDE.md` importing its `AGENTS.md` so the Go conventions auto-load for Claude.)
 
 ## Testing & Linting
 
-- Per-language lint/format commands load on demand as path-scoped rules (`.claude/rules/`, `~/.claude/rules/`): Go, Lua, Markdown, TOML, JSON/YAML, Shell, Terraform.
-- Not covered by rules: Dockerfile lint (`hadolint environment/docker/nvim.dockerfile`).
+- `mise run lint` runs every repo-wide linter (CI parity); `mise run verify:changed` maps changed files to the matching tests/linters. Run them from the repository root — markdownlint and friends resolve their config relative to cwd.
+- In Claude this is automatic: `PostToolUse` hooks format on write, and the `lint-changed.sh` Stop hook reports what still fails, naming the tool.
 - AI Bridge has Go unit tests: `mise run ai-bridge:test`.
 - No repository-level test suite beyond per-directory checks.
 - In Claude, the repo-local Stop hook `.claude/hooks/test-changed.sh` auto-runs `go test` for changed `scripts/<app>` apps (report-only, non-blocking; opt out with `TEST_CHANGED_DISABLE=1`).
