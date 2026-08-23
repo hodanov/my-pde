@@ -442,6 +442,51 @@ rm -f "$HOME/.config/wezterm"
 echo "Unlinked $HOME/.config/wezterm"
 '''
 
+# ~/.zshrc is deliberately not wired into dotfiles-link: replacing the login
+# shell config is far more disruptive than a wezterm directory symlink, so it
+# stays an explicit, opt-in command.
+[tasks.zshrc-link]
+description = "Symlink dotfiles/.zshrc -> ~/.zshrc (backs up an existing regular file)"
+run = '''
+if [ -e "$HOME/.zshrc" ] && [ ! -L "$HOME/.zshrc" ]; then
+  backup="$HOME/.zshrc.bak"
+  if [ -e "$backup" ]; then
+    backup="$HOME/.zshrc.bak.$(date +%Y%m%d%H%M%S)"
+  fi
+  mv "$HOME/.zshrc" "$backup"
+  echo "Backed up existing $HOME/.zshrc -> $backup"
+fi
+ln -sfn "{{config_root}}/dotfiles/.zshrc" "$HOME/.zshrc"
+echo "Linked {{config_root}}/dotfiles/.zshrc -> $HOME/.zshrc"
+'''
+
+[tasks.zshrc-unlink]
+description = "Remove the ~/.zshrc symlink (restores the most recent backup if present)"
+run = '''
+if [ ! -L "$HOME/.zshrc" ]; then
+  echo "$HOME/.zshrc is not a symlink; leaving it alone."
+  exit 0
+fi
+rm -f "$HOME/.zshrc"
+echo "Unlinked $HOME/.zshrc"
+# Restore the newest backup, not just .zshrc.bak: zshrc-link falls back to
+# .zshrc.bak.<timestamp> when .zshrc.bak is already taken, and those sort
+# lexicographically, so the last match is the most recently replaced config.
+backup=""
+for candidate in "$HOME"/.zshrc.bak.*; do
+  if [ -e "$candidate" ]; then
+    backup="$candidate"
+  fi
+done
+if [ -z "$backup" ] && [ -e "$HOME/.zshrc.bak" ]; then
+  backup="$HOME/.zshrc.bak"
+fi
+if [ -n "$backup" ]; then
+  mv "$backup" "$HOME/.zshrc"
+  echo "Restored $HOME/.zshrc from $backup"
+fi
+'''
+
 # ---- Repo-wide lint (CI parity) ----
 
 [tasks."lint:shell"]

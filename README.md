@@ -47,6 +47,19 @@ echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
 mise install    # run at the repo root
 ```
 
+If you link this repository's `.zshrc` (see [Dotfiles](#dotfiles)), skip the `echo` line — `dotfiles/.zshrc` already ends with `eval "$(mise activate zsh)"`, and appending it there would duplicate the line in the repository.
+
+### Dotfiles
+
+Shell and terminal configs under `dotfiles/` are deployed as symlinks, so edits on either side stay in sync:
+
+```sh
+mise run dotfiles-link    # dotfiles/wezterm -> ~/.config/wezterm
+mise run zshrc-link       # dotfiles/.zshrc  -> ~/.zshrc
+```
+
+`zshrc-link` is intentionally separate from `dotfiles-link` because it replaces the login shell config. An existing regular `~/.zshrc` is moved to `~/.zshrc.bak` first, and `mise run zshrc-unlink` removes the symlink and restores that backup.
+
 ## Features
 
 - **LSP / Linter / Formatter**: Go (gopls, golangci-lint), Python (pyright, ruff), JavaScript (eslint, prettier), Lua (stylua), Terraform (terraform-ls, tflint, terraform fmt), YAML, TOML, Markdown, etc.

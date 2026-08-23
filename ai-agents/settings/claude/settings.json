@@ -1,5 +1,6 @@
 {
-  "model": "claude-opus-4-8[1m]",
+  "agentPushNotifEnabled": true,
+  "model": "claude-opus-5[1m]",
   "env": {
     "SKILL_OBSERVE_HOME": "~/workspace/my-pde"
   },
@@ -239,7 +240,7 @@
   "askUserQuestionTimeout": "10m",
   "statusLine": {
     "type": "command",
-    "command": "jq -r '(.model.display_name // \"Claude\") + \" | Context: \" + (.context_window.used_percentage // 0 | tostring) + \"% used\"'"
+    "command": "~/.claude/statusline-command.sh"
   },
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,

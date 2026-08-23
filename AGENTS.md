@@ -14,7 +14,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
   - `ai-agents/skills/`: reusable skills (commit, review, blog, log export, etc.).
   - `ai-agents/settings/`: Claude/Cursor settings, hooks, and shared rules.
   - Deployment to each CLI (Claude, Cursor, Codex, Copilot) is done via mise tasks (`mise.toml` at the repo root).
-- `dotfiles/`: Shell and terminal configs (`.zshrc`, `wezterm/`).
+- `dotfiles/`: Shell and terminal configs (`.zshrc`, `wezterm/`). Both are deployed as symlinks (`mise run zshrc-link` / `dotfiles-link`), so host edits show up as repo diffs.
 - `docs/plan/`: implementation plans. `docs/log/`: work logs.
 - `assets/`: screenshots and static media.
 - `.github/workflows/`: CI workflows (lint, test, version bumps).
@@ -49,6 +49,7 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 ### Dotfiles
 
 - `mise run dotfiles-link` — symlink WezTerm config to `~/.config/wezterm`.
+- `mise run zshrc-link` — symlink `dotfiles/.zshrc` to `~/.zshrc` (backs up an existing regular file; `zshrc-unlink` reverts). Kept separate from `dotfiles-link` because it replaces the login shell config.
 
 ### Tool version updates
 
