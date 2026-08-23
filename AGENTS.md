@@ -72,9 +72,8 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 
 ## Testing & Linting
 
-- Per-language lint/format commands load on demand as path-scoped rules (`.claude/rules/`, `~/.claude/rules/`): Go, Lua, Terraform.
-- Markdown / TOML / JSON / YAML / Shell / Lua / Go have no rule file: in Claude the `PostToolUse` hooks (`markdown-format.sh`, `tombi.sh`, `prettier.sh`, `shfmt.sh`, `stylua.sh`, `goimports.sh`) format on every write, and the `lint-changed.sh` Stop hook reports remaining lint issues with the failing tool's name. Run those tools from the repository root so they pick up its config.
-- Dockerfiles and GitHub Actions workflows have no rule file either; `lint-changed.sh` runs `hadolint` / `actionlint` on them. Outside Claude, run `hadolint environment/docker/nvim.dockerfile` by hand.
+- `mise run lint` runs every repo-wide linter (CI parity); `mise run verify:changed` maps changed files to the matching tests/linters. Run them from the repository root — markdownlint and friends resolve their config relative to cwd.
+- In Claude this is automatic: `PostToolUse` hooks format on write, and the `lint-changed.sh` Stop hook reports what still fails, naming the tool.
 - AI Bridge has Go unit tests: `mise run ai-bridge:test`.
 - No repository-level test suite beyond per-directory checks.
 - In Claude, the repo-local Stop hook `.claude/hooks/test-changed.sh` auto-runs `go test` for changed `scripts/<app>` apps (report-only, non-blocking; opt out with `TEST_CHANGED_DISABLE=1`).
