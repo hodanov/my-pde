@@ -46,7 +46,9 @@ Phase 2 は未確定事項が多いため PoC を先行させ、結果を設計�
 
 ## Implementation steps
 
-### Phase 1-1: ベタ書きの重複を削る
+**Phase 1 は 2026-08-23 に完了**（[PR #699](https://github.com/hodanov/my-pde/pull/699)、コミット `a4a56cc8` / `c0d79b49`）。Phase 2 は未着手。
+
+### Phase 1-1: ベタ書きの重複を削る（完了）
 
 1. `weekly-adopted-issue-pr-bot.md` の手順 3-4 の lint コマンド表を `ai-agents/scripts/verify-changed.sh` の実行 1 行に置換し、`[SKIP]` は「ツールが無くて未検証」であって PASS ではない旨を添える（SKIP が出たら PR body に書いて CI に委ねる）。
 2. 同ファイル 13 行目の SKILL.md frontmatter 規約を削り、`.claude/rules/skill-authoring.md` へのポインタに圧縮する。
@@ -55,10 +57,17 @@ Phase 2 は未確定事項が多いため PoC を先行させ、結果を設計�
 5. `weekly-devx-skills-hooks-scan.md` の 20 / 41 行目の `ai-agents/Makefile` を mise タスクへ修正し、skills / hooks の書式規約は `.claude/rules/skill-authoring.md` へのポインタに寄せる（判断軸のブログ URL とディレクトリ構成は残す）。
 6. 残る scan 系 5 本（`daily-neovim-trend-scan` / `weekly-scripts-tooling-scan` / `weekly-environment-scan` / `weekly-ci-workflows-scan` / `monthly-routine-improve`）は Issue 起票が主で重複が無いため変更しない。
 
-### Phase 1-2: ドキュメント追従
+### Phase 1-2: ドキュメント追従（完了）
 
 1. `routines/README.md` に「クラウド実行で効く設定 / 効かない設定」節を追記する（Background の表の要約）。運用者向けの記録であって、プロンプトには書かない。
 2. `.claude/rules/routines.md` に「プロンプトに repo の正（`AGENTS.md` / `.claude/rules/` / `verify-changed.sh`）と重複する規約を書かない」を 1 行追加する。
+
+### Phase 1-3: 計画時に見えていなかった 2 点（完了）
+
+実装中に判明し、Phase 1 に含めた。
+
+1. **`.claude/rules/skill-authoring.md` に本文構成の規約を追加**。1-1 の 2 / 5 でプロンプトから消した「`# /<name> スキル` → `## Goal` / `## Workflow` / `## Notes`」の受け皿が rules 側に無く、ポインタ化すると知識が消えるだけだった。実体は `skill-scaffold` が持っていたため、そこを指す 1 行を rules に足した。
+2. **`ai-agents/scripts/verify-changed.sh` に mise 不在時のフォールバックを追加**。クラウドセッションに mise はプリインストールされていない（入っているのは Go / Node / Python 等の言語ランタイムと git・gh・jq・yq・ripgrep）。同スクリプトは Go の test / lint を `mise run <app>:test` 経由でしか実行しておらず、mise を落とした環境で実測すると両方 `[SKIP]` になり `result: PASS (0 passed, 2 skipped)` と表示された。Go 自体はクラウドにあるため、置換前のプロンプトが指示していた `go test ./...` は動いていたことになり、1-1 の置換は Go の検証カバレッジを落としていた。mise が無い場合は `go -C <dir> test ./...` と `golangci-lint` に直接フォールバックする。mise がある環境の挙動は変えていない。
 
 ### Phase 2-1: plugin PoC（hooks は含めない）
 
@@ -84,6 +93,8 @@ Routine を新規作成する必要はない。ドキュメントに「同じ環
 | 編集 | `routines/prompts/weekly-devx-skills-hooks-scan.md` | Makefile → mise、書式規約 → rules ポインタ                                  |
 | 編集 | `routines/README.md`                                | 「クラウドで効く設定 / 効かない設定」節                                     |
 | 編集 | `.claude/rules/routines.md`                         | 重複を書かない旨を 1 行                                                     |
+| 編集 | `.claude/rules/skill-authoring.md`                  | Phase 1-3: SKILL.md 本文構成の規約（計画外）                                |
+| 編集 | `ai-agents/scripts/verify-changed.sh`               | Phase 1-3: mise 不在時の Go フォールバック（計画外）                        |
 | 新規 | `ai-agents/.claude-plugin/plugin.json`              | Phase 2: plugin マニフェスト                                                |
 | 新規 | `.claude-plugin/marketplace.json`                   | Phase 2: marketplace カタログ                                               |
 | 編集 | `.claude/settings.json`                             | Phase 2: `extraKnownMarketplaces` / `enabledPlugins`                        |
@@ -93,7 +104,7 @@ Routine を新規作成する必要はない。ドキュメントに「同じ環
 ## Risks and mitigations
 
 - **プロンプトから削った知識が repo の正でカバーされていない**: 削除は 1 対 1 で突き合わせて確認する。とくに `~/.claude/rules/` にしかない汎用 lint 規約（Markdown / Shell / TOML / JSON-YAML）はクラウドに載らないが、コマンド自体は `verify-changed.sh` が担保する。
-- **クラウドに lint ツールが無く `[SKIP]` が並ぶ**: SKIP は PASS ではない。プロンプトにその旨を明記し、PR body に残させて CI 側の判定に委ねる。
+- **クラウドに lint ツールが無く `[SKIP]` が並ぶ**: SKIP は PASS ではない。プロンプトにその旨を明記し、PR body に残させて CI 側の判定に委ねる。**顕在化した** — Go が mise 経由でしか実行されず丸ごと SKIP になっていたため、Phase 1-3 でフォールバックを入れて解消。stylua / shfmt / shellcheck / markdownlint-cli2 はクラウドに無く SKIP のままだが、これは置換前のプロンプトでも同じで、CI が最終判定を持つ。
 - **plugin 化で呼び出し名が名前空間化される**: プラグイン提供のサブエージェントは `plugin-name:agent-name` で参照される。skills も同様なら既存の `/commit-and-draft-pr` 等の呼び方が変わる。PoC で実際の表示名を確認してから本適用する。
 - **plugin と mise 配布の二重ロード**: ローカルで `~/.claude/skills` のコピーと plugin の両方が載ると重複しうる。PoC 時にスキル一覧を確認し、必要なら Claude 向けの mise コピーを止める。
 - **`version` の bump 忘れ**: `plugin.json` に `version` を書くと bump 時のみ更新が届く。クラウドは毎セッション install するため、古い版が固定されうる。運用ルールとして決める。
@@ -101,12 +112,12 @@ Routine を新規作成する必要はない。ドキュメントに「同じ環
 
 ## Validation
 
-Phase 1
+Phase 1（1〜3 は実施済み、4 はマージ後）
 
 1. `mise run verify:changed` — 変更した Markdown に markdownlint-cli2 と prettier が走る。
 2. `git diff routines/` を読み、削った知識がすべて repo の正（`AGENTS.md` / `.claude/rules/*` / `verify-changed.sh`）でカバーされているか 1 対 1 で突き合わせる。
 3. `grep -rn "Makefile" routines/prompts/` が 0 件になること。
-4. マージ後、PR 作成系 Routine の次回定期実行のログで `verify-changed.sh` が実行され、`[PASS]` / `[SKIP]` が PR body に反映されているかを確認する。
+4. マージ後、PR 作成系 Routine の次回定期実行のログで `verify-changed.sh` が実行され、`[PASS]` / `[SKIP]` が PR body に反映されているかを確認する。とくに Go アプリを触った回で `go -C ... test` が走っているかを見る（Phase 1-3 のフォールバックの実地確認）。
 
 Phase 2
 
