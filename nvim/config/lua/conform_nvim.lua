@@ -10,7 +10,7 @@ require("conform").setup({
 		javascript = { "prettierd", "prettier", stop_after_first = true },
 		json = { "prettierd", "prettier", stop_after_first = true },
 		lua = { "stylua" },
-		markdown = { "markdownlint-cli2" },
+		markdown = { "markdownlint-cli2", "prettierd" },
 		python = { "ruff_fix", "ruff_format", "ruff_organize_imports" },
 		sh = { "shfmt" },
 		terraform = { "terraform_fmt" },
