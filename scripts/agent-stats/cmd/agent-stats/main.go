@@ -36,6 +36,7 @@ func run(args []string) error {
 	since := fset.Duration("since", 0, "only include sessions active within this window (e.g. 24h); 0 = all")
 	project := fset.String("project", "", "only include sessions whose cwd or file path contains this substring")
 	asJSON := fset.Bool("json", false, "emit machine-readable JSON instead of a table")
+	detail := fset.Bool("detail", false, "with --json, include the full per-session list (much larger output)")
 	if err := fset.Parse(args); err != nil {
 		return err
 	}
@@ -47,7 +48,7 @@ func run(args []string) error {
 	summary := report.Summarize(sessions)
 
 	if *asJSON {
-		out, err := report.RenderJSON(&summary)
+		out, err := report.RenderJSON(&summary, *detail)
 		if err != nil {
 			return err
 		}
@@ -78,37 +79,86 @@ func collect(dir string, since time.Duration, project string, now time.Time) ([]
 		cutoff = now.Add(-since)
 	}
 
+	groups, order, err := groupTranscripts(dir)
+	if err != nil {
+		return nil, err
+	}
+
 	var sessions []parser.Session
-	walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	for _, key := range order {
+		s := parser.NewSession(filepath.Base(key))
+		read := 0
+		for _, path := range groups[key] {
+			if perr := parser.AppendFile(&s, path); perr != nil {
+				// A single unreadable transcript (permission error, race with a
+				// deleted file, ...) shouldn't blank out every other session's
+				// results; skip it and keep going.
+				fmt.Fprintf(os.Stderr, "agent-stats: skipping %s: %v\n", path, perr)
+				continue
+			}
+			read++
+		}
+		if read == 0 {
+			continue
+		}
+		if !cutoff.IsZero() && !s.End.IsZero() && s.End.Before(cutoff) {
+			continue
+		}
+		// A session matches the project filter when either its transcript path
+		// or its recorded cwd contains the substring.
+		if project != "" && !strings.Contains(key, project) && !strings.Contains(s.Cwd, project) {
+			continue
+		}
+		sessions = append(sessions, s)
+	}
+	return sessions, nil
+}
+
+// subagentDir is the directory name Claude Code writes subagent transcripts to.
+const subagentDir = "subagents"
+
+// sessionKey maps a transcript path to the logical session it belongs to.
+// Claude Code writes a session's own turns to <project>/<id>.jsonl and each
+// subagent it spawns to <project>/<id>/subagents/agent-*.jsonl. Counting those
+// as separate sessions roughly doubles the session count and double-counts
+// wall-clock, since a subagent's transcript overlaps its parent's.
+func sessionKey(path string) string {
+	dir := filepath.Dir(path)
+	if filepath.Base(dir) != subagentDir {
+		return path
+	}
+	return filepath.Dir(dir) + ".jsonl"
+}
+
+// groupTranscripts walks dir and buckets every transcript by the session it
+// belongs to, returning the buckets and their first-seen order so the result
+// stays deterministic.
+func groupTranscripts(dir string) (groups map[string][]string, order []string, err error) {
+	groups = map[string][]string{}
+	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			// An unreadable directory shouldn't blank out the whole scan, the
+			// same way an unreadable file doesn't.
+			fmt.Fprintf(os.Stderr, "agent-stats: skipping %s: %v\n", path, err)
+			if d != nil && d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
 		}
 		if d.IsDir() || !strings.HasSuffix(d.Name(), ".jsonl") {
 			return nil
 		}
-		s, perr := parser.ParseFile(path)
-		if perr != nil {
-			// A single unreadable transcript (permission error, race with a
-			// deleted file, ...) shouldn't blank out every other session's
-			// results; skip it and keep walking.
-			fmt.Fprintf(os.Stderr, "agent-stats: skipping %s: %v\n", path, perr)
-			return nil
+		key := sessionKey(path)
+		if _, ok := groups[key]; !ok {
+			order = append(order, key)
 		}
-		if !cutoff.IsZero() && !s.End.IsZero() && s.End.Before(cutoff) {
-			return nil
-		}
-		// A session matches the project filter when either its file path or its
-		// recorded cwd contains the substring.
-		if project != "" && !strings.Contains(path, project) && !strings.Contains(s.Cwd, project) {
-			return nil
-		}
-		sessions = append(sessions, s)
+		groups[key] = append(groups[key], path)
 		return nil
 	})
-	if walkErr != nil {
-		return nil, walkErr
+	if err != nil {
+		return nil, nil, err
 	}
-	return sessions, nil
+	return groups, order, nil
 }
 
 func defaultDir() string {
