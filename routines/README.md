@@ -29,6 +29,26 @@ claude.ai のスケジュール Routine（クラウドエージェント / CCR�
 - **プロンプト本文の変更は、PR をマージするだけで次回実行から有効**（Routine は実行時に repo を checkout してファイルを読むため）。手動 apply は不要。
 - 手動 apply が必要なのは `cron_expression` / `model` / `allowed_tools` / `prompt`（ポインタ文言自体）など **JSON 側フィールドの変更のみ**。
 
+## クラウド実行で効く設定・効かない設定
+
+Routine は Anthropic クラウド上の使い捨てセッションで、リポジトリを fresh clone して動く。したがって **リポジトリにコミットされたものは効き、`~/.claude` 配下は一切効かない**（[Configure cloud environments](https://code.claude.com/docs/en/cloud-environments) の "What carries over from your setup"）。
+
+| 対象                                                                    | クラウドで有効                                                                   |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| repo の `CLAUDE.md` / `AGENTS.md`                                       | 有効                                                                             |
+| repo の `.claude/rules/`（`paths:` にマッチしたときロード）             | 有効                                                                             |
+| repo の `.claude/skills/` / `.claude/agents/` / `.claude/commands/`     | 有効                                                                             |
+| repo の `.claude/settings.json` の hooks                                | 有効（`guard-version-pins.sh` と `test-changed.sh` は Routine 実行中も発火する） |
+| repo の `.mcp.json`、`.claude/settings.json` で宣言した plugins         | 有効                                                                             |
+| `~/.claude/` 配下（`agents.xml`、汎用 rules、skills、subagents、hooks） | 無効。`ai-agents/` から配っているものはクラウドに届かない                        |
+
+この前提から、プロンプト本文には次を書かない。
+
+- 「`~/.claude` はクラウドに無い」といった**仕様として自明なこと**。
+- `AGENTS.md` / `.claude/rules/` / `ai-agents/scripts/verify-changed.sh` に**既に書いてある規約の写し**（lint コマンド一覧、SKILL.md の書式規約など）。二重管理になり、必ず片方がドリフトする。
+
+検証は `ai-agents/scripts/verify-changed.sh` に寄せる。変更ファイルの種別から lint / test を自動で選ぶので、プロンプト側でコマンドを列挙する必要がない。ツールが無い場合は `[SKIP]` になる（PASS ではない）ため、残った SKIP は CI の判定に委ねる。
+
 ## スキーマ
 
 各 JSON は 1 Routine を表す。
