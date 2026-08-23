@@ -493,13 +493,6 @@ vim.api.nvim_create_autocmd("TermClose", {
 vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n>]], { desc = "Exit terminal mode" })
 
 -- ----------------------------------------
--- indent_guides setting.
--- ----------------------------------------
-vim.g.indent_guides_enable_on_vim_startup = 1
-vim.g.indent_guides_start_level = 2
-vim.g.indent_guides_guide_size = 1
-
--- ----------------------------------------
 -- Undo tree viewer (Neovim 0.12 builtin).
 -- ----------------------------------------
 vim.api.nvim_set_keymap("n", "<Leader>u", ":Undotree<CR>", { noremap = true, silent = true })
