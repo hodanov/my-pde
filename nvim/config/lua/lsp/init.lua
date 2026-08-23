@@ -133,6 +133,20 @@ vim.api.nvim_create_autocmd("LspAttach", {
 				callback = vim.lsp.buf.clear_references,
 			})
 		end
+
+		-- Call hierarchy (textDocument/prepareCallHierarchy -> callHierarchy/incomingCalls)。
+		-- grr (references) の quickfix は text が「その位置のソース行」なので、
+		-- 低レイヤのヘルパを変更するレビューで「どの上位関数の挙動が変わるか」が読めない。
+		-- incoming_calls は text に「呼び出し元の関数名」を入れるため一覧のまま判断でき、
+		-- 飛んだ先で grc を打ち直せば 1 階層ずつ呼び出し元へ遡れる。
+		-- 結果は quickfix なので ]q / [q・:Cfilter・switchbuf=useopen がそのまま効く
+		-- (copen までコアのハンドラ側が面倒を見るので追加の処理は不要)。
+		-- キーはコア既定の LSP 名前空間 (gra/gri/grn/grr/grt/grx) に揃えて grc。
+		-- なお gopls は動的呼び出し (インターフェース経由のディスパッチ) を返さないため、
+		-- インターフェース越しの追跡は従来どおり grr を使う。
+		if client and client:supports_method("textDocument/prepareCallHierarchy") then
+			vim.keymap.set("n", "grc", vim.lsp.buf.incoming_calls, opts)
+		end
 	end,
 })
 
