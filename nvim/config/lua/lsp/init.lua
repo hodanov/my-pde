@@ -65,7 +65,7 @@ vim.lsp.enable("yamlls")
 vim.lsp.enable("tombi")
 -- vim.lsp.enable("lemminx")
 
--- Lua (Neovim 設定自身の編集用。型/補完/診断は lazydev.nvim が lua_ls に供給する)
+-- Lua
 vim.lsp.enable("lua_ls")
 
 -- Global mappings.

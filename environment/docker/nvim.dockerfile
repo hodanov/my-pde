@@ -220,6 +220,35 @@ RUN set -eux; \
   install -m 0755 "$TMPDIR/terraform" /usr/local/bin/terraform
 
 ####################
+# Stage 8: Fetch lua-language-server (LSP for editing this Neovim config itself)
+FROM base AS lua-ls-builder
+
+ARG LUA_LS_VERSION=3.19.1
+# LuaLS publishes no aggregate checksum file with its releases (there is no
+# equivalent of hadolint's checksums.sha256 or terraform's SHA256SUMS), so the
+# per-asset sha256 is pinned here instead. Update BOTH when bumping the version.
+ARG LUA_LS_SHA256_AMD64=e9235d2d72ef55bc41cf8c99cda2ed64777682024b4bb81f5dea425060c5cbb8
+ARG LUA_LS_SHA256_ARM64=abd2572e8fc929dc838a81ffb8473c5bce0bf39bfe8edb4b120b3b623176ce83
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN set -eux; \
+  ARCH="$(dpkg --print-architecture)"; \
+  case "$ARCH" in \
+    amd64) LS_ARCH="linux-x64"; REF_SHA="$LUA_LS_SHA256_AMD64" ;; \
+    arm64) LS_ARCH="linux-arm64"; REF_SHA="$LUA_LS_SHA256_ARM64" ;; \
+    *) echo "Unsupported arch for lua-language-server: $ARCH" >&2; exit 1 ;; \
+  esac; \
+  BASE_URL="https://github.com/LuaLS/lua-language-server/releases/download/${LUA_LS_VERSION}"; \
+  TMPDIR="/tmp/lua-language-server"; \
+  mkdir -p "$TMPDIR"; \
+  TARBALL="lua-language-server-${LUA_LS_VERSION}-${LS_ARCH}.tar.gz"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$TARBALL" -o "$TMPDIR/$TARBALL"; \
+  ACT_SHA="$(sha256sum "$TMPDIR/$TARBALL" | awk '{print $1}')"; \
+  [ "$ACT_SHA" = "$REF_SHA" ] || (echo "lua-language-server checksum mismatch: expected=$REF_SHA actual=$ACT_SHA" >&2; exit 1); \
+  mkdir -p /opt/lua-language-server; \
+  tar -xzf "$TMPDIR/$TARBALL" -C /opt/lua-language-server; \
+  rm -rf "$TMPDIR"
+
+####################
 # Final stage
 FROM base
 
@@ -251,8 +280,9 @@ COPY --from=python-builder /root/.local/bin/uv /usr/local/bin/uv
 COPY --from=python-builder /root/.local/bin/uvx /usr/local/bin/uvx
 COPY --from=rust-builder /root/.cargo/bin/stylua /usr/local/bin/stylua
 COPY --from=rust-builder /root/.cargo/bin/tree-sitter /usr/local/bin/tree-sitter
+COPY --from=lua-ls-builder /opt/lua-language-server/ /opt/lua-language-server/
 
-ENV PATH="/opt/python/.venv/bin:/opt/node/bin:/opt/npm-tools/node_modules/.bin:/usr/local/go/bin:/root/go/bin:${PATH}"
+ENV PATH="/opt/python/.venv/bin:/opt/node/bin:/opt/npm-tools/node_modules/.bin:/usr/local/go/bin:/root/go/bin:/opt/lua-language-server/bin:${PATH}"
 ENV NODE_PATH="/opt/npm-tools/node_modules"
 
 ####################
