@@ -41,7 +41,7 @@ ENV LC_CTYPE=ja_JP.UTF-8
 # Stage 1: Build Neovim from source
 FROM base AS nvim-builder
 
-ARG NEOVIM_VERSION=0.12.4
+ARG NEOVIM_VERSION=0.12.5
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ninja-build gettext cmake \
@@ -93,7 +93,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
 # Stage 3: Build Go toolchain and tools
 FROM base AS go-builder
 
-ARG GO_VERSION=1.26.6
+ARG GO_VERSION=1.27.0
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH="$(dpkg --print-architecture)" \
@@ -197,7 +197,7 @@ RUN set -eux; \
 # Stage 7: Fetch Terraform CLI binary only
 FROM base AS terraform-builder
 
-ARG TERRAFORM_VERSION=1.15.8
+ARG TERRAFORM_VERSION=1.15.9
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
