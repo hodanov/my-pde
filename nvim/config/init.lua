@@ -111,6 +111,9 @@ vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 -- ----------------------------------------
 pcall(vim.cmd.packadd, "cfilter")
 
+vim.keymap.set("n", "<Leader>c[", "<cmd>colder<CR><cmd>botright copen<CR>", { desc = "Older quickfix list" })
+vim.keymap.set("n", "<Leader>c]", "<cmd>cnewer<CR><cmd>botright copen<CR>", { desc = "Newer quickfix list" })
+
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
 -- ----------------------------------------
