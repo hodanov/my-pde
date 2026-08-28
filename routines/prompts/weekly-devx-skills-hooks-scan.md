@@ -34,13 +34,14 @@
    - 既存 skill / hook の汎用化・横展開の余地
 4. このリポジトリで実際に役立つ「汎用的で再利用可能な」改善を hook または skill から『1つだけ』選ぶ。このリポジトリ固有の一発ネタや、特定言語に偏りすぎる狭い提案は避ける。
    - 【重要】手順 1 で取得した Open Issue（提案済み）と Close 済み rejected Issue（不採用）のいずれとも重複しないものを選ぶこと。有力候補が被る場合は採用せず、被らない別の角度の提案を選び直す。
+   - 選定の確認（重複チェック・除外条件）は起票前に自分で行い、body には結論だけを書く。確認した過程・検討して外した代替手段の網羅列挙を body に入れない。
 5. ラベル `scan:ai-agents` が無ければ `gh label create scan:ai-agents` で作成。選んだ改善提案を Issue として 1 件だけ起票する: `gh issue create --label "scan:ai-agents" --title "..." --body "..."`。body には以下を含める:
-   - (a) 何を・なぜ
-   - (b) hook か skill かと、その機構を選ぶ理由（上記ブログのフレームワークに沿って）
-   - (c) 出典 URL（あれば）
-   - (d) どこにどう置くか — skill なら `ai-agents/skills/<name>/SKILL.md` の frontmatter 雛形、hook なら `ai-agents/settings/{claude,cursor,copilot}/hooks/<name>.sh` と settings.json の配線、および mise タスク / copy-entries への影響
-   - (e) リスク・留意点
-   - 適用例のコード・diff にはコメントを書かない。`.claude/rules/code-comments.md` が Issue / PR / プラン文書のコード例にも適用されるため、そのまま採用できる形で書く。説明したい判断は散文側の項目に書く。
+   - **課題** — どの操作・運用が具体的にどう不便か。既存手段（既定機能・既存ツール・現行設定）で足りない理由を最大 2 点、各 1〜2 行。
+   - **変更** — 冒頭 1〜2 行で hook か skill かとその理由、および置き場所（skill なら `ai-agents/skills/<name>/SKILL.md`、hook なら `ai-agents/settings/{claude,cursor,copilot}/hooks/<name>.sh` と settings の配線・mise タスクへの影響）。続けて対象ファイルと、そこに入る差分。コード / diff は 20 行以内、コメントは書かない（`.claude/rules/code-comments.md` は Issue のコード例にも適用される）。20 行を超える規模なら、コードを載せず方針と対象ファイルだけ書く。
+   - **リスク** — 最大 3 点、各 1 行。
+   - **出典** — URL のみを最大 3 本。grep 結果・実測値・ファイル一覧を証拠として並べない。数字を出すなら課題の中に 1 行で織り込む。
+   - 本文は 1,500 字程度に収める（上限 2,000 字）。タイトルは `<prefix>:` を除いた部分を 32 字以内にする。
+   - `gh issue create` の直前にタイトルと本文の文字数を数え、超えていれば削ってから起票する。
 6. コード変更や PR 作成はしない。Issue 起票のみ。既存（Open 提案済み / Close 済み rejected）と被らない新しい改善提案がどうしても見つからない場合に限り、起票せず終了してよい。
 
 ## 制約
