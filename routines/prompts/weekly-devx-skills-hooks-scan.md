@@ -40,6 +40,7 @@
    - (c) 出典 URL（あれば）
    - (d) どこにどう置くか — skill なら `ai-agents/skills/<name>/SKILL.md` の frontmatter 雛形、hook なら `ai-agents/settings/{claude,cursor,copilot}/hooks/<name>.sh` と settings.json の配線、および mise タスク / copy-entries への影響
    - (e) リスク・留意点
+   - 適用例のコード・diff にはコメントを書かない。`.claude/rules/code-comments.md` が Issue / PR / プラン文書のコード例にも適用されるため、そのまま採用できる形で書く。説明したい判断は散文側の項目に書く。
 6. コード変更や PR 作成はしない。Issue 起票のみ。既存（Open 提案済み / Close 済み rejected）と被らない新しい改善提案がどうしても見つからない場合に限り、起票せず終了してよい。
 
 ## 制約
