@@ -552,7 +552,7 @@ description = "Build the nvim image with versions injected from mise.toml"
 # locally, so `mise run docker:build` behaves exactly as before. The unquoted
 # expansion is intentional: the value is meant to split into separate arguments.
 run = '''
-docker build \
+docker buildx build \
   --file environment/docker/nvim.dockerfile \
   --build-arg LUA_LS_VERSION="$LUA_LS_VERSION" \
   --build-arg NEOVIM_VERSION="$NEOVIM_VERSION" \
