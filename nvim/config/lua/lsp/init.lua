@@ -65,6 +65,17 @@ vim.lsp.enable("yamlls")
 vim.lsp.enable("tombi")
 -- vim.lsp.enable("lemminx")
 
+-- Shell
+vim.lsp.config("bashls", {
+	settings = {
+		bashIde = {
+			shellcheckPath = "",
+			includeAllWorkspaceSymbols = true,
+		},
+	},
+})
+vim.lsp.enable("bashls")
+
 -- Lua
 vim.lsp.enable("lua_ls")
 
