@@ -27,6 +27,8 @@ cd my-pde
 docker compose -f environment/docker/docker-compose.yml up -d
 ```
 
+The image is tagged `my-pde-nvim:dev`, which is also the tag `mise run docker:build` writes, so an image built with that task is the one `up -d` starts.
+
 Attach to the container:
 
 ```sh
