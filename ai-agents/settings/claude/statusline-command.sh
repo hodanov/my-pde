@@ -1,6 +1,6 @@
 #!/bin/sh
 # Claude Code statusline.
-# Shows: model | git branch | dir | context used% | (activity indicator, if any)
+# Shows: model | git branch | dir | context used% (tokens/window) | (activity indicator, if any)
 #
 # LIMITATION (read this before assuming the activity indicator is complete):
 # Claude Code does not expose a "N background tasks running" field to
@@ -21,7 +21,9 @@ input=$(cat)
 model=$(printf '%s' "$input" | jq -r '.model.display_name // "Claude"')
 dir=$(printf '%s' "$input" | jq -r '.workspace.current_dir // .cwd // empty')
 transcript=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
-used=$(printf '%s' "$input" | jq -r '.context_window.used_percentage // empty')
+used=$(printf '%s' "$input" | jq -r '.context_window.used_percentage | numbers | floor')
+ctx_tokens=$(printf '%s' "$input" | jq -r '.context_window.total_input_tokens | numbers | select(. > 0) | floor')
+ctx_size=$(printf '%s' "$input" | jq -r '.context_window.context_window_size | numbers | select(. > 0) | floor')
 
 short_dir=""
 if [ -n "$dir" ]; then
@@ -61,10 +63,24 @@ fi
 dim() { printf '\033[2m%s\033[0m' "$1"; }
 warn() { printf '\033[33m%s\033[0m' "$1"; }
 
+compact_tokens() {
+	if [ "$1" -ge 1000000 ]; then
+		printf '%dM' $(($1 / 1000000))
+	else
+		printf '%dK' $(($1 / 1000))
+	fi
+}
+
 line=$(dim "$model")
 [ -n "$branch" ] && line="$line $(dim "| git:$branch")"
 [ -n "$short_dir" ] && line="$line $(dim "| $short_dir")"
-[ -n "$used" ] && line="$line $(dim "| ctx:${used}%")"
+if [ -n "$used" ]; then
+	ctx="ctx:${used}%"
+	if [ -n "$ctx_tokens" ] && [ -n "$ctx_size" ]; then
+		ctx="$ctx ($(compact_tokens "$ctx_tokens")/$(compact_tokens "$ctx_size"))"
+	fi
+	line="$line $(dim "| $ctx")"
+fi
 
 if [ -n "$activity" ]; then
 	if [ "$activity" = "subagent" ]; then

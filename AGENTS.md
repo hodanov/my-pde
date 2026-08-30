@@ -68,6 +68,7 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 ## Coding Style
 
 - Per-language conventions that a linter cannot check load on demand from path-scoped rules in `.claude/rules/` (and personal rules in `~/.claude/rules/`) when you touch matching files. Conventions a formatter/linter _can_ enforce are left to hooks rather than duplicated as rules.
+- Comments: don't write them. Code carries the "what"; the "why" goes in commit messages, PRs, and `docs/plan/**`. Mechanical exceptions only (godoc on exported Go identifiers, linter directives, shebangs) — see `.claude/rules/code-comments.md`. This applies to code samples and diffs in issues and PRs too, not just to files you edit.
 - Dockerfile/toolchain version constraints live in `.claude/rules/dockerfile-versions.md`; tool versions are pinned and updated via workflows or scripts, not manual edits. For Claude this is enforced by the `guard-version-pins.sh` PreToolUse hook.
 - For sub-directory conventions, see each directory's `AGENTS.md`. (`scripts/ai-bridge/` also has a `CLAUDE.md` importing its `AGENTS.md` so the Go conventions auto-load for Claude.)
 
