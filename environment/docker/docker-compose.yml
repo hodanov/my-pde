@@ -1,6 +1,7 @@
 services:
   nvim:
     container_name: nvim-dev
+    image: my-pde-nvim:dev
     build:
       context: ../..
       dockerfile: environment/docker/nvim.dockerfile

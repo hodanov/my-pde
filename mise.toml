@@ -554,6 +554,7 @@ description = "Build the nvim image with versions injected from mise.toml"
 run = '''
 docker buildx build \
   --file environment/docker/nvim.dockerfile \
+  --tag my-pde-nvim:dev \
   --build-arg LUA_LS_VERSION="$LUA_LS_VERSION" \
   --build-arg NEOVIM_VERSION="$NEOVIM_VERSION" \
   --build-arg NPM_VERSION="$NPM_VERSION" \
