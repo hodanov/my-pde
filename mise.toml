@@ -4,8 +4,8 @@
 
 [tools]
 actionlint = "1.7.12"
-go = "1.26.6"
-golangci-lint = "2.12.2"
+go = "1.27.0"
+golangci-lint = "2.13.1"
 node = "24.19.0"
 shfmt = "3.13.1"
 shellcheck = "0.11.0"
@@ -22,10 +22,10 @@ tflint = "0.64.0"
 # `mise run pins:sync` and injected as --build-arg by `mise run docker:build`.
 [env]
 LUA_LS_VERSION = "3.19.1"
-NEOVIM_VERSION = "0.12.4"
+NEOVIM_VERSION = "0.12.5"
 NPM_VERSION = "12.0.2"
 RUST_TOOLCHAIN = "stable"
-TERRAFORM_VERSION = "1.15.8"
+TERRAFORM_VERSION = "1.15.9"
 
 # ---- ai-bridge (Go) ----
 
@@ -552,7 +552,7 @@ description = "Build the nvim image with versions injected from mise.toml"
 # locally, so `mise run docker:build` behaves exactly as before. The unquoted
 # expansion is intentional: the value is meant to split into separate arguments.
 run = '''
-docker build \
+docker buildx build \
   --file environment/docker/nvim.dockerfile \
   --build-arg LUA_LS_VERSION="$LUA_LS_VERSION" \
   --build-arg NEOVIM_VERSION="$NEOVIM_VERSION" \
