@@ -61,6 +61,9 @@ vim.lsp.enable("ruff")
 vim.lsp.enable("terraformls")
 
 -- Config files
+vim.lsp.config("yamlls", {
+	filetypes = { "yaml", "yaml.ghaction", "yaml.docker-compose", "yaml.gitlab", "yaml.helm-values" },
+})
 vim.lsp.enable("yamlls")
 vim.lsp.enable("tombi")
 -- vim.lsp.enable("lemminx")
