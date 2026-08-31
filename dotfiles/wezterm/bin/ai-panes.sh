@@ -23,9 +23,11 @@ interval="${AI_PANES_INTERVAL:-2}"
 self_pane="${WEZTERM_PANE:--1}"
 # Keep this list in sync with TRACKED in dotfiles/wezterm/ai-panes.lua.
 targets="${AI_PANES_AGENTS:-nvim claude codex cursor-agent copilot}"
+jump_uri_prefix="wezterm-ai-panes://jump/"
 
 # Catppuccin Mocha, matching appearance.lua and the zsh prompt.
 esc=$'\033'
+bel=$'\a'
 reset="${esc}[0m"
 mauve="${esc}[38;2;203;166;247m"
 blue="${esc}[38;2;137;180;250m"
@@ -141,7 +143,7 @@ rule() {
 }
 
 render() {
-	local cols json count prev_ws marker missing
+	local cols json count prev_ws marker missing link_open link_close
 	cols=$(term_cols)
 
 	printf ' %sPANES%s\n' "$mauve" "$reset"
@@ -166,6 +168,8 @@ render() {
 		printf '%s' "$json" |
 			jq -r '.[] | [.ws, .proc, .project, (.pane | tostring)] | @tsv' |
 			while IFS=$'\t' read -r ws proc project pane; do
+				link_open="${esc}]8;;${jump_uri_prefix}${pane}${bel}"
+				link_close="${esc}]8;;${bel}"
 				if [ "$ws" != "$prev_ws" ]; then
 					printf ' %s▍%s%s\n' "$mauve" "$ws" "$reset"
 					prev_ws="$ws"
@@ -175,17 +179,17 @@ render() {
 				else
 					marker="${overlay0}○"
 				fi
-				printf '   %s%s %s%-13.13s%s%s#%s%s\n' \
-					"$marker" "$reset" "$(proc_color "$proc")" "$proc" \
-					"$reset" "$overlay0" "$pane" "$reset"
+				printf '   %s%s%s %s%-13.13s%s%s#%s%s%s\n' \
+					"$link_open" "$marker" "$reset" "$(proc_color "$proc")" "$proc" \
+					"$reset" "$overlay0" "$pane" "$reset" "$link_close"
 				# cwd がワークスペース名と食い違うときだけ実際の場所を補足する
 				if [ -n "$project" ] && [ "$project" != "$ws" ]; then
-					printf '     %s↳ %-16.16s%s\n' "$overlay0" "$project" "$reset"
+					printf '     %s%s↳ %-16.16s%s%s\n' "$link_open" "$overlay0" "$project" "$reset" "$link_close"
 				fi
 			done
 	fi
 
-	printf '\n %sCMD+a  jump%s\n' "$overlay0" "$reset"
+	printf '\n %sclick / CMD+a  jump%s\n' "$overlay0" "$reset"
 }
 
 cleanup() {
@@ -199,11 +203,14 @@ loop() {
 	printf '%s' "${esc}[?1049h${esc}[?25l"
 	# Marker read back by ai-panes.lua so CMD+SHIFT+A can find and close this pane.
 	printf '\033]1337;SetUserVar=ai_panes_dashboard=%s\a' "$(printf '1' | base64)"
-	local frame
+	local frame prev=""
 	while :; do
 		frame=$(render)
-		# [H + [0J redraws with far less flicker than a full [2J clear
-		printf '%s%s\n' "${esc}[H${esc}[0J" "$frame"
+		if [ "$frame" != "$prev" ]; then
+			# [H + [0J redraws with far less flicker than a full [2J clear
+			printf '%s%s\n' "${esc}[H${esc}[0J" "$frame"
+			prev="$frame"
+		fi
 		sleep "$interval"
 	done
 }
