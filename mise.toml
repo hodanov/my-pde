@@ -5,9 +5,9 @@
 [tools]
 actionlint = "1.7.12"
 go = "1.27.0"
-golangci-lint = "2.13.1"
-node = "24.19.0"
-shfmt = "3.13.1"
+golangci-lint = "2.13.2"
+node = "24.20.0"
+shfmt = "3.14.0"
 shellcheck = "0.11.0"
 stylua = "2.5.2"
 hadolint = "2.15.1"
@@ -25,7 +25,7 @@ LUA_LS_VERSION = "3.19.1"
 NEOVIM_VERSION = "0.12.5"
 NPM_VERSION = "12.0.2"
 RUST_TOOLCHAIN = "stable"
-TERRAFORM_VERSION = "1.15.9"
+TERRAFORM_VERSION = "1.16.0"
 
 # ---- ai-bridge (Go) ----
 
