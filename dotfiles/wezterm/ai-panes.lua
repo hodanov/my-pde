@@ -44,6 +44,8 @@ local DASHBOARD_VAR = "ai_panes_dashboard"
 local DASHBOARD_CMD = wezterm.config_dir .. "/bin/ai-panes.sh"
 local DASHBOARD_PERCENT = 18
 
+local JUMP_URI_PATTERN = "^wezterm%-ai%-panes://jump/(%d+)$"
+
 -- update-status は毎秒発火するので、全ペイン走査はこの間隔まで間引く。
 local STATUS_THROTTLE_SECONDS = 3
 
@@ -132,29 +134,38 @@ local function process_of(pane)
 	return nil
 end
 
+local function each_pane(fn)
+	for _, win in ipairs(mux.all_windows()) do
+		local workspace = win:get_workspace()
+		for _, tab in ipairs(win:tabs()) do
+			for _, pane in ipairs(tab:panes()) do
+				local found = fn(pane, tab, workspace)
+				if found ~= nil then
+					return found
+				end
+			end
+		end
+	end
+end
+
 -- mux 配下の全 window / tab / pane を走査して追跡対象が動いているペインを集める。
 -- この wezterm には mux.get_pane() が無いので、後でジャンプできるよう
 -- MuxPane オブジェクトそのものを行に持たせる。
 local function collect()
 	local rows = {}
-	for _, win in ipairs(mux.all_windows()) do
-		local workspace = win:get_workspace()
-		for _, tab in ipairs(win:tabs()) do
-			for _, pane in ipairs(tab:panes()) do
-				local proc = process_of(pane)
-				if proc then
-					table.insert(rows, {
-						workspace = workspace,
-						proc = proc,
-						project = basename(pane_cwd(pane)) or workspace,
-						tab_title = tab:get_title(),
-						pane_id = pane:pane_id(),
-						pane = pane,
-					})
-				end
-			end
+	each_pane(function(pane, tab, workspace)
+		local proc = process_of(pane)
+		if proc then
+			table.insert(rows, {
+				workspace = workspace,
+				proc = proc,
+				project = basename(pane_cwd(pane)) or workspace,
+				tab_title = tab:get_title(),
+				pane_id = pane:pane_id(),
+				pane = pane,
+			})
 		end
-	end
+	end)
 	table.sort(rows, function(a, b)
 		if a.workspace ~= b.workspace then
 			return a.workspace < b.workspace
@@ -165,6 +176,14 @@ local function collect()
 		return a.pane_id < b.pane_id
 	end)
 	return rows
+end
+
+local function find_pane(pane_id)
+	return each_pane(function(pane, _, workspace)
+		if pane:pane_id() == pane_id then
+			return { workspace = workspace, pane_id = pane_id, pane = pane }
+		end
+	end)
 end
 
 -- 先にペインを activate してから workspace を切り替える。
@@ -307,6 +326,20 @@ return function(config)
 	-- 書き込むスロットも別なので workspaces.lua を変更せずに共存できる。
 	wezterm.on("update-status", function(window)
 		window:set_left_status(status_text())
+	end)
+
+	wezterm.on("open-uri", function(window, _, uri)
+		local id = uri:match(JUMP_URI_PATTERN)
+		if not id then
+			return
+		end
+		local row = find_pane(tonumber(id))
+		if row then
+			jump_to(window, row)
+		else
+			window:toast_notification("WezTerm", "Pane #" .. id .. " is gone", nil, 2000)
+		end
+		return false
 	end)
 
 	table.insert(config.keys, { key = "a", mods = "CMD", action = select_pane() })
