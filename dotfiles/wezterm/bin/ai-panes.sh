@@ -197,7 +197,7 @@ render() {
 	fi
 
 	printf '\n %sj/k move  l/Enter jump%s\n' "$overlay0" "$reset"
-	printf ' %sclick / CMD+a  jump%s\n' "$overlay0" "$reset"
+	printf ' %sclick jump%s\n' "$overlay0" "$reset"
 }
 
 refresh_rows() {
