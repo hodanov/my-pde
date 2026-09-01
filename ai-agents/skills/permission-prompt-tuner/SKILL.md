@@ -43,8 +43,9 @@ kind ごとに `references/prompt-causes.md` の対応表に従って決める�
 - `missing-allow` → `Bash(<tool> *)` を allow に追加。**スコープ判断**: 汎用的で無害なコマンドは
   グローバル（`~/.claude/settings.json`）、リポ固有・パス依存は project（`.claude/settings.local.json`）。
   `cat` は Read ツール推奨のため allow 追加を勧めない（コマンド側を Read に変える提案）。
-- `prefix-break` → 具体パターン（例 `Bash(terraform -chdir=* show *)`）追加、または `-chdir` を
-  使わない書き換え、の二択を提示。
+- `prefix-break` → `-chdir` を使わない書き換えを提示する。サブコマンド前に `*` を挟む具体パターン
+  （例 `Bash(terraform -chdir=* show *)`）は追加しない（Claude Code の許可判定では位置に関わらず
+  `*` が任意個のトークンを吸収するため、意図しないオプション挿入まで無審査で通ってしまう）。
 - `builtin-cd-redirect` → allow では消せない。**コマンド書き換え**（`cd` を使わず絶対パスで
   redirect する）を提示。
 - `deny-hit` → 意図的 deny の可能性が高い。allow 追加は勧めず、なぜ deny されているかを確認するよう促す。
