@@ -46,6 +46,11 @@ local DASHBOARD_PERCENT = 18
 
 local JUMP_URI_PATTERN = "^wezterm%-ai%-panes://jump/(%d+)$"
 
+-- ダッシュボードが l キーで送ってくる user var。値は `<pane_id>:<連番>` で、
+-- 同じペインへ連続でジャンプしても値が変わり user-var-changed が確実に発火する。
+local JUMP_VAR = "ai_panes_jump"
+local JUMP_VAR_PATTERN = "^(%d+):"
+
 -- update-status は毎秒発火するので、全ペイン走査はこの間隔まで間引く。
 local STATUS_THROTTLE_SECONDS = 3
 
@@ -315,8 +320,6 @@ local function toggle_dashboard()
 			}),
 			pane
 		)
-		-- 分割直後は新しいペインにフォーカスが移るので、作業中のペインへ戻す
-		pane:activate()
 	end)
 end
 
@@ -340,6 +343,22 @@ return function(config)
 			window:toast_notification("WezTerm", "Pane #" .. id .. " is gone", nil, 2000)
 		end
 		return false
+	end)
+
+	wezterm.on("user-var-changed", function(window, _, name, value)
+		if name ~= JUMP_VAR then
+			return
+		end
+		local id = value:match(JUMP_VAR_PATTERN)
+		if not id then
+			return
+		end
+		local row = find_pane(tonumber(id))
+		if row then
+			jump_to(window, row)
+		else
+			window:toast_notification("WezTerm", "Pane #" .. id .. " is gone", nil, 2000)
+		end
 	end)
 
 	table.insert(config.keys, { key = "a", mods = "CMD", action = select_pane() })

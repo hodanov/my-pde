@@ -24,6 +24,12 @@ self_pane="${WEZTERM_PANE:--1}"
 # Keep this list in sync with TRACKED in dotfiles/wezterm/ai-panes.lua.
 targets="${AI_PANES_AGENTS:-nvim claude codex cursor-agent copilot}"
 jump_uri_prefix="wezterm-ai-panes://jump/"
+jump_var="ai_panes_jump"
+jump_seq=0
+saved_stty=""
+rows="[]"
+count=0
+notice=""
 
 # Catppuccin Mocha, matching appearance.lua and the zsh prompt.
 esc=$'\033'
@@ -143,75 +149,167 @@ rule() {
 }
 
 render() {
-	local cols json count prev_ws marker missing link_open link_close
+	local json="$1" selected="$2" notice="${3:-}"
+	local cols total prev_ws marker link_open link_close cursor idx
 	cols=$(term_cols)
 
 	printf ' %sPANES%s\n' "$mauve" "$reset"
 	printf ' %s%s%s\n' "$overlay0" "$(rule $((cols - 2)))" "$reset"
 
-	missing=$(missing_deps)
-	if [ -n "$missing" ]; then
-		printf ' %snot on PATH:%s%s\n' "$yellow" "$missing" "$reset"
-		return 0
-	fi
-
-	if ! json=$(collect); then
-		printf ' %swezterm cli unavailable%s\n' "$yellow" "$reset"
-		return 0
-	fi
-	count=$(printf '%s' "$json" | jq 'length')
-
-	if [ "$count" -eq 0 ]; then
-		printf ' %snothing running%s\n' "$overlay0" "$reset"
+	if [ -n "$notice" ]; then
+		printf ' %s%s%s\n' "$yellow" "$notice" "$reset"
 	else
-		prev_ws=""
-		printf '%s' "$json" |
-			jq -r '.[] | [.ws, .proc, .project, (.pane | tostring)] | @tsv' |
-			while IFS=$'\t' read -r ws proc project pane; do
-				link_open="${esc}]8;;${jump_uri_prefix}${pane}${bel}"
-				link_close="${esc}]8;;${bel}"
-				if [ "$ws" != "$prev_ws" ]; then
-					printf ' %s▍%s%s\n' "$mauve" "$ws" "$reset"
-					prev_ws="$ws"
-				fi
-				if [ "$ws" = "$here" ]; then
-					marker="${green}●"
-				else
-					marker="${overlay0}○"
-				fi
-				printf '   %s%s%s %s%-13.13s%s%s#%s%s%s\n' \
-					"$link_open" "$marker" "$reset" "$(proc_color "$proc")" "$proc" \
-					"$reset" "$overlay0" "$pane" "$reset" "$link_close"
-				# cwd がワークスペース名と食い違うときだけ実際の場所を補足する
-				if [ -n "$project" ] && [ "$project" != "$ws" ]; then
-					printf '     %s%s↳ %-16.16s%s%s\n' "$link_open" "$overlay0" "$project" "$reset" "$link_close"
-				fi
-			done
+		total=$(printf '%s' "$json" | jq 'length')
+		if [ "$total" -eq 0 ]; then
+			printf ' %snothing running%s\n' "$overlay0" "$reset"
+		else
+			prev_ws=""
+			idx=0
+			printf '%s' "$json" |
+				jq -r '.[] | [.ws, .proc, .project, (.pane | tostring)] | @tsv' |
+				while IFS=$'\t' read -r ws proc project pane; do
+					link_open="${esc}]8;;${jump_uri_prefix}${pane}${bel}"
+					link_close="${esc}]8;;${bel}"
+					if [ "$ws" != "$prev_ws" ]; then
+						printf ' %s▍%s%s\n' "$mauve" "$ws" "$reset"
+						prev_ws="$ws"
+					fi
+					if [ "$ws" = "$here" ]; then
+						marker="${green}●"
+					else
+						marker="${overlay0}○"
+					fi
+					if [ "$idx" -eq "$selected" ]; then
+						cursor="${mauve}▸${reset}"
+					else
+						cursor=" "
+					fi
+					printf ' %s %s%s%s %s%-13.13s%s%s#%s%s%s\n' \
+						"$cursor" "$link_open" "$marker" "$reset" "$(proc_color "$proc")" "$proc" \
+						"$reset" "$overlay0" "$pane" "$reset" "$link_close"
+					# cwd がワークスペース名と食い違うときだけ実際の場所を補足する
+					if [ -n "$project" ] && [ "$project" != "$ws" ]; then
+						printf '     %s%s↳ %-16.16s%s%s\n' "$link_open" "$overlay0" "$project" "$reset" "$link_close"
+					fi
+					idx=$((idx + 1))
+				done
+		fi
 	fi
 
-	printf '\n %sclick / CMD+a  jump%s\n' "$overlay0" "$reset"
+	printf '\n %sj/k move  l/Enter jump%s\n' "$overlay0" "$reset"
+	printf ' %sclick / CMD+a  jump%s\n' "$overlay0" "$reset"
+}
+
+refresh_rows() {
+	local deps
+	deps=$(missing_deps)
+	if [ -n "$deps" ]; then
+		rows="[]"
+		count=0
+		notice="not on PATH:${deps}"
+	elif rows=$(collect); then
+		count=$(printf '%s' "$rows" | jq 'length')
+		notice=""
+	else
+		rows="[]"
+		count=0
+		notice="wezterm cli unavailable"
+	fi
+}
+
+index_of_pane() {
+	printf '%s' "$rows" | jq -r --arg p "$1" '(map(.pane | tostring) | index($p)) // -1'
+}
+
+pane_at_index() {
+	printf '%s' "$rows" | jq -r --argjson i "$1" '.[$i].pane // empty'
+}
+
+emit_jump() {
+	jump_seq=$((jump_seq + 1))
+	printf '\033]1337;SetUserVar=%s=%s\a' "$jump_var" \
+		"$(printf '%s:%s' "$1" "$jump_seq" | base64)"
 }
 
 cleanup() {
 	printf '%s' "${esc}[?25h${esc}[?1049l"
+	if [ -n "$saved_stty" ]; then
+		stty "$saved_stty" </dev/tty 2>/dev/null
+	fi
 }
 
 loop() {
+	local frame prev="" key idx=0 selected="" pos refresh=1
+
+	{ saved_stty=$(stty -g </dev/tty); } 2>/dev/null || saved_stty=""
+	if [ -n "$saved_stty" ]; then
+		# isig は落とさない。CMD+SHIFT+A の再押下が送る Ctrl-C で閉じられなくなるため。
+		stty -echo -icanon min 1 time 0 </dev/tty
+	fi
+
 	trap 'cleanup; exit 0' INT TERM
 	trap cleanup EXIT
 	# alternate screen so the refreshes never touch the pane's scrollback
 	printf '%s' "${esc}[?1049h${esc}[?25l"
 	# Marker read back by ai-panes.lua so CMD+SHIFT+A can find and close this pane.
 	printf '\033]1337;SetUserVar=ai_panes_dashboard=%s\a' "$(printf '1' | base64)"
-	local frame prev=""
+
 	while :; do
-		frame=$(render)
+		if [ "$refresh" -eq 1 ]; then
+			refresh_rows
+			refresh=0
+		fi
+
+		if [ "$count" -eq 0 ]; then
+			idx=0
+			selected=""
+		else
+			if [ -n "$selected" ]; then
+				pos=$(index_of_pane "$selected")
+				if [ "$pos" -ge 0 ]; then
+					idx=$pos
+				fi
+			fi
+			if [ "$idx" -ge "$count" ]; then
+				idx=$((count - 1))
+			fi
+			selected=$(pane_at_index "$idx")
+		fi
+
+		frame=$(render "$rows" "$idx" "$notice")
 		if [ "$frame" != "$prev" ]; then
 			# [H + [0J redraws with far less flicker than a full [2J clear
 			printf '%s%s\n' "${esc}[H${esc}[0J" "$frame"
 			prev="$frame"
 		fi
-		sleep "$interval"
+
+		key=""
+		if ! IFS= read -rsn1 -t "$interval" key </dev/tty; then
+			refresh=1
+			continue
+		fi
+
+		case "$key" in
+		j)
+			if [ "$idx" -lt $((count - 1)) ]; then
+				idx=$((idx + 1))
+				selected=$(pane_at_index "$idx")
+			fi
+			;;
+		k)
+			if [ "$idx" -gt 0 ]; then
+				idx=$((idx - 1))
+				selected=$(pane_at_index "$idx")
+			fi
+			;;
+		# read -n1 は改行を行区切りとして食うので、Enter は rc=0 かつ空文字で返る。
+		# タイムアウトは rc!=0 なので取り違えない。
+		l | "")
+			if [ -n "$selected" ]; then
+				emit_jump "$selected"
+			fi
+			;;
+		esac
 	done
 }
 
@@ -219,6 +317,9 @@ here=$(workspace_of_self)
 
 case "${1:-}" in
 --json) collect ;;
---once) render ;;
+--once)
+	refresh_rows
+	render "$rows" 0 "$notice"
+	;;
 *) loop ;;
 esac
