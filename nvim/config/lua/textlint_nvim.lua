@@ -11,18 +11,22 @@ local config = {
 -- デバウンス用のタイマー
 local timers = {}
 
+local jobs = {}
+
+local notified = {}
+
 -- diagnosticsの名前空間を作成
 local ns_id = vim.api.nvim_create_namespace("textlint")
 
 -- textlintの結果をneovimのdiagnosticsに変換
-local function parse_textlint_output(output, bufnr)
+local function parse_textlint_output(output)
 	local ok, result = pcall(vim.json.decode, output)
-	if not ok or not result or not result[1] then
-		return {}
+	if not ok or type(result) ~= "table" then
+		return nil, vim.trim(output)
 	end
 
 	local diagnostics = {}
-	local messages = result[1].messages or {}
+	local messages = result[1] and result[1].messages or {}
 
 	for _, msg in ipairs(messages) do
 		local diagnostic = {
@@ -38,7 +42,27 @@ local function parse_textlint_output(output, bufnr)
 		table.insert(diagnostics, diagnostic)
 	end
 
-	return diagnostics
+	return diagnostics, nil
+end
+
+local function stop_job(bufnr)
+	if jobs[bufnr] then
+		pcall(vim.fn.jobstop, jobs[bufnr])
+		jobs[bufnr] = nil
+	end
+end
+
+local function notify_unparsable(bufnr, err)
+	if notified[bufnr] then
+		return
+	end
+	notified[bufnr] = true
+
+	local detail = err ~= "" and err or "textlintが出力を返しませんでした"
+	vim.notify(
+		"textlint: 結果を解釈できませんでした（指摘0件ではありません）\n" .. detail,
+		vim.log.levels.WARN
+	)
 end
 
 -- textlintを実行する関数
@@ -49,6 +73,8 @@ local function run_textlint(bufnr)
 	if filename == "" then
 		return
 	end
+
+	stop_job(bufnr)
 
 	local content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
 
@@ -69,8 +95,17 @@ local function run_textlint(bufnr)
 		on_stdout = function(_, data)
 			if data and #data > 0 then
 				local output = table.concat(data, "\n")
-				local diagnostics = parse_textlint_output(output, bufnr)
+				if vim.trim(output) == "" then
+					return
+				end
+
+				local diagnostics, err = parse_textlint_output(output)
 				vim.schedule(function()
+					if not diagnostics then
+						notify_unparsable(bufnr, err)
+						return
+					end
+					notified[bufnr] = nil
 					vim.diagnostic.set(ns_id, bufnr, diagnostics)
 				end)
 			end
@@ -82,17 +117,15 @@ local function run_textlint(bufnr)
 				end)
 			end
 		end,
-		on_exit = function(_, code)
-			if code == 0 then
-				-- 正常終了時、エラーがない場合は空のdiagnosticsをセット
-				vim.schedule(function()
-					-- stdoutで結果が返ってこない場合の処理
-				end)
+		on_exit = function(id)
+			if jobs[bufnr] == id then
+				jobs[bufnr] = nil
 			end
 		end,
 	})
 
 	if job_id > 0 then
+		jobs[bufnr] = job_id
 		vim.fn.chansend(job_id, content)
 		vim.fn.chanclose(job_id, "stdin")
 	end
@@ -116,6 +149,8 @@ local function on_buffer_delete(bufnr)
 		timers[bufnr]:stop()
 		timers[bufnr] = nil
 	end
+	stop_job(bufnr)
+	notified[bufnr] = nil
 	vim.diagnostic.set(ns_id, bufnr, {})
 end
 
@@ -131,7 +166,7 @@ function M.setup(user_config)
 		pattern = "*",
 		callback = function(args)
 			local bufnr = args.buf
-			local filetype = vim.api.nvim_buf_get_option(bufnr, "filetype")
+			local filetype = vim.bo[bufnr].filetype
 
 			-- 対象のfiletypeかチェック
 			if vim.tbl_contains(config.filetypes, filetype) then
