@@ -65,8 +65,15 @@ end
 -- ~/.local/share/claude/versions/<version> への symlink で、get_foreground_process_name()
 -- は解決後の実パスを返すため basename がバージョン番号（例 2.1.235）になる。
 -- LocalProcessInfo の name / argv[0] も候補に入れて、どれか 1 つでも一致すれば採用する。
+local function tracked_name(candidate)
+	local name = basename(candidate)
+	if name and TRACKED[name] then
+		return name
+	end
+	return nil
+end
+
 local function process_of(pane)
-	local candidates = {}
 	local info = nil
 
 	local ok_info, got = pcall(function()
@@ -74,24 +81,21 @@ local function process_of(pane)
 	end)
 	if ok_info and got then
 		info = got
-		table.insert(candidates, info.name)
-		if info.argv then
-			table.insert(candidates, info.argv[1])
+		local hit = tracked_name(info.name)
+			or (info.argv and tracked_name(info.argv[1]))
+			or tracked_name(info.executable)
+		if hit then
+			return hit
 		end
-		table.insert(candidates, info.executable)
 	end
 
 	local ok_name, proc = pcall(function()
 		return pane:get_foreground_process_name()
 	end)
 	if ok_name then
-		table.insert(candidates, proc)
-	end
-
-	for _, candidate in ipairs(candidates) do
-		local name = basename(candidate)
-		if name and TRACKED[name] then
-			return name
+		local hit = tracked_name(proc)
+		if hit then
+			return hit
 		end
 	end
 
@@ -230,6 +234,9 @@ return function(config)
 	-- こちらは update-status / set_left_status を使う。両イベントは併存して発火し、
 	-- 書き込むスロットも別なので workspaces.lua を変更せずに共存できる。
 	wezterm.on("update-status", function(window)
+		if not window:is_focused() then
+			return
+		end
 		window:set_left_status(status_text())
 	end)
 
