@@ -19,13 +19,34 @@ fi
 #   ai-panes.sh --json   dump the collected rows as JSON
 set -uo pipefail
 
-interval="${AI_PANES_INTERVAL:-2}"
+interval="${AI_PANES_INTERVAL:-1}"
 self_pane="${WEZTERM_PANE:--1}"
 # Keep this list in sync with TRACKED in dotfiles/wezterm/ai-panes.lua.
 targets="${AI_PANES_AGENTS:-nvim claude codex cursor-agent copilot}"
+jump_uri_prefix="wezterm-ai-panes://jump/"
+jump_var="ai_panes_jump"
+jump_seq=0
+saved_stty=""
+
+row_ws=()
+row_proc=()
+row_project=()
+row_pane=()
+count=0
+idx=0
+selected=""
+found_idx=-1
+here=""
+notice=""
+rows_serial=""
+frame=""
+separator=""
+cols=0
+cols_stale=1
 
 # Catppuccin Mocha, matching appearance.lua and the zsh prompt.
 esc=$'\033'
+bel=$'\a'
 reset="${esc}[0m"
 mauve="${esc}[38;2;203;166;247m"
 blue="${esc}[38;2;137;180;250m"
@@ -43,16 +64,6 @@ missing_deps() {
 	printf '%s' "$out"
 }
 
-proc_color() {
-	case "$1" in
-	nvim) printf '%s' "$blue" ;;
-	claude) printf '%s' "$mauve" ;;
-	codex) printf '%s' "$teal" ;;
-	cursor-agent) printf '%s' "$green" ;;
-	*) printf '%s' "$yellow" ;;
-	esac
-}
-
 # tty -> process name. Matching on the command name alone (rather than on the
 # foreground process group) keeps an agent listed while it shells out.
 #
@@ -62,7 +73,7 @@ proc_color() {
 # (`docker container exec -it nvim-dev bash --login`) is not reported as an editor.
 # Same rule as argv_runs_nvim() in dotfiles/wezterm/ai-panes.lua.
 procs_by_tty() {
-	ps -Ao tty=,command= | awk -v names="$targets" '
+	ps -ao tty=,command= | awk -v names="$targets" '
 		BEGIN {
 			n = split(names, list, " ")
 			for (i = 1; i <= n; i++) {
@@ -86,40 +97,50 @@ procs_by_tty() {
 	'
 }
 
-# Rows of { ws, pane, proc, project }, sorted by workspace then by the order of
-# $targets, excluding this pane.
+IFS= read -r -d '' collect_filter <<'JQ'
+	($procs | split("\n") | map(select(length > 0) | split("\t")
+		| { tty: .[0], proc: .[1] })) as $procs
+	| ($targets | split(" ")) as $order
+	| . as $all
+	| ([ $all[] | select((.pane_id | tostring) == $self) | .workspace ] | first // "") as $here
+	| [ $all[]
+		| select((.pane_id | tostring) != $self)
+		| . as $p
+		| ($procs | map(select(.tty == $p.tty_name)) | first) as $hit
+		| select($hit != null)
+		| { ws: $p.workspace,
+		    pane: $p.pane_id,
+		    proc: $hit.proc,
+		    project: (($p.cwd // "") | sub("^file://[^/]*"; "")
+		              | sub("/$"; "") | sub(".*/"; "")) } ]
+	| sort_by(.ws, (.proc as $n | $order | index($n)), .pane) as $rows
+	| if $shape == "tsv"
+	  then ($here), ($rows[] | [.ws, .proc, .project, (.pane | tostring)] | @tsv)
+	  else ($rows | tojson)
+	  end
+JQ
+
 collect() {
 	local panes
 	panes=$(wezterm cli list --format json 2>/dev/null) || return 1
 	[ -n "$panes" ] || return 1
 
-	printf '%s' "$panes" | jq -c \
+	printf '%s' "$panes" | jq -r \
 		--arg procs "$(procs_by_tty)" \
 		--arg targets "$targets" \
-		--arg self "$self_pane" '
-		($procs | split("\n") | map(select(length > 0) | split("\t")
-			| { tty: .[0], proc: .[1] })) as $procs
-		| ($targets | split(" ")) as $order
-		| [ .[]
-			| select((.pane_id | tostring) != $self)
-			| . as $p
-			| ($procs | map(select(.tty == $p.tty_name)) | first) as $hit
-			| select($hit != null)
-			| { ws: $p.workspace,
-			    pane: $p.pane_id,
-			    proc: $hit.proc,
-			    project: (($p.cwd // "") | sub("^file://[^/]*"; "")
-			              | sub("/$"; "") | sub(".*/"; "")) } ]
-		| sort_by(.ws, (.proc as $n | $order | index($n)), .pane)'
+		--arg self "$self_pane" \
+		--arg shape "$1" \
+		"$collect_filter"
 }
 
-workspace_of_self() {
-	wezterm cli list --format json 2>/dev/null |
-		jq -r --arg p "$self_pane" '.[] | select((.pane_id | tostring) == $p) | .workspace'
+collect_tsv() {
+	collect tsv
 }
 
-# render() の出力は $(...) で受けるため stdout はパイプになる。tput は stdout を
-# 見て幅を決めるので、制御端末から直接引く。
+collect_json() {
+	collect json
+}
+
 term_cols() {
 	local size=""
 	# 制御端末が無いとリダイレクト自体が失敗し、その診断はシェルが出すので
@@ -132,86 +153,244 @@ term_cols() {
 	printf '%s' "${COLUMNS:-26}"
 }
 
-rule() {
+resize_if_stale() {
 	local i out=""
-	for ((i = 0; i < $1; i++)); do
+	[ "$cols_stale" -eq 1 ] || return
+	cols=$(term_cols)
+	for ((i = 0; i < cols - 2; i++)); do
 		out="${out}─"
 	done
-	printf '%s' "$out"
+	separator=$out
+	cols_stale=0
 }
 
-render() {
-	local cols json count prev_ws marker missing
-	cols=$(term_cols)
+refresh_rows() {
+	local deps out body ws proc project pane
 
-	printf ' %sPANES%s\n' "$mauve" "$reset"
-	printf ' %s%s%s\n' "$overlay0" "$(rule $((cols - 2)))" "$reset"
+	row_ws=()
+	row_proc=()
+	row_project=()
+	row_pane=()
+	count=0
+	rows_serial=""
 
-	missing=$(missing_deps)
-	if [ -n "$missing" ]; then
-		printf ' %snot on PATH:%s%s\n' "$yellow" "$missing" "$reset"
-		return 0
+	deps=$(missing_deps)
+	if [ -n "$deps" ]; then
+		notice="not on PATH:${deps}"
+		return
 	fi
-
-	if ! json=$(collect); then
-		printf ' %swezterm cli unavailable%s\n' "$yellow" "$reset"
-		return 0
+	if ! out=$(collect_tsv); then
+		notice="wezterm cli unavailable"
+		return
 	fi
-	count=$(printf '%s' "$json" | jq 'length')
+	notice=""
 
-	if [ "$count" -eq 0 ]; then
-		printf ' %snothing running%s\n' "$overlay0" "$reset"
+	here=${out%%$'\n'*}
+	if [ "$here" = "$out" ]; then
+		body=""
 	else
-		prev_ws=""
-		printf '%s' "$json" |
-			jq -r '.[] | [.ws, .proc, .project, (.pane | tostring)] | @tsv' |
-			while IFS=$'\t' read -r ws proc project pane; do
-				if [ "$ws" != "$prev_ws" ]; then
-					printf ' %s▍%s%s\n' "$mauve" "$ws" "$reset"
-					prev_ws="$ws"
-				fi
-				if [ "$ws" = "$here" ]; then
-					marker="${green}●"
-				else
-					marker="${overlay0}○"
-				fi
-				printf '   %s%s %s%-13.13s%s%s#%s%s\n' \
-					"$marker" "$reset" "$(proc_color "$proc")" "$proc" \
-					"$reset" "$overlay0" "$pane" "$reset"
-				# cwd がワークスペース名と食い違うときだけ実際の場所を補足する
-				if [ -n "$project" ] && [ "$project" != "$ws" ]; then
-					printf '     %s↳ %-16.16s%s\n' "$overlay0" "$project" "$reset"
-				fi
-			done
+		body=${out#*$'\n'}
+	fi
+	[ -n "$body" ] || return
+
+	while IFS=$'\t' read -r ws proc project pane; do
+		row_ws[count]=$ws
+		row_proc[count]=$proc
+		row_project[count]=$project
+		row_pane[count]=$pane
+		count=$((count + 1))
+	done <<<"$body"
+	rows_serial=$body
+}
+
+index_of_pane() {
+	local i
+	for ((i = 0; i < count; i++)); do
+		if [ "${row_pane[$i]}" = "$1" ]; then
+			found_idx=$i
+			return
+		fi
+	done
+	found_idx=-1
+}
+
+render_into_frame() {
+	local i line ws proc project pane marker cursor color link_open link_close prev_ws=""
+
+	printf -v frame ' %sPANES%s\n' "$mauve" "$reset"
+	printf -v line ' %s%s%s\n' "$overlay0" "$separator" "$reset"
+	frame+=$line
+
+	if [ -n "$notice" ]; then
+		printf -v line ' %s%s%s\n' "$yellow" "$notice" "$reset"
+		frame+=$line
+	elif [ "$count" -eq 0 ]; then
+		printf -v line ' %snothing running%s\n' "$overlay0" "$reset"
+		frame+=$line
+	else
+		for ((i = 0; i < count; i++)); do
+			ws=${row_ws[$i]}
+			proc=${row_proc[$i]}
+			project=${row_project[$i]}
+			pane=${row_pane[$i]}
+			link_open="${esc}]8;;${jump_uri_prefix}${pane}${bel}"
+			link_close="${esc}]8;;${bel}"
+			if [ "$ws" != "$prev_ws" ]; then
+				printf -v line ' %s▍%s%s\n' "$mauve" "$ws" "$reset"
+				frame+=$line
+				prev_ws=$ws
+			fi
+			if [ "$ws" = "$here" ]; then
+				marker="${green}●"
+			else
+				marker="${overlay0}○"
+			fi
+			if [ "$i" -eq "$idx" ]; then
+				cursor="${mauve}▸${reset}"
+			else
+				cursor=" "
+			fi
+			case "$proc" in
+			nvim) color=$blue ;;
+			claude) color=$mauve ;;
+			codex) color=$teal ;;
+			cursor-agent) color=$green ;;
+			*) color=$yellow ;;
+			esac
+			printf -v line ' %s %s%s%s %s%-13.13s%s%s#%s%s%s\n' \
+				"$cursor" "$link_open" "$marker" "$reset" "$color" "$proc" \
+				"$reset" "$overlay0" "$pane" "$reset" "$link_close"
+			frame+=$line
+			# cwd がワークスペース名と食い違うときだけ実際の場所を補足する
+			if [ -n "$project" ] && [ "$project" != "$ws" ]; then
+				printf -v line '     %s%s↳ %-16.16s%s%s\n' "$link_open" "$overlay0" "$project" "$reset" "$link_close"
+				frame+=$line
+			fi
+		done
 	fi
 
-	printf '\n %sCMD+a  jump%s\n' "$overlay0" "$reset"
+	printf -v line '\n %sj/k move  l/Enter jump%s\n' "$overlay0" "$reset"
+	frame+=$line
+	printf -v line ' %sclick jump%s\n' "$overlay0" "$reset"
+	frame+=$line
+}
+
+move_down() {
+	if [ "$idx" -lt $((count - 1)) ]; then
+		idx=$((idx + 1))
+		selected=${row_pane[$idx]}
+	fi
+}
+
+move_up() {
+	if [ "$idx" -gt 0 ]; then
+		idx=$((idx - 1))
+		selected=${row_pane[$idx]}
+	fi
+}
+
+resync_selection() {
+	if [ "$count" -eq 0 ]; then
+		idx=0
+		selected=""
+		return
+	fi
+	if [ -n "$selected" ]; then
+		index_of_pane "$selected"
+		if [ "$found_idx" -ge 0 ]; then
+			idx=$found_idx
+		fi
+	fi
+	if [ "$idx" -ge "$count" ]; then
+		idx=$((count - 1))
+	fi
+	selected=${row_pane[$idx]}
+}
+
+emit_jump() {
+	jump_seq=$((jump_seq + 1))
+	printf '\033]1337;SetUserVar=%s=%s\a' "$jump_var" \
+		"$(printf '%s:%s' "$1" "$jump_seq" | base64)"
 }
 
 cleanup() {
 	printf '%s' "${esc}[?25h${esc}[?1049l"
+	if [ -n "$saved_stty" ]; then
+		stty "$saved_stty" </dev/tty 2>/dev/null
+	fi
 }
 
 loop() {
+	local key last_second=0 stale=1 painted="" frame_key="" prev_frame_key=""
+
+	{ saved_stty=$(stty -g </dev/tty); } 2>/dev/null || saved_stty=""
+	if [ -n "$saved_stty" ]; then
+		# isig は落とさない。CMD+SHIFT+A の再押下が送る Ctrl-C で閉じられなくなるため。
+		stty -echo -icanon min 1 time 0 </dev/tty
+	fi
+
 	trap 'cleanup; exit 0' INT TERM
 	trap cleanup EXIT
 	# alternate screen so the refreshes never touch the pane's scrollback
 	printf '%s' "${esc}[?1049h${esc}[?25l"
 	# Marker read back by ai-panes.lua so CMD+SHIFT+A can find and close this pane.
 	printf '\033]1337;SetUserVar=ai_panes_dashboard=%s\a' "$(printf '1' | base64)"
-	local frame
+
 	while :; do
-		frame=$(render)
-		# [H + [0J redraws with far less flicker than a full [2J clear
-		printf '%s%s\n' "${esc}[H${esc}[0J" "$frame"
-		sleep "$interval"
+		# read はキーが来るたび早期に返るので、タイムアウトだけを頼りにすると
+		# 操作している間ずっと更新が止まる。秒単位の締め切りを保険に併走させる。
+		if [ "$stale" -eq 1 ] || [ $((SECONDS - last_second)) -ge $((interval + 1)) ]; then
+			refresh_rows
+			stale=0
+			cols_stale=1
+			last_second=$SECONDS
+		fi
+
+		resync_selection
+		resize_if_stale
+
+		frame_key="$count|$idx|$notice|$cols|$here|$rows_serial"
+		if [ "$frame_key" != "$prev_frame_key" ]; then
+			render_into_frame
+			prev_frame_key=$frame_key
+			if [ "$frame" != "$painted" ]; then
+				# [H + [0J redraws with far less flicker than a full [2J clear
+				printf '%s%s' "${esc}[H${esc}[0J" "$frame"
+				painted=$frame
+			fi
+		fi
+
+		key=""
+		if IFS= read -rsn1 -t "$interval" key </dev/tty; then
+			case "$key" in
+			j) move_down ;;
+			k) move_up ;;
+			# read -n1 は改行を行区切りとして食うので、Enter は rc=0 かつ空文字で返る。
+			# タイムアウトは rc!=0 なので取り違えない。
+			l | "")
+				if [ -n "$selected" ]; then
+					emit_jump "$selected"
+				fi
+				;;
+			esac
+		else
+			stale=1
+		fi
 	done
 }
 
-here=$(workspace_of_self)
+render_once() {
+	refresh_rows
+	idx=0
+	resize_if_stale
+	render_into_frame
+	printf '%s' "$frame"
+}
 
-case "${1:-}" in
---json) collect ;;
---once) render ;;
-*) loop ;;
-esac
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+	case "${1:-}" in
+	--json) collect_json ;;
+	--once) render_once ;;
+	*) loop ;;
+	esac
+fi

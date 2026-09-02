@@ -62,7 +62,7 @@ run_check() {
 }
 
 go_apps=""
-declare -a lua_files sh_files md_files fmt_files docker_files
+declare -a lua_files=() sh_files=() md_files=() fmt_files=() docker_files=()
 run_tombi=0
 run_actionlint=0
 unmapped=""
