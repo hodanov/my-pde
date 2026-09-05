@@ -92,7 +92,7 @@ return function(config)
 			source = {
 				File = os.getenv("HOME") .. "/Pictures/romancing_saga_rs_alkaizer.PNG",
 			},
-			opacity = 0.23,
+			opacity = 0.13,
 			vertical_align = "Bottom",
 			horizontal_align = "Right",
 			repeat_x = "NoRepeat",

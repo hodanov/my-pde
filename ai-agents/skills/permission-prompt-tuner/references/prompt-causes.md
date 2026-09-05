@@ -30,9 +30,12 @@ Claude Code の Bash 許可判定と、permission prompt が出る主な原因�
 - **症状**: コマンド名は allow にあるが、フラグが差し込まれて前方一致が外れる。代表例:
   `terraform -chdir=/path show ...` は `Bash(terraform show *)` に当たらない（`-chdir` が
   `terraform` と `show` の間に入るため）。
-- **推奨**: 次の二択を提示。
-  - パターン追加: `Bash(terraform -chdir=* show *)` のように `-chdir` 込みで登録。
-  - 書き換え: `-chdir` を使わず素直な形にする（サブコマンドを先頭付近に置く）。
+- **推奨**: `-chdir` を使わず素直な形にする（サブコマンドを先頭付近に置く。例:
+  `cd "$DIR" && terraform show ...`、または既存の non-chdir allow ルールをそのまま使う）。
+  - **非推奨**: `Bash(terraform -chdir=* show *)` のように `-chdir` 込みでパターン登録する案は
+    採用しない。Claude Code の許可判定では `*` がその位置で任意個のトークンを吸収するため、
+    `-chdir=<path>` の値だけでなく、サブコマンドとの間に差し込まれた他の任意オプションまで
+    無審査で通してしまう（Claude Code 起動時の警告で指摘される既知の危険パターン）。
 
 ### `builtin-cd-redirect`
 

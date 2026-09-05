@@ -2,8 +2,7 @@ local wezterm = require("wezterm")
 local act = wezterm.action
 local mux = wezterm.mux
 
--- 検知対象。bin/ai-panes.sh の AI_PANES_AGENTS と対応させること。
--- 値はステータスバーでの表示色（Catppuccin Mocha）。
+-- 検知対象。値はステータスバーとダッシュボードでの表示色（Catppuccin Mocha）。
 -- nvim は AI CLI ではないが「どの workspace で動いているかを把握して飛ぶ」対象としては
 -- 完全に同型なので、専用モジュールを作らずここに同居させる。
 local TRACKED = {
@@ -14,38 +13,35 @@ local TRACKED = {
 	copilot = "#f9e2af",
 }
 
--- ステータスバーとピッカーの並びを固定するための一覧。pairs() の走査順は不定なので、
--- これを使わないとリフレッシュのたびに並びが入れ替わる。
--- nvim は「その workspace の主ペイン」なので先頭に置く。
+-- 並びを固定するための一覧。pairs() の走査順は不定なので、これを使わないと
+-- リフレッシュのたびに並びが入れ替わる。nvim は「その workspace の主ペイン」なので先頭。
 local TRACKED_ORDER = { "nvim", "claude", "codex", "cursor-agent", "copilot" }
 
--- ピッカーのソート用に TRACKED_ORDER を逆引きできるようにしておく。
 local TRACKED_RANK = {}
-for i, name in ipairs(TRACKED_ORDER) do
-	TRACKED_RANK[name] = i
+for index, name in ipairs(TRACKED_ORDER) do
+	TRACKED_RANK[name] = index
 end
 
--- ピッカーの行はフィールドを空白で並べただけだと workspace 名と CLI 名が地続きに
--- 読めてしまうので、境目には可視のセパレータを挟む。
--- ラベルに色は付けない。InputSelector は選択行を Reverse 属性で描くので、前景色を
--- 指定するとその色が選択時の背景になり、行の背景がフィールドごとにまだらになる。
--- 色無しにしておけば CMD+s のワークスペース選択と同じ均一な背景が乗る。
-local SEP = " / "
+local MAUVE = "#cba6f7"
+local GREEN = "#a6e3a1"
+local OVERLAY0 = "#6c7086"
 
--- 対象が 1 本も無いときにピッカーへ出すプレースホルダの id。
--- トースト通知は macOS の通知設定次第で無音になり「何も起きない」ように見えるため、
--- 空でもセレクタ自体は開いて理由を出す。
-local NO_PANES_ID = "__none__"
-
--- ダッシュボードペインが起動直後に立てる user var。
--- pane_id を wezterm.GLOBAL に持つ方式と違い、ペインが消えれば目印も消えるので
--- 手動で閉じられても設定をリロードしても状態がずれない。
 local DASHBOARD_VAR = "ai_panes_dashboard"
 local DASHBOARD_CMD = wezterm.config_dir .. "/bin/ai-panes.sh"
-local DASHBOARD_PERCENT = 18
+local DASHBOARD_FRACTION = 0.18
 
--- update-status は毎秒発火するので、全ペイン走査はこの間隔まで間引く。
-local STATUS_THROTTLE_SECONDS = 3
+local KEY_VAR = "ai_panes_key"
+local KEY_VAR_PATTERN = "^(%a):"
+
+local JUMP_URI_PREFIX = "wezterm-ai-panes://jump/"
+local JUMP_URI_PATTERN = "^wezterm%-ai%-panes://jump/(%d+)$"
+
+local COLLECT_THROTTLE_SECONDS = 2
+
+local ESC = "\027"
+local RESET = ESC .. "[0m"
+
+local state = { rows = {}, collected_at = 0, tab_id = {}, dashboards = {}, painted = {} }
 
 local function basename(path)
 	if path == nil or path == "" then
@@ -54,19 +50,9 @@ local function basename(path)
 	return path:gsub("/+$", ""):match("([^/]+)$")
 end
 
--- 20240127 以降 get_current_working_dir() は Url オブジェクトを返す。
--- 文字列を返す旧版とも両対応にしておく。
-local function pane_cwd(pane)
-	local ok, cwd = pcall(function()
-		return pane:get_current_working_dir()
-	end)
-	if not ok or cwd == nil then
-		return nil
-	end
-	if type(cwd) == "string" then
-		return (cwd:gsub("^file://[^/]*", ""))
-	end
-	return cwd.file_path
+local function fg(hex)
+	local r, g, b = hex:match("^#(%x%x)(%x%x)(%x%x)$")
+	return string.format("%s[38;2;%d;%d;%dm", ESC, tonumber(r, 16), tonumber(g, 16), tonumber(b, 16))
 end
 
 -- .zshrc の nvim() は docker exec でコンテナ内の nvim を起動するので、ホスト側の
@@ -74,7 +60,6 @@ end
 -- （nvim-dev）ではなく argv に素の nvim トークンが現れるかで行う。
 --   `bash --login -c 'nvim "$@"'` → argv の 1 要素が `nvim "$@"` になるので拾える
 --   `docker container exec -it nvim-dev bash --login` → コンテナに入っただけなので拾わない
--- この判定ルールは bin/ai-panes.sh の awk 側と対になっている。
 local function argv_runs_nvim(argv)
 	if argv == nil then
 		return false
@@ -91,8 +76,15 @@ end
 -- ~/.local/share/claude/versions/<version> への symlink で、get_foreground_process_name()
 -- は解決後の実パスを返すため basename がバージョン番号（例 2.1.235）になる。
 -- LocalProcessInfo の name / argv[0] も候補に入れて、どれか 1 つでも一致すれば採用する。
+local function tracked_name(candidate)
+	local name = basename(candidate)
+	if name and TRACKED[name] then
+		return name
+	end
+	return nil
+end
+
 local function process_of(pane)
-	local candidates = {}
 	local info = nil
 
 	local ok_info, got = pcall(function()
@@ -100,24 +92,21 @@ local function process_of(pane)
 	end)
 	if ok_info and got then
 		info = got
-		table.insert(candidates, info.name)
-		if info.argv then
-			table.insert(candidates, info.argv[1])
+		local hit = tracked_name(info.name)
+			or (info.argv and tracked_name(info.argv[1]))
+			or tracked_name(info.executable)
+		if hit then
+			return hit
 		end
-		table.insert(candidates, info.executable)
 	end
 
 	local ok_name, proc = pcall(function()
 		return pane:get_foreground_process_name()
 	end)
 	if ok_name then
-		table.insert(candidates, proc)
-	end
-
-	for _, candidate in ipairs(candidates) do
-		local name = basename(candidate)
-		if name and TRACKED[name] then
-			return name
+		local hit = tracked_name(proc)
+		if hit then
+			return hit
 		end
 	end
 
@@ -132,39 +121,203 @@ local function process_of(pane)
 	return nil
 end
 
--- mux 配下の全 window / tab / pane を走査して追跡対象が動いているペインを集める。
--- この wezterm には mux.get_pane() が無いので、後でジャンプできるよう
--- MuxPane オブジェクトそのものを行に持たせる。
+local function is_dashboard(pane)
+	if state.dashboards[pane:pane_id()] then
+		return true
+	end
+	local ok, vars = pcall(function()
+		return pane:get_user_vars()
+	end)
+	if ok and vars and vars[DASHBOARD_VAR] == "1" then
+		state.dashboards[pane:pane_id()] = true
+		return true
+	end
+	return false
+end
+
+local function project_of(pane)
+	local ok, cwd = pcall(function()
+		return pane:get_current_working_dir()
+	end)
+	if not ok or cwd == nil then
+		return nil
+	end
+	if type(cwd) == "string" then
+		return basename((cwd:gsub("^file://[^/]*", "")))
+	end
+	local ok_path, path = pcall(function()
+		return cwd.file_path or cwd.path
+	end)
+	if not ok_path then
+		return nil
+	end
+	return basename(path)
+end
+
 local function collect()
 	local rows = {}
 	for _, win in ipairs(mux.all_windows()) do
 		local workspace = win:get_workspace()
 		for _, tab in ipairs(win:tabs()) do
 			for _, pane in ipairs(tab:panes()) do
-				local proc = process_of(pane)
-				if proc then
-					table.insert(rows, {
-						workspace = workspace,
-						proc = proc,
-						project = basename(pane_cwd(pane)) or workspace,
-						tab_title = tab:get_title(),
-						pane_id = pane:pane_id(),
-						pane = pane,
-					})
+				if not is_dashboard(pane) then
+					local proc = process_of(pane)
+					if proc then
+						rows[#rows + 1] = {
+							ws = workspace,
+							proc = proc,
+							pane_id = pane:pane_id(),
+							project = project_of(pane),
+						}
+					end
 				end
 			end
 		end
 	end
+
 	table.sort(rows, function(a, b)
-		if a.workspace ~= b.workspace then
-			return a.workspace < b.workspace
+		if a.ws ~= b.ws then
+			return a.ws < b.ws
 		end
 		if a.proc ~= b.proc then
-			return (TRACKED_RANK[a.proc] or math.huge) < (TRACKED_RANK[b.proc] or math.huge)
+			return TRACKED_RANK[a.proc] < TRACKED_RANK[b.proc]
 		end
 		return a.pane_id < b.pane_id
 	end)
 	return rows
+end
+
+local function status_text(rows)
+	local counts = {}
+	for _, row in ipairs(rows) do
+		counts[row.proc] = (counts[row.proc] or 0) + 1
+	end
+
+	local parts = {}
+	for _, name in ipairs(TRACKED_ORDER) do
+		if counts[name] then
+			parts[#parts + 1] = { Foreground = { Color = TRACKED[name] } }
+			parts[#parts + 1] = { Text = string.format(" %s:%d", name, counts[name]) }
+		end
+	end
+	if #parts == 0 then
+		return ""
+	end
+	parts[#parts + 1] = { Text = " " }
+	return wezterm.format(parts)
+end
+
+local function index_of(rows, pane_id)
+	for index, row in ipairs(rows) do
+		if row.pane_id == pane_id then
+			return index
+		end
+	end
+	return nil
+end
+
+local function resolve_selection(rows, selected)
+	if #rows == 0 then
+		return nil
+	end
+	if selected and index_of(rows, selected) then
+		return selected
+	end
+	return rows[1].pane_id
+end
+
+local function move_selection(rows, selected, delta)
+	if #rows == 0 then
+		return nil
+	end
+	local index = index_of(rows, selected) or 1
+	index = math.max(1, math.min(#rows, index + delta))
+	return rows[index].pane_id
+end
+
+local function pad(text, preferred, available)
+	local width = math.max(1, math.min(preferred, available))
+	return string.format("%-" .. width .. "." .. width .. "s", text)
+end
+
+local function clip(text, available)
+	if available < 1 then
+		return ""
+	end
+	return text:sub(1, available)
+end
+
+local function render(rows, ctx)
+	local lines = {
+		" " .. fg(MAUVE) .. clip("PANES", ctx.cols - 1) .. RESET,
+		" " .. fg(OVERLAY0) .. string.rep("─", math.max(0, ctx.cols - 2)) .. RESET,
+	}
+
+	if #rows == 0 then
+		lines[#lines + 1] = " " .. fg(OVERLAY0) .. clip("nothing running", ctx.cols - 1) .. RESET
+	end
+
+	local group = nil
+	for _, row in ipairs(rows) do
+		if row.ws ~= group then
+			lines[#lines + 1] = " " .. fg(MAUVE) .. "▍" .. clip(row.ws, ctx.cols - 2) .. RESET
+			group = row.ws
+		end
+
+		local link_open = ESC .. "]8;;" .. JUMP_URI_PREFIX .. row.pane_id .. "\007"
+		local link_close = ESC .. "]8;;\007"
+		local marker = row.ws == ctx.here and (fg(GREEN) .. "●") or (fg(OVERLAY0) .. "○")
+		local cursor = row.pane_id == ctx.selected and (fg(MAUVE) .. "▸" .. RESET) or " "
+
+		local id_text = "#" .. row.pane_id
+		lines[#lines + 1] = string.format(
+			" %s %s%s%s %s%s%s%s%s%s%s",
+			cursor,
+			link_open,
+			marker,
+			RESET,
+			fg(TRACKED[row.proc]),
+			pad(row.proc, 13, ctx.cols - 5 - #id_text),
+			RESET,
+			fg(OVERLAY0),
+			id_text,
+			RESET,
+			link_close
+		)
+
+		if row.project and row.project ~= row.ws then
+			lines[#lines + 1] = string.format(
+				"     %s%s↳ %s%s%s",
+				link_open,
+				fg(OVERLAY0),
+				pad(row.project, 16, ctx.cols - 7),
+				RESET,
+				link_close
+			)
+		end
+	end
+
+	lines[#lines + 1] = ""
+	for _, hint in ipairs({ "j/k move", "l/Enter jump", "click jump", "CMD+SHIFT+A close" }) do
+		lines[#lines + 1] = " " .. fg(OVERLAY0) .. clip(hint, ctx.cols - 1) .. RESET
+	end
+
+	return ESC .. "[?25l" .. ESC .. "[H" .. ESC .. "[0J" .. table.concat(lines, "\r\n") .. "\r\n"
+end
+
+local function find_pane(pane_id)
+	if pane_id == nil then
+		return nil
+	end
+	local ok, pane = pcall(mux.get_pane, pane_id)
+	if not ok or not pane then
+		return nil
+	end
+	local win = pane:window()
+	if not win then
+		return nil
+	end
+	return { workspace = win:get_workspace(), pane_id = pane_id, pane = pane }
 end
 
 -- 先にペインを activate してから workspace を切り替える。
@@ -183,132 +336,189 @@ local function jump_to(window, row)
 	end
 end
 
-local function select_pane()
-	return wezterm.action_callback(function(window, pane)
-		local rows = collect()
-
-		local choices = {}
-		if #rows == 0 then
-			table.insert(choices, { id = NO_PANES_ID, label = "no tracked panes" })
-		end
-		for _, row in ipairs(rows) do
-			local label = row.workspace .. SEP .. row.proc
-			-- タブ名は無いことがある。空のまま並べると区切りだけが浮くので出さない。
-			-- プロセス名と同じタブ名（`my-pde / nvim / nvim`）も冗長なだけなので出さない。
-			if row.tab_title and row.tab_title ~= "" and row.tab_title ~= row.proc then
-				label = label .. SEP .. row.tab_title
-			end
-
-			table.insert(choices, {
-				id = tostring(row.pane_id),
-				label = label .. string.format(" #%d", row.pane_id),
-			})
-		end
-
-		window:perform_action(
-			act.InputSelector({
-				title = "Jump to pane",
-				fuzzy = true,
-				fuzzy_description = "Pane > ",
-				choices = choices,
-				action = wezterm.action_callback(function(w, _, id)
-					if not id or id == NO_PANES_ID then
-						return
-					end
-					for _, row in ipairs(rows) do
-						if tostring(row.pane_id) == id then
-							jump_to(w, row)
-							return
-						end
-					end
-				end),
-			}),
-			pane
-		)
-	end)
-end
-
--- タブバー左端に出す `nvim:2 claude:1` 形式のサマリ。
--- ダッシュボードペインはそのタブの中でしか見えないので、どのタブ / どの workspace に
--- いても総数だけは分かるようにする補完。1 本も動いていなければ何も出さない。
---
--- キャッシュはスカラー 2 本で持つ。wezterm.GLOBAL に入れたテーブルはネストした
--- 書き換えが保持されないことがあるため、テーブルを持たせない。
-local function status_text()
-	local now = os.time()
-	local cached_at = wezterm.GLOBAL.ai_panes_status_at
-	if cached_at and (now - cached_at) < STATUS_THROTTLE_SECONDS then
-		return wezterm.GLOBAL.ai_panes_status_text or ""
+local function jump_by_id(window, pane_id)
+	if pane_id == nil then
+		return
 	end
-
-	local counts = {}
-	for _, row in ipairs(collect()) do
-		counts[row.proc] = (counts[row.proc] or 0) + 1
+	local row = find_pane(pane_id)
+	if row then
+		jump_to(window, row)
+	else
+		window:toast_notification("WezTerm", "Pane #" .. pane_id .. " is gone", nil, 2000)
 	end
-
-	local parts = {}
-	for _, name in ipairs(TRACKED_ORDER) do
-		if counts[name] then
-			table.insert(parts, { Foreground = { Color = TRACKED[name] } })
-			table.insert(parts, { Text = string.format(" %s:%d", name, counts[name]) })
-		end
-	end
-
-	local text = ""
-	if #parts > 0 then
-		table.insert(parts, { Text = " " })
-		text = wezterm.format(parts)
-	end
-
-	wezterm.GLOBAL.ai_panes_status_at = now
-	wezterm.GLOBAL.ai_panes_status_text = text
-	return text
 end
 
 local function find_dashboard(tab)
 	for _, pane in ipairs(tab:panes()) do
-		local ok, vars = pcall(function()
-			return pane:get_user_vars()
-		end)
-		if ok and vars and vars[DASHBOARD_VAR] then
+		if is_dashboard(pane) then
 			return pane
 		end
 	end
 	return nil
 end
 
+local function ensure_dashboard(tab, focus)
+	local existing = find_dashboard(tab)
+	if existing then
+		if focus then
+			pcall(function()
+				existing:activate()
+			end)
+		end
+		return existing
+	end
+
+	local before = tab:active_pane()
+	local ok, dash = pcall(function()
+		return before:split({
+			direction = "Left",
+			size = DASHBOARD_FRACTION,
+			top_level = true,
+			args = { DASHBOARD_CMD },
+		})
+	end)
+	if not ok or not dash then
+		return nil
+	end
+
+	state.dashboards[dash:pane_id()] = true
+	if not focus then
+		pcall(function()
+			before:activate()
+		end)
+	end
+	return dash
+end
+
+local function paint(window, tab)
+	local dash = find_dashboard(tab)
+	if not dash then
+		return
+	end
+
+	local selected = resolve_selection(state.rows, wezterm.GLOBAL.ai_panes_selected)
+	wezterm.GLOBAL.ai_panes_selected = selected
+
+	local ok, dims = pcall(function()
+		return dash:get_dimensions()
+	end)
+	local frame = render(state.rows, {
+		cols = ok and dims.cols or 26,
+		here = window:active_workspace(),
+		selected = selected,
+	})
+
+	local id = dash:pane_id()
+	if state.painted[id] == frame then
+		return
+	end
+	local painted = pcall(function()
+		dash:inject_output(frame)
+	end)
+	if painted then
+		state.painted[id] = frame
+	end
+end
+
+local function refresh(force)
+	local now = os.time()
+	if force or (now - state.collected_at) >= COLLECT_THROTTLE_SECONDS then
+		state.rows = collect()
+		state.collected_at = now
+	end
+end
+
+local function close_all()
+	for _, win in ipairs(mux.all_windows()) do
+		for _, tab in ipairs(win:tabs()) do
+			local dash = find_dashboard(tab)
+			if dash then
+				-- CloseCurrentPane は perform_action に渡したペインではなく「いまアクティブな
+				-- ペイン」を閉じてしまうので使えない。sink はペイン直下のプロセスなので、
+				-- Ctrl-C を送れば INT トラップが exit 0 し、WezTerm がそのペインを閉じる。
+				pcall(function()
+					dash:send_text("\003")
+				end)
+			end
+		end
+	end
+end
+
 local function toggle_dashboard()
-	return wezterm.action_callback(function(window, pane)
-		local existing = find_dashboard(window:active_tab())
-		if existing then
-			-- CloseCurrentPane は perform_action に渡したペインではなく「いまアクティブな
-			-- ペイン」を閉じてしまうので使えない。スクリプトはペイン直下のプロセスなので、
-			-- Ctrl-C を送れば INT トラップが exit 0 し、WezTerm がそのペインを閉じる。
-			existing:send_text("\003")
+	return wezterm.action_callback(function(window, _pane)
+		if wezterm.GLOBAL.ai_panes_on then
+			wezterm.GLOBAL.ai_panes_on = false
+			close_all()
+			state.dashboards = {}
+			state.painted = {}
 			return
 		end
 
-		window:perform_action(
-			act.SplitPane({
-				direction = "Left",
-				size = { Percent = DASHBOARD_PERCENT },
-				command = { args = { DASHBOARD_CMD } },
-			}),
-			pane
-		)
-		-- 分割直後は新しいペインにフォーカスが移るので、作業中のペインへ戻す
-		pane:activate()
+		wezterm.GLOBAL.ai_panes_on = true
+		local tab = window:active_tab()
+		ensure_dashboard(tab, true)
+		refresh(true)
+		paint(window, tab)
 	end)
 end
 
-return function(config)
-	-- workspaces.lua が update-right-status / set_right_status を持っているので、
-	-- こちらは update-status / set_left_status を使う。両イベントは併存して発火し、
-	-- 書き込むスロットも別なので workspaces.lua を変更せずに共存できる。
-	wezterm.on("update-status", function(window)
-		window:set_left_status(status_text())
-	end)
+local M = {
+	collect = collect,
+	status_text = status_text,
+	render = render,
+	move_selection = move_selection,
+	resolve_selection = resolve_selection,
+	process_of = process_of,
+}
 
-	table.insert(config.keys, { key = "a", mods = "CMD", action = select_pane() })
-	table.insert(config.keys, { key = "A", mods = "CMD|SHIFT", action = toggle_dashboard() })
-end
+return setmetatable(M, {
+	__call = function(_, config)
+		wezterm.on("update-status", function(window)
+			local tab = window:active_tab()
+			local seen = window:window_id()
+			local switched = state.tab_id[seen] ~= tab:tab_id()
+			state.tab_id[seen] = tab:tab_id()
+
+			refresh(switched)
+			window:set_left_status(status_text(state.rows))
+
+			if wezterm.GLOBAL.ai_panes_on then
+				ensure_dashboard(tab, false)
+				paint(window, tab)
+			end
+		end)
+
+		wezterm.on("open-uri", function(window, _, uri)
+			local id = uri:match(JUMP_URI_PATTERN)
+			if not id then
+				return
+			end
+			jump_by_id(window, tonumber(id))
+			return false
+		end)
+
+		wezterm.on("user-var-changed", function(window, pane, name, value)
+			if name == DASHBOARD_VAR then
+				if value == "1" then
+					state.dashboards[pane:pane_id()] = true
+				end
+				return
+			end
+			if name ~= KEY_VAR then
+				return
+			end
+
+			local key = value:match(KEY_VAR_PATTERN)
+			if key == "l" then
+				jump_by_id(window, wezterm.GLOBAL.ai_panes_selected)
+			elseif key == "j" or key == "k" then
+				refresh(false)
+				wezterm.GLOBAL.ai_panes_selected =
+					move_selection(state.rows, wezterm.GLOBAL.ai_panes_selected, key == "j" and 1 or -1)
+				paint(window, window:active_tab())
+			end
+		end)
+
+		table.insert(config.keys, { key = "A", mods = "CMD|SHIFT", action = toggle_dashboard() })
+	end,
+})

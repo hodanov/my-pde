@@ -25,6 +25,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 
 - `docker compose -f environment/docker/docker-compose.yml up -d` — build and start.
 - `docker container exec -it nvim-dev bash --login` — enter the container.
+- Both `mise run docker:build` and the compose service use the image tag `my-pde-nvim:dev`, so an image built by the former is what `up -d` starts.
 
 ### Task runner (mise)
 

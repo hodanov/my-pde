@@ -27,6 +27,8 @@ cd my-pde
 docker compose -f environment/docker/docker-compose.yml up -d
 ```
 
+The image is tagged `my-pde-nvim:dev`, which is also the tag `mise run docker:build` writes, so an image built with that task is the one `up -d` starts.
+
 Attach to the container:
 
 ```sh
@@ -54,9 +56,12 @@ If you link this repository's `.zshrc` (see [Dotfiles](#dotfiles)), skip the `ec
 Shell and terminal configs under `dotfiles/` are deployed as symlinks, so edits on either side stay in sync:
 
 ```sh
-mise run dotfiles-link    # dotfiles/wezterm -> ~/.config/wezterm
-mise run zshrc-link       # dotfiles/.zshrc  -> ~/.zshrc
+brew install --cask wezterm@nightly    # the stable channel has been frozen since 2024-02
+mise run dotfiles-link                 # dotfiles/wezterm -> ~/.config/wezterm
+mise run zshrc-link                    # dotfiles/.zshrc  -> ~/.zshrc
 ```
+
+`mise run wezterm-verify` smoke-tests the config against whichever wezterm is installed; run it after a nightly update. See [the migration notes](./docs/plan/2026-09-05_wezterm-nightly-migration.md) for why this repository tracks nightly.
 
 `zshrc-link` is intentionally separate from `dotfiles-link` because it replaces the login shell config. An existing regular `~/.zshrc` is moved to `~/.zshrc.bak` first, and `mise run zshrc-unlink` removes the symlink and restores that backup.
 

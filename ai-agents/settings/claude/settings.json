@@ -54,11 +54,6 @@
       "Bash(sort *)",
       "Bash(stylua *)",
       "Bash(tail *)",
-      "Bash(terraform -chdir=* init *)",
-      "Bash(terraform -chdir=* providers *)",
-      "Bash(terraform -chdir=* plan *)",
-      "Bash(terraform -chdir=* version)",
-      "Bash(terraform -chdir=* validate *)",
       "Bash(terraform fmt *)",
       "Bash(terraform init *)",
       "Bash(terraform plan *)",
@@ -104,12 +99,33 @@
     ]
   },
   "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/context-anchor-save.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
             "command": "~/.claude/hooks/toolchain-doctor.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/context-anchor-restore.sh",
+            "timeout": 10
           }
         ]
       }

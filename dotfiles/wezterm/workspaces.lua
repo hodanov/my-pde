@@ -100,7 +100,7 @@ end
 
 return function(config)
 	-- ステータスバーにワークスペース名を表示
-	wezterm.on("update-right-status", function(window)
+	wezterm.on("update-status", function(window)
 		window:set_right_status(window:active_workspace())
 	end)
 

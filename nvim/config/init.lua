@@ -348,22 +348,23 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 -- ----------------------------------------
 -- Settings for indent each files.
 -- ----------------------------------------
-vim.api.nvim_create_augroup("html_css_js_and_others_indent", { clear = true })
-vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
-	group = "html_css_js_and_others_indent",
-	pattern = { "*.yml", "*.yaml", "*.tmpl", "*json" },
-	command = "set tabstop=2 shiftwidth=2",
-})
-vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
-	group = "html_css_js_and_others_indent",
-	pattern = { "*.html", "*.css", "*.js", "*.ts", "*.php" },
-	command = "set tabstop=2 shiftwidth=2",
-})
-vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
-	group = "html_css_js_and_others_indent",
-	pattern = "*.go",
-	command = "set noexpandtab tabstop=8 shiftwidth=8",
-})
+local filetype_indent_group = vim.api.nvim_create_augroup("filetype_indent", { clear = true })
+
+local function set_filetype_indent(filetypes, options)
+	vim.api.nvim_create_autocmd("FileType", {
+		group = filetype_indent_group,
+		pattern = filetypes,
+		callback = function()
+			for name, value in pairs(options) do
+				vim.opt_local[name] = value
+			end
+		end,
+	})
+end
+
+set_filetype_indent({ "yaml", "yaml.ghaction", "json", "jsonc", "template" }, { tabstop = 2, shiftwidth = 2 })
+set_filetype_indent({ "html", "css", "javascript", "typescript", "php" }, { tabstop = 2, shiftwidth = 2 })
+set_filetype_indent({ "go" }, { expandtab = false, tabstop = 8, shiftwidth = 8 })
 
 -- ----------------------------------------
 -- 散文系 filetype の折り返しを読みやすくする（ドキュメント編集の主用途向け）

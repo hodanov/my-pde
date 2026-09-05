@@ -4,10 +4,10 @@
 
 [tools]
 actionlint = "1.7.12"
-go = "1.26.6"
-golangci-lint = "2.12.2"
-node = "24.19.0"
-shfmt = "3.13.1"
+go = "1.27.0"
+golangci-lint = "2.13.2"
+node = "24.20.0"
+shfmt = "3.14.0"
 shellcheck = "0.11.0"
 stylua = "2.5.2"
 hadolint = "2.15.1"
@@ -22,10 +22,10 @@ tflint = "0.64.0"
 # `mise run pins:sync` and injected as --build-arg by `mise run docker:build`.
 [env]
 LUA_LS_VERSION = "3.19.1"
-NEOVIM_VERSION = "0.12.4"
+NEOVIM_VERSION = "0.12.5"
 NPM_VERSION = "12.0.2"
 RUST_TOOLCHAIN = "stable"
-TERRAFORM_VERSION = "1.15.8"
+TERRAFORM_VERSION = "1.16.0"
 
 # ---- ai-bridge (Go) ----
 
@@ -443,6 +443,24 @@ rm -f "$HOME/.config/wezterm"
 echo "Unlinked $HOME/.config/wezterm"
 '''
 
+# WezTerm tracks the nightly channel (see docs/plan/2026-09-05_wezterm-nightly-migration.md),
+# so the terminal underneath this config can move without warning. `show-keys` parses the
+# config in a separate process from the GUI, and the Lua test exercises the mux API surface
+# the dashboard is built on; between them they catch a broken nightly immediately.
+[tasks.wezterm-verify]
+description = "Smoke-test the WezTerm config against the installed wezterm"
+dir = "{{config_root}}"
+run = '''
+wezterm --version
+wezterm --config-file dotfiles/wezterm/wezterm.lua show-keys >/dev/null
+echo "show-keys: ok"
+if command -v luajit >/dev/null 2>&1; then
+	luajit dotfiles/wezterm/tests/ai-panes_test.lua
+else
+	echo "ai-panes_test.lua: skipped (luajit not on PATH)"
+fi
+'''
+
 # ~/.zshrc is deliberately not wired into dotfiles-link: replacing the login
 # shell config is far more disruptive than a wezterm directory symlink, so it
 # stays an explicit, opt-in command.
@@ -552,8 +570,9 @@ description = "Build the nvim image with versions injected from mise.toml"
 # locally, so `mise run docker:build` behaves exactly as before. The unquoted
 # expansion is intentional: the value is meant to split into separate arguments.
 run = '''
-docker build \
+docker buildx build \
   --file environment/docker/nvim.dockerfile \
+  --tag my-pde-nvim:dev \
   --build-arg LUA_LS_VERSION="$LUA_LS_VERSION" \
   --build-arg NEOVIM_VERSION="$NEOVIM_VERSION" \
   --build-arg NPM_VERSION="$NPM_VERSION" \
