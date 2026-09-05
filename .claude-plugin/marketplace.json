@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "my-pde",
+  "description": "hodanov/my-pde が提供する Claude Code plugin のカタログ",
+  "owner": {
+    "name": "hodanov"
+  },
+  "plugins": [
+    {
+      "name": "ai-agents",
+      "source": "./ai-agents",
+      "description": "hodanov の共通スキル・サブエージェント一式",
+      "category": "development"
+    }
+  ]
+}

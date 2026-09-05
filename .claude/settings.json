@@ -21,5 +21,16 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "ai-agents@my-pde": true
+  },
+  "extraKnownMarketplaces": {
+    "my-pde": {
+      "source": {
+        "source": "github",
+        "repo": "hodanov/my-pde"
+      }
+    }
   }
 }
