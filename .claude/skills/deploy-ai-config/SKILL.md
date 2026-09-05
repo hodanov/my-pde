@@ -2,7 +2,7 @@
 name: deploy-ai-config
 description: ai-agents/ と dotfiles/ の編集内容を各 AI CLI（~/.claude, ~/.cursor, ~/.codex, ~/.copilot）と ~/.config へ反映するデプロイ手順。「設定を反映」「デプロイ」「~/.claude に配って」「スキル/エージェント/設定を更新したから配布」等を求められたときに使用する。
 metadata:
-  version: 2
+  version: 3
 ---
 
 # Deploy AI config
@@ -20,6 +20,7 @@ metadata:
 | `ai-agents/personal/skills/**`                       | `mise run skills-copy`                                     | 各 CLI の `skills/`（汎用と同じ配布先）      |
 | `ai-agents/agents/**`                                | `mise run agents-copy`                                     | 各 CLI の `agents/`（Claude/Cursor/Copilot） |
 | `ai-agents/settings/**`（hooks/rules/settings.json） | `mise run settings-copy`                                   | 各 CLI のルート（Claude/Cursor/Copilot）     |
+| `ai-agents/hooks/**`                                 | `mise run settings-copy`                                   | `~/.claude/hooks/`（plugin とも二重配布）    |
 | `dotfiles/wezterm/**`                                | `mise run dotfiles-link`                                   | `~/.config/wezterm`（symlink）               |
 
 `*-copy` は実体コピー（編集ごとに再実行が必要、既存エントリは上書き）。`*-link` / `dotfiles-link` は
@@ -47,5 +48,8 @@ symlink（一度貼れば追従）。
 - `.claude/skills/` の my-pde 専用スキル（`skill-scaffold` / `hook-scaffold` / `agent-codex-convert` /
   `routine-create-clean-connectors` / `deploy-ai-config`）はコミットするだけでよい。clone の一部として
   ローカルにもクラウド Routine にも載る。配るとむしろ他リポで実行できないスキルが一覧に残る。
-- スキルをどのルートに置くかの判断軸は `.claude/rules/skill-authoring.md` にある。
+- スキルをどのルートに置くかの判断軸は `.claude/rules/skill-authoring.md`、フックは
+  `.claude/rules/hook-authoring.md` にある。
+- `ai-agents/hooks/` は plugin（`ai-agents@my-pde`）と `settings-copy` の両方から配られ、ローカルでは
+  二重に発火する。移行期の意図した状態で、どちらを落とすかは実測後に決める。
 - バージョンピン（`environment/**`）はこのスキルの対象外。`guard-version-pins.sh` で保護されている。
