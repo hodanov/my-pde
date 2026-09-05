@@ -513,6 +513,8 @@ local M = {
 
 return setmetatable(M, {
 	__call = function(_, config)
+		config.set_environment_variables = { ConEmuANSI = "ON" }
+
 		wezterm.on("update-status", function(window)
 			local tab = window:active_tab()
 			local seen = window:window_id()

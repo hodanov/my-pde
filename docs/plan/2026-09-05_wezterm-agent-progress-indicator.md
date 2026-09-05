@@ -8,6 +8,8 @@ Claude Code のバイナリには `terminalProgressBarEnabled` という設定�
 
 しかも今の設定はその恩恵を取り逃していた。nightly は既定のタブバー描画で Indeterminate 時にスピナーを出すようになったが、`appearance.lua` が `format-tab-title` を自前定義しているため既定描画ごと置き換わっている。
 
+ただしこの設定だけでは足りない。Claude Code の送信ゲートはターミナルの許可リスト方式で、ConEmu / ghostty≥1.2.0 / iTerm.app≥3.6.6 しか通さず、`TERM_PROGRAM=WezTerm` は素通りして `false` に落ちる。初版はここを見落として実装したため、タブバーもダッシュボードも `"None"` しか受け取れず丸ごと無効だった。`ConEmuANSI` が立っていれば無条件で通るので、WezTerm 側からこれを渡してゲートを開ける。
+
 併せて `macos_fullscreen_extend_behind_notch` を入れる。ハードは MacBook Air M2（Mac14,2）で notch があり、フルスクリーンを常用しているため。
 
 ## Current structure
@@ -44,14 +46,22 @@ Claude Code のバイナリには `terminalProgressBarEnabled` という設定�
 
 収集は `COLLECT_THROTTLE_SECONDS`（2 秒）に間引かれる。`get_progress()` は mux 内のメモリ参照なので毎秒でも回せるが、`get_foreground_process_info()` と同じ走査に相乗りしているので独立したスロットルは持たせない。`state.painted` がフレーム文字列で差分を見るので、進捗が変われば再描画は自動的に走る。
 
-### 3. notch（`appearance.lua`）
+### 3. 送信ゲート（`ai-panes.lua`）
+
+`config.set_environment_variables` で `ConEmuANSI = "ON"` を渡す。Claude Code の `progressReporting` 判定は `ConEmuANSI` / `ConEmuPID` / `ConEmuTask` のいずれかがあれば無条件で真を返す。
+
+WezTerm は元々 ConEmu 形式の `ESC ] 9 ; 4 ; st ; pr ST` を実装している（`pane:get_progress()` の docs がそう書いている）ので、これは能力の誤申告ではない。ターミナル名の判定は `TERM_PROGRAM` を ConEmu チェックより先に見るため、Claude Code から見た terminal は `"WezTerm"` のまま変わらず、ハイパーリンクや kitty keyboard protocol の能力判定には影響しない。
+
+置き場所を `ai-panes.lua` にしたのは、この env var が稼働状態表示のためだけに存在し、同モジュールがその機能を端から端まで持っているため。
+
+### 4. notch（`appearance.lua`）
 
 `macos_fullscreen_extend_behind_notch = true`。docs が要求する `native_macos_fullscreen_mode = false` は既定値だが、将来 native 側を変えたときに黙って無効化されるので明示的に併記した。
 
 ## File changes
 
 - `dotfiles/wezterm/appearance.lua` — `progress_mark()` と `format-tab-title` の書き換え、notch 2 行
-- `dotfiles/wezterm/ai-panes.lua` — `progress_token()` / `progress_of()`、`collect()` の行への `progress`、`render()` のトークン列と幅計算
+- `dotfiles/wezterm/ai-panes.lua` — `progress_token()` / `progress_of()`、`collect()` の行への `progress`、`render()` のトークン列と幅計算、`config.set_environment_variables` の `ConEmuANSI`
 - `dotfiles/wezterm/tests/ai-panes_test.lua` — `progress_token()` の 6 ケース、`collect()` が行に載せること、`render()` の色とリンク内側の位置、幅 10 でトークンを落とすこと
 
 ## Risks and mitigations
@@ -61,6 +71,14 @@ Claude Code のバイナリには `terminalProgressBarEnabled` という設定�
 **行が長くなる。** 最悪ケース（`cursor-agent` + 3 桁 pane id + `busy`）で 28 桁。ダッシュボードは画面幅 18% なので通常は足りる。足りない幅ではトークンを落として折り返しを避け、テストが幅 10 / 14 / 20 / 26 / 37 で全行が収まることを見張る。
 
 **`get_progress()` は nightly の API。** 安定版へ戻したり nightly が壊したりすると呼び出しが失敗する。`pcall` に包んであるので進捗が消えるだけで、ダッシュボードの他の列は従来どおり出る。
+
+**`ConEmuANSI` は wezterm が spawn する全プロセスに漏れる。** ConEmu 用の分岐を持つツールが誤動作しうる。macOS でこの変数を見るツールはほぼ無く、見る場合も「ANSI が使える」方向にしか倒れない。1 行削れば元に戻る。
+
+**Claude Code 側のゲートは非公開の内部実装。** 将来のバージョンで判定が変われば再び沈黙する。沈黙しても `progress == "None"` の経路に落ちるだけで、ダッシュボードの他の列とタブタイトルは従来どおり出る。
+
+**反映には再起動が 2 段要る。** `set_environment_variables` は新規 spawn にしか効かず、claude は起動時に env を読む。WezTerm を再起動し、さらに claude を起動し直さないと変化しない。
+
+**claude から来るのは `Indeterminate` と `None` だけ。** Claude Code の分岐は `indeterminate` と `completed`（= clear）の 2 つしか通らない。よってダッシュボードのトークンは常に `busy`、タブグリフは常に `md_circle_medium` になる。`PROGRESS_SLICES` と `err` は OSC を出す他プログラム向けの汎用サポートとして残す。
 
 ## Validation
 
@@ -78,14 +96,24 @@ Claude Code のバイナリには `terminalProgressBarEnabled` という設定�
 | split の非アクティブ側に進捗         | タブバーには出ない（設計どおり）                         |
 | GUI ログ                             | Lua エラー・panic なし。`"ResetAttributes"` は受理される |
 
+`ConEmuANSI` の効きは、`script(1)` の pty 越しに claude を起動して生バイト列を捕まえて実測した。wezterm を介さないので受信側の実装から独立に、送信側だけを切り分けられる。
+
+| 条件                   | 捕まえた OSC 9;4                                 |
+| ---------------------- | ------------------------------------------------ |
+| `ConEmuANSI` なし      | ゼロ。OSC は `0`（タイトル）と `8`（リンク）だけ |
+| `ConEmuANSI=ON`        | `ESC]9;4;0;BEL`（起動直後 idle）                 |
+| `ConEmuANSI=ON` で推論 | `9;4;0` → `9;4;3`（推論開始）→ `9;4;0`（完了）   |
+
+同じキャプチャでタイトルの遷移も取れた: `✳ Claude Code` → `◐ Basic arithmetic` → `◑ …`（推論中はアニメーション）→ `✳ …`。**タブ先頭に見えていた「推論中のアイコン」はこれで、`progress_mark()` のグリフではなかった。** タイトルは高頻度に変わるのでタブバーの再計算頻度に表示が引きずられる。progress 由来のグリフは状態変化時のみのイベント駆動なので、この弱点を持たない。
+
+隔離インスタンスで `ConEmuANSI=ON` / `TERM_PROGRAM=WezTerm` の併存も確認済み。
+
 ダッシュボード側は常駐化（`2026-09-05_wezterm-resident-dashboard-pane.md`）との統合で描画経路ごと書き直したため、`tests/ai-panes_test.lua` に移した。`mise run wezterm-verify` が `show-keys` と合わせて回す。
 
 静的検証は `mise run wezterm-verify`、`stylua --check`、`markdownlint-cli2` すべて通過。
 
 ## Open questions
 
-**Claude Code が実際に OSC 9;4 を流すかは未実測。** 設定の存在と既定 on までは確認したが、稼働中の claude で観測はしていない。実装は OSC を出すどのプログラムにも効くので、出さないと分かっても無駄にはならない。日常利用で出なければ `/config` の "Terminal progress bar" を確認する。
-
-**常駐ダッシュボードでのトークン表示は GUI 実機で未確認。** 統合後の描画はテストで押さえたが、実際に進捗を立てた状態のスクリーンショットは取っていない。反映後の最初の claude 実行で確認する。
+**非アクティブタブでグリフが追随するかは実機確認待ち。** docs は「progress OSC を処理して状態が変化したら wezterm がタブバー更新をトリガーし `format-tab-title` が走る」と書いており、1 秒ポーリングではなくイベント駆動なので取りこぼさないはず。claude を回したまま別タブへ移り、busy の開始と終了にグリフが追随するかを見る。追随しなければ、常駐ダッシュボード側は `inject_output()` で自前に描くのでタブバーの再計算に依存せず、そちらだけが残る。
 
 codex / cursor-agent / copilot が将来 OSC 9;4 を出すようになれば、設定側は無改修で対応できる。
