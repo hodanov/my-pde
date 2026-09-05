@@ -14,14 +14,14 @@ Claude Code のバイナリには `terminalProgressBarEnabled` という設定�
 
 `appearance.lua` の `format-tab-title` は、パスを剥いだタイトルを固定の空白 1 文字と一緒に出し、非アクティブなら灰色にするだけだった（`icon` という変数名だったが中身は `" "` で、実質は余白）。
 
-ダッシュボードは `bin/ai-panes.sh` が `wezterm cli list --format json` と `ps` を tty で join して行を組む。`ai-panes.lua` 側は mux を走査して左ステータスの `nvim:2 claude:1` を作る。
+ダッシュボードは `2026-09-05_wezterm-resident-dashboard-pane.md` で全タブ常駐になり、収集も描画も `ai-panes.lua` に寄った。`collect()` が mux を走査して行データを組み、`render()` がフレーム文字列を作り、`pane:inject_output()` で sink（`bin/ai-panes.sh`）へ流す。シェルはペインを開いたまま保持してキーを中継するだけで、`wezterm cli list` も `jq` も使わない。
 
 ## Design policy
 
-- **progress は `wezterm cli list --format json` に含まれない。** 移行時に数えたスカラーキー 21 個に無いので、ダッシュボードへ出すには Lua からシェルへ渡す配管が要る
-- 配管はファイル 1 本。トークンの正規化（`busy` / `NN%` / `err`）は Lua 側で済ませ、シェルにパースを持ち込まない
-- ファイルが無い・空・書き出し側が動いていない、のいずれでも既存の表示のまま壊れないこと
-- 出力先は既存の環境変数（`AI_PANES_INTERVAL` / `AI_PANES_AGENTS`）と同じ流儀で `AI_PANES_PROGRESS_FILE` から差し替えられるようにする。隔離インスタンスで検証するとき、常用インスタンスと同じファイルを取り合わないため
+- **progress は行データの一部として扱う。** 収集も描画も Lua 側にあるので、`collect()` が組む行に `progress` を 1 フィールド足せば `render()` まで素通しできる。プロセス間の配管は要らない
+- トークンは `busy` / `NN%` / `err` の 3 形に正規化する。表示側に OSC 9;4 の値の形を持ち込まない
+- `pane:get_progress()` を持たない wezterm でも行が組めること。`pcall` で包み、失敗は「進捗なし」に落とす
+- 幅が足りない行はトークンを落とす。ダッシュボードは画面幅 18% の細いペインなので、折り返しは行の対応関係ごと壊す
 - 色は既存の Catppuccin パレットから採り、新しい色は error の red だけに留める
 
 ## Implementation steps
@@ -34,21 +34,15 @@ Claude Code のバイナリには `terminalProgressBarEnabled` という設定�
 
 色は error のときだけ red `#f38ba8` を当て、直後に `"ResetAttributes"` を挟む。**それ以外では Foreground を一切指定しない。** アクティブタブの背景は mauve `#cba6f7` で、進捗色に mauve を使うとアクティブタブでは見えなくなる。グリフの形だけで状態を区別し、色に頼らない。
 
-### 2. ダッシュボード（`ai-panes.lua` + `bin/ai-panes.sh`）
+### 2. ダッシュボード（`ai-panes.lua`）
 
-#### Lua 側（書き出し）
+`progress_token()` が OSC 9;4 の値を `busy` / `NN%` / `err` に正規化し、`progress_of()` が `pcall` 越しに `pane:get_progress()` を呼ぶ。`collect()` は追跡対象のペインだけを見るので、進捗を引くのも同じ範囲で済む。
 
-既存の `update-status` ハンドラの先頭で `write_progress()` を呼ぶ。既存の `is_focused()` 早期 return より前に置く。背景ウィンドウでも進捗は更新したい。
+`render()` は pane id の直後、OSC 8 ハイパーリンクの内側にトークンを置く。行全体がクリックでジャンプできる性質を保つため。色は `err` だけ red で、それ以外は green。
 
-全 window / tab / pane を走査するが、`count_tracked()` が 3 秒に間引かれている理由は `get_foreground_process_info()` のプロセステーブル参照であって走査そのものではない。`pane:get_progress()` は mux 内のメモリ参照なので毎秒でよい。GUI ウィンドウが複数あると `update-status` が窓の数だけ発火するので、既存の `ai_panes_status_at` と同じ形の 1 秒スロットルを `wezterm.GLOBAL` に置き、内容が前回と同じなら書き込み自体を省く。
+幅は `render()` が持つ計算にトークン分を足すだけで足りる。`room` からトークン幅（`#token + 1`）を引いた残りをプロセス名のパディングに渡し、引いた結果が 1 桁未満になる幅ではトークン自体を落とす。
 
-書き込みは一時ファイル + `os.rename` で原子的に行う。シェルが毎秒読むので部分書き込みを踏ませない。ディレクトリは最初の `io.open` が失敗したときだけ `mkdir -p` する。
-
-#### シェル側（表示）
-
-`collect()` に `--arg progress "$(cat "$progress_file" 2>/dev/null)"` を足し、jq で `pane_id -> token` に畳んで各行に `busy` を付ける。TSV に列を 1 本増やし、`row_busy` 配列を経由して行末に色付きで出す。
-
-`frame_key` が TSV 本体（`rows_serial`）を含んでいるので、**進捗が変われば再描画は自動的に走る**。追加の仕掛けは要らなかった。
+収集は `COLLECT_THROTTLE_SECONDS`（2 秒）に間引かれる。`get_progress()` は mux 内のメモリ参照なので毎秒でも回せるが、`get_foreground_process_info()` と同じ走査に相乗りしているので独立したスロットルは持たせない。`state.painted` がフレーム文字列で差分を見るので、進捗が変われば再描画は自動的に走る。
 
 ### 3. notch（`appearance.lua`）
 
@@ -57,40 +51,41 @@ Claude Code のバイナリには `terminalProgressBarEnabled` という設定�
 ## File changes
 
 - `dotfiles/wezterm/appearance.lua` — `progress_mark()` と `format-tab-title` の書き換え、notch 2 行
-- `dotfiles/wezterm/ai-panes.lua` — `progress_token()` / `collect_progress()` / `write_progress()` と `update-status` からの呼び出し
-- `dotfiles/wezterm/bin/ai-panes.sh` — `progress_file`、jq の join、`row_busy`、行末の表示
+- `dotfiles/wezterm/ai-panes.lua` — `progress_token()` / `progress_of()`、`collect()` の行への `progress`、`render()` のトークン列と幅計算
+- `dotfiles/wezterm/tests/ai-panes_test.lua` — `progress_token()` の 6 ケース、`collect()` が行に載せること、`render()` の色とリンク内側の位置、幅 10 でトークンを落とすこと
 
 ## Risks and mitigations
 
-**タブバーは各タブのアクティブペインしか見ない。** claude が非アクティブペインで回っているタブには出ない。ダッシュボードは全ペインを見るのでそちらが埋める。実測でも、split の非アクティブ側（pane 3）に進捗を立てると進捗ファイルには載るがタブバーには出なかった。
+**タブバーは各タブのアクティブペインしか見ない。** claude が非アクティブペインで回っているタブには出ない。ダッシュボードは全ペインを見るのでそちらが埋める。実測でも、split の非アクティブ側（pane 3）に進捗を立ててもタブバーには出なかった。
 
-**行が長くなる。** 最悪ケース（`cursor-agent` + 3 桁 pane id + `busy`）で 28 桁。ダッシュボードは画面幅 18% なので通常は足りるが、`stty` が失敗したときのフォールバック幅 26 桁では溢れる。フォールバックに落ちるのは制御端末が無いときだけなので実害はないと判断した。
+**行が長くなる。** 最悪ケース（`cursor-agent` + 3 桁 pane id + `busy`）で 28 桁。ダッシュボードは画面幅 18% なので通常は足りる。足りない幅ではトークンを落として折り返しを避け、テストが幅 10 / 14 / 20 / 26 / 37 で全行が収まることを見張る。
 
-**常用インスタンスとの取り合い。** 進捗ファイルの既定パスは 1 本なので、隔離インスタンスを同時に起動すると両者が同じファイルを書く。`AI_PANES_PROGRESS_FILE` で逃がす。
+**`get_progress()` は nightly の API。** 安定版へ戻したり nightly が壊したりすると呼び出しが失敗する。`pcall` に包んであるので進捗が消えるだけで、ダッシュボードの他の列は従来どおり出る。
 
 ## Validation
 
-隔離インスタンス（`AI_PANES_PROGRESS_FILE=<scratch> wezterm --config-file ~/.config/wezterm/wezterm.lua start --always-new-process`）で実測した。
+タブバーと OSC 9;4 の状態遷移は、隔離インスタンス（`wezterm --config-file ~/.config/wezterm/wezterm.lua start --always-new-process`）で実測した。
 
 **`wezterm cli send-text` は既定でブラケットペーストとして送る。** 改行が Enter にならずプロンプトに積まれるだけで、コマンドが実行されない。`--no-paste` が要る。最初これに気づかず「進捗が立たない」と誤読した。
 
-| 観測点 | 結果 |
-| --- | --- |
-| ペイン内で `printf "\033]9;4;3;0\a"` | 進捗ファイルに `<pane>\tbusy`、タブバーのグリフが `md_circle_medium` |
-| `\033]9;4;1;42\a` | `<pane>\t42%`、グリフは slice 4（`floor(42/12.5)+1`） |
-| `\033]9;4;2;7\a` | `<pane>\terr`、グリフは `md_alert_circle_outline`、`is_error=true` |
-| `\033]9;4;0\a` | 該当行が消え、全解除でファイルが空になる |
-| 進捗なし | `raw=None`、グリフ nil。タブバーの出力は従来と同一 |
-| split の非アクティブ側に進捗 | 進捗ファイルには載る。タブバーには出ない（設計どおり） |
-| ダッシュボードの join | `busy` / `42%` / `err` / 空 のすべてで期待どおり。進捗ファイルが存在しないときも全行が空に落ちる |
-| 描画バイト列 | `busy` / `42%` は green、`err` は red。トークンは OSC 8 ハイパーリンクの内側にあり、行全体がクリック可能なまま |
-| GUI ログ | Lua エラー・panic なし。`"ResetAttributes"` は受理される |
-| 静的 | `mise run wezterm-verify`、`stylua --check`、`shfmt -d`、`shellcheck` すべて通過 |
+| 観測点                               | 結果                                                     |
+| ------------------------------------ | -------------------------------------------------------- |
+| ペイン内で `printf "\033]9;4;3;0\a"` | タブバーのグリフが `md_circle_medium`                    |
+| `\033]9;4;1;42\a`                    | グリフは slice 4（`floor(42/12.5)+1`）                   |
+| `\033]9;4;2;7\a`                     | グリフは `md_alert_circle_outline`、`is_error=true`      |
+| `\033]9;4;0\a`                       | グリフが消える                                           |
+| 進捗なし                             | `raw=None`、グリフ nil。タブバーの出力は従来と同一       |
+| split の非アクティブ側に進捗         | タブバーには出ない（設計どおり）                         |
+| GUI ログ                             | Lua エラー・panic なし。`"ResetAttributes"` は受理される |
+
+ダッシュボード側は常駐化（`2026-09-05_wezterm-resident-dashboard-pane.md`）との統合で描画経路ごと書き直したため、`tests/ai-panes_test.lua` に移した。`mise run wezterm-verify` が `show-keys` と合わせて回す。
+
+静的検証は `mise run wezterm-verify`、`stylua --check`、`markdownlint-cli2` すべて通過。
 
 ## Open questions
 
 **Claude Code が実際に OSC 9;4 を流すかは未実測。** 設定の存在と既定 on までは確認したが、稼働中の claude で観測はしていない。実装は OSC を出すどのプログラムにも効くので、出さないと分かっても無駄にはならない。日常利用で出なければ `/config` の "Terminal progress bar" を確認する。
 
-codex / cursor-agent / copilot が将来 OSC 9;4 を出すようになれば、設定側は無改修で対応できる。
+**常駐ダッシュボードでのトークン表示は GUI 実機で未確認。** 統合後の描画はテストで押さえたが、実際に進捗を立てた状態のスクリーンショットは取っていない。反映後の最初の claude 実行で確認する。
 
-ダッシュボードの `bin/ai-panes.sh` が Lua とファイルで結ばれたのは初めてで、契約が 1 つ増えた。`2026-08-21_wezterm-shared-dashboard-pane.md` を実装するときはこのファイルの扱いも一緒に見直す。
+codex / cursor-agent / copilot が将来 OSC 9;4 を出すようになれば、設定側は無改修で対応できる。
