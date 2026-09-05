@@ -72,6 +72,7 @@ vim.opt.confirm = true -- 未保存バッファを破棄しうる :q / :e 等で
 -- 既定値を壊さないよう append で足す（重複指定は無視される）。internal は既定で有効。
 vim.opt.diffopt:append("linematch:60") -- 変更ハンク内で似た行同士を対応付け直し、本当に変わった行だけを着色（Neovim 0.9+）
 vim.opt.diffopt:append("algorithm:histogram") -- 内蔵 diff のアルゴリズムを histogram にし、並べ替えを含む差分でも直感的なマッチにする
+vim.opt.diffopt:append("followwrap")
 
 -- ----------------------------------------
 -- :grep / :make 等で quickfix が populate されたら結果窓を自動で開く（ripgrep 動線の最終ピース）
