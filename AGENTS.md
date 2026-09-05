@@ -11,8 +11,10 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
   - `scripts/ai-bridge/`: Go daemon bridging Neovim to host-side AI CLIs. See `scripts/ai-bridge/AGENTS.md`.
 - `ai-agents/`: AI agent/skill definitions and settings deployed to `~/.claude`, `~/.cursor`, `~/.codex`.
   - `ai-agents/agents/`: subagent definitions (review, investigation).
-  - `ai-agents/skills/`: reusable skills (commit, review, blog, log export, etc.).
+  - `ai-agents/skills/`: shared skills that run in any repository (dev workflow, review, plan export, etc.).
+  - `ai-agents/personal/skills/`: hobby / private-life skills, distributed as the separate `personal` plugin.
   - `ai-agents/settings/`: Claude/Cursor settings, hooks, and shared rules.
+  - Skills that rewrite this repository's own paths live in `.claude/skills/` instead and are not distributed. Placement rules: `.claude/rules/skill-authoring.md`.
   - Deployment to each CLI (Claude, Cursor, Codex, Copilot) is done via mise tasks (`mise.toml` at the repo root).
 - `dotfiles/`: Shell and terminal configs (`.zshrc`, `wezterm/`). Both are deployed as symlinks (`mise run zshrc-link` / `dotfiles-link`), so host edits show up as repo diffs.
 - `docs/plan/`: implementation plans. `docs/log/`: work logs.

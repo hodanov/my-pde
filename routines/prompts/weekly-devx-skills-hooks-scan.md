@@ -15,7 +15,7 @@
 
 ## リポジトリ構成（提案の土台。ここを実際に読んで現状を把握する）
 
-- skills: `ai-agents/skills/<name>/SKILL.md`。書式規約は `.claude/rules/skill-authoring.md` に従う（`ai-agents/skills/**` を触ると自動で載る）。既存スキルと重複させない。
+- skills: 汎用は `ai-agents/skills/<name>/SKILL.md`、趣味・私生活用は `ai-agents/personal/skills/`、my-pde のパスを書き換えるものは `.claude/skills/`。書式規約と置き場所の判断軸は `.claude/rules/skill-authoring.md` に従う（3 ルートのいずれかを触ると自動で載る）。このルーチンが提案するのは汎用スキルなので既定の置き場所は `ai-agents/skills/`。既存スキルと重複させない。
 - hooks: `ai-agents/settings/{claude,cursor,copilot}/hooks/*.sh` と、配線先の settings.json（claude は `settings/claude/settings.json` の hooks: PostToolUse の matcher="Write|Edit|MultiEdit" / Stop / Notification）。既存 hook と重複させない（実体は各 hooks/ ディレクトリを読んで確認する）。
 - デプロイ経路: ルートの `mise.toml` のタスク（`skills-copy` / `agents-copy` / `settings-copy`、実体は `ai-agents/scripts/copy-entries.sh`）が skills/agents/settings を `~/.{codex,claude,cursor,copilot}` へ配布する。新規 hook は 3 エディタ（claude/cursor/copilot）分の配線と配布経路への影響も考慮する。
 
@@ -27,7 +27,7 @@
 
    前者は「既に提案済み」、後者は「一度不採用になった」提案。どちらとも重複しない提案を出すこと。特に rejected は同じ角度で出し直さない。
 
-2. `ai-agents/skills/` と `ai-agents/settings/*/hooks/` を読み、既に実装済みの skill / hook と被らないことを確認する。
+2. `ai-agents/skills/`、`ai-agents/personal/skills/`、`.claude/skills/`、`ai-agents/settings/*/hooks/` を読み、既に実装済みの skill / hook と被らないことを確認する。
 3. WebSearch / WebFetch で Claude Code の skills / hooks のベストプラクティスや有用な実例を調査する。改善のネタは以下を広く対象にする（最新動向に変化が無くても素材が尽きないように）:
    - 編集・コミット・テスト等のライフサイクルで自動化すると効く新しい hook（フォーマッタ以外: lint、型チェック、危険操作のガード、テスト自動実行、通知連携 等）
    - 定型的な開発作業を会話手順として再利用可能にする新しい skill（調査・レビュー・リリース・依存更新・ドキュメント生成 等）

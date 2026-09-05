@@ -11,6 +11,12 @@
       "source": "./ai-agents",
       "description": "hodanov の共通スキル・サブエージェント一式",
       "category": "development"
+    },
+    {
+      "name": "personal",
+      "source": "./ai-agents/personal",
+      "description": "hodanov の私生活・趣味向けスキル一式",
+      "category": "productivity"
     }
   ]
 }
