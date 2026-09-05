@@ -110,39 +110,31 @@ local function process_of(pane)
 	return nil
 end
 
-local function each_pane(fn)
+local function count_tracked()
+	local counts = {}
 	for _, win in ipairs(mux.all_windows()) do
-		local workspace = win:get_workspace()
 		for _, tab in ipairs(win:tabs()) do
 			for _, pane in ipairs(tab:panes()) do
-				local found = fn(pane, tab, workspace)
-				if found ~= nil then
-					return found
+				local proc = process_of(pane)
+				if proc then
+					counts[proc] = (counts[proc] or 0) + 1
 				end
 			end
 		end
 	end
-end
-
--- mux 配下の全 window / tab / pane を走査して、追跡対象が何本動いているか数える。
-local function count_tracked()
-	local counts = {}
-	each_pane(function(pane)
-		local proc = process_of(pane)
-		if proc then
-			counts[proc] = (counts[proc] or 0) + 1
-		end
-	end)
 	return counts
 end
 
--- この wezterm には mux.get_pane() が無いので、ジャンプ先も全走査で引き当てる。
 local function find_pane(pane_id)
-	return each_pane(function(pane, _, workspace)
-		if pane:pane_id() == pane_id then
-			return { workspace = workspace, pane_id = pane_id, pane = pane }
-		end
-	end)
+	local ok, pane = pcall(mux.get_pane, pane_id)
+	if not ok or not pane then
+		return nil
+	end
+	local win = pane:window()
+	if not win then
+		return nil
+	end
+	return { workspace = win:get_workspace(), pane_id = pane_id, pane = pane }
 end
 
 -- 先にペインを activate してから workspace を切り替える。
@@ -164,9 +156,6 @@ end
 -- タブバー左端に出す `nvim:2 claude:1` 形式のサマリ。
 -- ダッシュボードペインはそのタブの中でしか見えないので、どのタブ / どの workspace に
 -- いても総数だけは分かるようにする補完。1 本も動いていなければ何も出さない。
---
--- キャッシュはスカラー 2 本で持つ。wezterm.GLOBAL に入れたテーブルはネストした
--- 書き換えが保持されないことがあるため、テーブルを持たせない。
 local function status_text()
 	local now = os.time()
 	local cached_at = wezterm.GLOBAL.ai_panes_status_at
@@ -230,9 +219,6 @@ local function toggle_dashboard()
 end
 
 return function(config)
-	-- workspaces.lua が update-right-status / set_right_status を持っているので、
-	-- こちらは update-status / set_left_status を使う。両イベントは併存して発火し、
-	-- 書き込むスロットも別なので workspaces.lua を変更せずに共存できる。
 	wezterm.on("update-status", function(window)
 		if not window:is_focused() then
 			return

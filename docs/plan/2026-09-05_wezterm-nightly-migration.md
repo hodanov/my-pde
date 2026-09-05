@@ -73,4 +73,4 @@ brew install --cask wezterm
 ## 積み残し
 
 - **Phase 5（brew の差し替え）は未実行。** 検証はすべて通っているが、`/Applications/WezTerm.app` の置き換えは実行中のセッションを巻き込むため手動で行う。差し替え後は `WEZTERM_EXECUTABLE` が指す CLI と稼働中の mux の版が食い違うので、WezTerm を一度再起動する
-- `ai-panes.lua` の `find_pane()` に付いた「この wezterm には `mux.get_pane()` が無い」というコメントは nightly では成り立たない（`mux.get_pane` は存在する）。全走査を残すか置き換えるかは別途判断する
+- ~~`ai-panes.lua` の `find_pane()` に付いた「この wezterm には `mux.get_pane()` が無い」というコメントは nightly では成り立たない（`mux.get_pane` は存在する）。全走査を残すか置き換えるかは別途判断する~~ → `2026-09-05_wezterm-nightly-api-cleanup.md` で置き換え済み
