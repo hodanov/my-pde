@@ -36,6 +36,10 @@ local JUMP_VAR_PATTERN = "^(%d+):"
 -- update-status は毎秒発火するので、全ペイン走査はこの間隔まで間引く。
 local STATUS_THROTTLE_SECONDS = 3
 
+local PROGRESS_PATH = os.getenv("AI_PANES_PROGRESS_FILE")
+	or (os.getenv("HOME") or "") .. "/.local/state/wezterm-ai-panes/progress"
+local PROGRESS_THROTTLE_SECONDS = 1
+
 local function basename(path)
 	if path == nil or path == "" then
 		return nil
@@ -123,6 +127,80 @@ local function count_tracked()
 		end
 	end
 	return counts
+end
+
+local function progress_token(progress)
+	if progress == nil or progress == "None" then
+		return nil
+	end
+	if progress == "Indeterminate" then
+		return "busy"
+	end
+	if type(progress) ~= "table" then
+		return nil
+	end
+	if progress.Percentage ~= nil then
+		return string.format("%d%%", progress.Percentage)
+	end
+	if progress.Error ~= nil then
+		return "err"
+	end
+	return nil
+end
+
+local function collect_progress()
+	local lines = {}
+	for _, win in ipairs(mux.all_windows()) do
+		for _, tab in ipairs(win:tabs()) do
+			for _, pane in ipairs(tab:panes()) do
+				local ok, progress = pcall(function()
+					return pane:get_progress()
+				end)
+				local token = ok and progress_token(progress) or nil
+				if token then
+					table.insert(lines, string.format("%d\t%s", pane:pane_id(), token))
+				end
+			end
+		end
+	end
+	table.sort(lines)
+	return table.concat(lines, "\n")
+end
+
+local function open_progress_tmp()
+	local tmp = PROGRESS_PATH .. ".tmp"
+	local handle = io.open(tmp, "w")
+	if handle then
+		return handle, tmp
+	end
+	wezterm.run_child_process({ "mkdir", "-p", PROGRESS_PATH:match("^(.*)/[^/]*$") or "." })
+	return io.open(tmp, "w"), tmp
+end
+
+-- ダッシュボードは wezterm cli list --format json から行を組むが、progress は
+-- そこに含まれない。Lua からファイル経由で渡す。
+local function write_progress()
+	local now = os.time()
+	local wrote_at = wezterm.GLOBAL.ai_panes_progress_at
+	if wrote_at and (now - wrote_at) < PROGRESS_THROTTLE_SECONDS then
+		return
+	end
+	wezterm.GLOBAL.ai_panes_progress_at = now
+
+	local body = collect_progress()
+	if body == wezterm.GLOBAL.ai_panes_progress_body then
+		return
+	end
+
+	local handle, tmp = open_progress_tmp()
+	if not handle then
+		return
+	end
+	handle:write(body)
+	handle:close()
+	if os.rename(tmp, PROGRESS_PATH) then
+		wezterm.GLOBAL.ai_panes_progress_body = body
+	end
 end
 
 local function find_pane(pane_id)
@@ -220,6 +298,7 @@ end
 
 return function(config)
 	wezterm.on("update-status", function(window)
+		write_progress()
 		if not window:is_focused() then
 			return
 		end

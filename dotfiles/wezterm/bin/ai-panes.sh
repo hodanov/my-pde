@@ -26,12 +26,16 @@ targets="${AI_PANES_AGENTS:-nvim claude codex cursor-agent copilot}"
 jump_uri_prefix="wezterm-ai-panes://jump/"
 jump_var="ai_panes_jump"
 jump_seq=0
+# ai-panes.lua が毎秒書き出す `<pane_id>\t<token>`。progress は
+# wezterm cli list --format json に含まれないのでファイル経由で受け取る。
+progress_file="${AI_PANES_PROGRESS_FILE:-$HOME/.local/state/wezterm-ai-panes/progress}"
 saved_stty=""
 
 row_ws=()
 row_proc=()
 row_project=()
 row_pane=()
+row_busy=()
 count=0
 idx=0
 selected=""
@@ -54,6 +58,7 @@ teal="${esc}[38;2;148;226;213m"
 green="${esc}[38;2;166;227;161m"
 yellow="${esc}[38;2;249;226;175m"
 overlay0="${esc}[38;2;108;112;134m"
+red="${esc}[38;2;243;139;168m"
 
 # 依存が欠けたときに無言の空ペインにならないよう、不足分を名前で返す。
 missing_deps() {
@@ -100,6 +105,8 @@ procs_by_tty() {
 IFS= read -r -d '' collect_filter <<'JQ'
 	($procs | split("\n") | map(select(length > 0) | split("\t")
 		| { tty: .[0], proc: .[1] })) as $procs
+	| ($progress | split("\n") | map(select(length > 0) | split("\t")
+		| { key: .[0], value: .[1] }) | from_entries) as $busy
 	| ($targets | split(" ")) as $order
 	| . as $all
 	| ([ $all[] | select((.pane_id | tostring) == $self) | .workspace ] | first // "") as $here
@@ -111,11 +118,12 @@ IFS= read -r -d '' collect_filter <<'JQ'
 		| { ws: $p.workspace,
 		    pane: $p.pane_id,
 		    proc: $hit.proc,
+		    busy: ($busy[($p.pane_id | tostring)] // ""),
 		    project: (($p.cwd // "") | sub("^file://[^/]*"; "")
 		              | sub("/$"; "") | sub(".*/"; "")) } ]
 	| sort_by(.ws, (.proc as $n | $order | index($n)), .pane) as $rows
 	| if $shape == "tsv"
-	  then ($here), ($rows[] | [.ws, .proc, .project, (.pane | tostring)] | @tsv)
+	  then ($here), ($rows[] | [.ws, .proc, .project, (.pane | tostring), .busy] | @tsv)
 	  else ($rows | tojson)
 	  end
 JQ
@@ -127,6 +135,7 @@ collect() {
 
 	printf '%s' "$panes" | jq -r \
 		--arg procs "$(procs_by_tty)" \
+		--arg progress "$(cat "$progress_file" 2>/dev/null)" \
 		--arg targets "$targets" \
 		--arg self "$self_pane" \
 		--arg shape "$1" \
@@ -165,12 +174,13 @@ resize_if_stale() {
 }
 
 refresh_rows() {
-	local deps out body ws proc project pane
+	local deps out body ws proc project pane busy
 
 	row_ws=()
 	row_proc=()
 	row_project=()
 	row_pane=()
+	row_busy=()
 	count=0
 	rows_serial=""
 
@@ -193,11 +203,12 @@ refresh_rows() {
 	fi
 	[ -n "$body" ] || return
 
-	while IFS=$'\t' read -r ws proc project pane; do
+	while IFS=$'\t' read -r ws proc project pane busy; do
 		row_ws[count]=$ws
 		row_proc[count]=$proc
 		row_project[count]=$project
 		row_pane[count]=$pane
+		row_busy[count]=$busy
 		count=$((count + 1))
 	done <<<"$body"
 	rows_serial=$body
@@ -215,7 +226,7 @@ index_of_pane() {
 }
 
 render_into_frame() {
-	local i line ws proc project pane marker cursor color link_open link_close prev_ws=""
+	local i line ws proc project pane busy busy_cell marker cursor color link_open link_close prev_ws=""
 
 	printf -v frame ' %sPANES%s\n' "$mauve" "$reset"
 	printf -v line ' %s%s%s\n' "$overlay0" "$separator" "$reset"
@@ -233,6 +244,7 @@ render_into_frame() {
 			proc=${row_proc[$i]}
 			project=${row_project[$i]}
 			pane=${row_pane[$i]}
+			busy=${row_busy[$i]}
 			link_open="${esc}]8;;${jump_uri_prefix}${pane}${bel}"
 			link_close="${esc}]8;;${bel}"
 			if [ "$ws" != "$prev_ws" ]; then
@@ -257,9 +269,17 @@ render_into_frame() {
 			cursor-agent) color=$green ;;
 			*) color=$yellow ;;
 			esac
-			printf -v line ' %s %s%s%s %s%-13.13s%s%s#%s%s%s\n' \
+			if [ -n "$busy" ]; then
+				case "$busy" in
+				err) printf -v busy_cell ' %s%s%s' "$red" "$busy" "$reset" ;;
+				*) printf -v busy_cell ' %s%s%s' "$green" "$busy" "$reset" ;;
+				esac
+			else
+				busy_cell=""
+			fi
+			printf -v line ' %s %s%s%s %s%-13.13s%s%s#%s%s%s%s\n' \
 				"$cursor" "$link_open" "$marker" "$reset" "$color" "$proc" \
-				"$reset" "$overlay0" "$pane" "$reset" "$link_close"
+				"$reset" "$overlay0" "$pane" "$reset" "$busy_cell" "$link_close"
 			frame+=$line
 			# cwd がワークスペース名と食い違うときだけ実際の場所を補足する
 			if [ -n "$project" ] && [ "$project" != "$ws" ]; then
