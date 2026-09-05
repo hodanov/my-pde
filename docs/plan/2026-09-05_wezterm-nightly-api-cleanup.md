@@ -83,4 +83,4 @@ nightly で挙動が変わったが対応不要と判断したもの:
 - `text_min_contrast_ratio` — 背景画像 `opacity = 0.13` と Catppuccin Mocha の組み合わせで効きそう
 - `command_palette_font` / `char_select_font` / `pane_select_font` — 既定は `window_frame.font`（Roboto）なので日本語グリフを持たない
 - `PromptInputLine` の `prompt` / `initial_value`、`launcher_alphabet`、`macos_fullscreen_extend_behind_notch`
-- `pane:get_progress()` — ConEmu 形式の進捗。AI ペインダッシュボードに「動いているか」を出す材料になりうる。`2026-08-21_wezterm-shared-dashboard-pane.md` と一緒に検討する
+- `pane:get_progress()` — ConEmu 形式の進捗。AI ペインダッシュボードに「動いているか」を出す材料になりうる。`2026-09-05_wezterm-resident-dashboard-pane.md` でもスコープ外としたので、まだ手つかず
