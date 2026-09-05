@@ -24,6 +24,7 @@ end
 
 local MAUVE = "#cba6f7"
 local GREEN = "#a6e3a1"
+local RED = "#f38ba8"
 local OVERLAY0 = "#6c7086"
 
 local DASHBOARD_VAR = "ai_panes_dashboard"
@@ -154,6 +155,35 @@ local function project_of(pane)
 	return basename(path)
 end
 
+local function progress_token(progress)
+	if progress == nil or progress == "None" then
+		return nil
+	end
+	if progress == "Indeterminate" then
+		return "busy"
+	end
+	if type(progress) ~= "table" then
+		return nil
+	end
+	if progress.Percentage ~= nil then
+		return string.format("%d%%", progress.Percentage)
+	end
+	if progress.Error ~= nil then
+		return "err"
+	end
+	return nil
+end
+
+local function progress_of(pane)
+	local ok, progress = pcall(function()
+		return pane:get_progress()
+	end)
+	if not ok then
+		return nil
+	end
+	return progress_token(progress)
+end
+
 local function collect()
 	local rows = {}
 	for _, win in ipairs(mux.all_windows()) do
@@ -168,6 +198,7 @@ local function collect()
 							proc = proc,
 							pane_id = pane:pane_id(),
 							project = project_of(pane),
+							progress = progress_of(pane),
 						}
 					end
 				end
@@ -270,18 +301,26 @@ local function render(rows, ctx)
 		local cursor = row.pane_id == ctx.selected and (fg(MAUVE) .. "▸" .. RESET) or " "
 
 		local id_text = "#" .. row.pane_id
+		local room = ctx.cols - 5 - #id_text
+		local token = row.progress
+		if token and room - (#token + 1) < 1 then
+			token = nil
+		end
+		local progress_cell = token and (" " .. fg(token == "err" and RED or GREEN) .. token .. RESET) or ""
+
 		lines[#lines + 1] = string.format(
-			" %s %s%s%s %s%s%s%s%s%s%s",
+			" %s %s%s%s %s%s%s%s%s%s%s%s",
 			cursor,
 			link_open,
 			marker,
 			RESET,
 			fg(TRACKED[row.proc]),
-			pad(row.proc, 13, ctx.cols - 5 - #id_text),
+			pad(row.proc, 13, room - (token and #token + 1 or 0)),
 			RESET,
 			fg(OVERLAY0),
 			id_text,
 			RESET,
+			progress_cell,
 			link_close
 		)
 
@@ -469,10 +508,13 @@ local M = {
 	move_selection = move_selection,
 	resolve_selection = resolve_selection,
 	process_of = process_of,
+	progress_token = progress_token,
 }
 
 return setmetatable(M, {
 	__call = function(_, config)
+		config.set_environment_variables = { ConEmuANSI = "ON" }
+
 		wezterm.on("update-status", function(window)
 			local tab = window:active_tab()
 			local seen = window:window_id()

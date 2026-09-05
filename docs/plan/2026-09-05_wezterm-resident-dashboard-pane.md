@@ -125,4 +125,4 @@
 ## Open questions
 
 - 常駐の対象は「訪れたタブ」にした。`workspaces.lua` が作る全タブへ先回りして広げるかは、しばらく使ってから判断する
-- `pane:get_progress()`（nightly で追加）で AI CLI が実際に動いているかを行に出す案はスコープ外
+- `pane:get_progress()`（nightly で追加）で AI CLI が実際に動いているかを行に出す案はスコープ外とした。`2026-09-05_wezterm-agent-progress-indicator.md` が本方式の上で実装している

@@ -95,6 +95,12 @@ local function fake_pane(spec)
 		get_current_working_dir = function()
 			return spec.cwd
 		end,
+		get_progress = function()
+			if spec.progress == nil then
+				error("get_progress is unavailable")
+			end
+			return spec.progress
+		end,
 		get_dimensions = function()
 			return { cols = spec.cols or 26 }
 		end,
@@ -141,6 +147,7 @@ local docker_nvim = fake_pane({
 	},
 	name = "/usr/local/bin/docker",
 	cwd = { file_path = "/Users/hodanov/workspace/hodalog-hugo" },
+	progress = { Percentage = 42 },
 })
 
 local versioned_claude = fake_pane({
@@ -152,6 +159,7 @@ local versioned_claude = fake_pane({
 	},
 	name = "/Users/hodanov/.local/share/claude/versions/2.1.235",
 	cwd = "file://host/Users/hodanov/workspace/hodalog-hugo",
+	progress = "Indeterminate",
 })
 
 local host_nvim = fake_pane({
@@ -186,6 +194,7 @@ local codex_worktree = fake_pane({
 	info = { name = "/opt/homebrew/bin/codex", executable = "/opt/homebrew/bin/codex", argv = { "codex" } },
 	name = "/opt/homebrew/bin/codex",
 	cwd = { file_path = "/Users/hodanov/workspace/.worktrees/my-pde/lively-otter/" },
+	progress = { Error = 2 },
 })
 
 local compose_noise = fake_pane({
@@ -234,6 +243,18 @@ assert_eq(rows[1].project, "hodalog-hugo", "cwd が Url オブジェクトでも
 assert_eq(rows[2].project, "hodalog-hugo", "cwd が file:// 文字列でも project を取れる")
 assert_eq(rows[4].project, "lively-otter", "末尾スラッシュを落として project を取る")
 
+assert_eq(ai_panes.progress_token(nil), nil, "progress が nil なら進捗なし")
+assert_eq(ai_panes.progress_token("None"), nil, "None は進捗なし")
+assert_eq(ai_panes.progress_token("Indeterminate"), "busy", "Indeterminate は busy")
+assert_eq(ai_panes.progress_token({ Percentage = 42 }), "42%", "Percentage はパーセント表記")
+assert_eq(ai_panes.progress_token({ Error = 2 }), "err", "Error は err")
+assert_eq(ai_panes.progress_token(42), nil, "想定外の型は進捗なし")
+
+assert_eq(rows[1].progress, "42%", "collect() が Percentage を行に載せる")
+assert_eq(rows[2].progress, "busy", "collect() が Indeterminate を行に載せる")
+assert_eq(rows[3].progress, nil, "get_progress を持たない wezterm でも行は組める")
+assert_eq(rows[4].progress, "err", "collect() が Error を行に載せる")
+
 assert_eq(ai_panes.status_text(rows), " nvim:2 claude:1 codex:1 ", "status_text() が TRACKED_ORDER の順に並べる")
 assert_eq(ai_panes.status_text({}), "", "1 本も無ければステータスは空")
 
@@ -251,6 +272,22 @@ assert_absent(frame, "↳ my-pde", "cwd が workspace 名と同じなら補足�
 report(select(2, frame:gsub("●", "")) == 2, "現在の workspace の行だけ ● を出す")
 report(select(2, frame:gsub("○", "")) == 2, "他の workspace の行は ○ を出す")
 report(select(2, frame:gsub("▸", "")) == 1, "選択カーソルは 1 行だけ")
+
+local reset = "\027[0m"
+local green = "\027[38;2;166;227;161m"
+local red = "\027[38;2;243;139;168m"
+
+assert_contains(frame, "#1" .. reset .. " " .. green .. "42%" .. reset, "Percentage の行末にトークンを出す")
+assert_contains(frame, "#2" .. reset .. " " .. green .. "busy" .. reset, "busy は green で出す")
+assert_contains(frame, "#6" .. reset .. " " .. red .. "err" .. reset, "err は red で出す")
+assert_contains(frame, "#3" .. reset .. "\027]8;;\007", "進捗の無い行にはトークンを足さない")
+report(
+	frame:find("busy" .. reset .. "\027]8;;\007", 1, true) ~= nil,
+	"トークンは OSC 8 の内側に置いて行全体をクリック可能に保つ"
+)
+
+local narrow = ai_panes.render(rows, { cols = 10, here = "my-pde", selected = 3 })
+assert_absent(narrow, "busy", "幅が足りない行はトークンを落とす")
 
 local lf_only = frame:gsub("\r\n", "")
 assert_absent(lf_only, "\n", "改行はすべて CRLF")
@@ -271,7 +308,7 @@ local function widest_visible_line(text)
 	return widest
 end
 
-for _, cols in ipairs({ 14, 20, 26, 37 }) do
+for _, cols in ipairs({ 10, 14, 20, 26, 37 }) do
 	local frame_at = ai_panes.render(rows, { cols = cols, here = "my-pde", selected = 3 })
 	report(
 		widest_visible_line(frame_at) <= cols,

@@ -1,8 +1,51 @@
 local wezterm = require("wezterm")
 
+local TAB_INACTIVE_FG = "#6c7086"
+local TAB_ERROR_FG = "#f38ba8"
+
+local PROGRESS_SLICES = {
+	wezterm.nerdfonts.md_circle_slice_1,
+	wezterm.nerdfonts.md_circle_slice_2,
+	wezterm.nerdfonts.md_circle_slice_3,
+	wezterm.nerdfonts.md_circle_slice_4,
+	wezterm.nerdfonts.md_circle_slice_5,
+	wezterm.nerdfonts.md_circle_slice_6,
+	wezterm.nerdfonts.md_circle_slice_7,
+	wezterm.nerdfonts.md_circle_slice_8,
+}
+
+local function progress_mark(progress)
+	if progress == nil or progress == "None" then
+		return nil
+	end
+	if progress == "Indeterminate" then
+		return { glyph = wezterm.nerdfonts.md_circle_medium }
+	end
+	if type(progress) ~= "table" then
+		return nil
+	end
+	if progress.Percentage ~= nil then
+		local slot = math.floor(progress.Percentage / 12.5) + 1
+		if slot < 1 then
+			slot = 1
+		end
+		if slot > #PROGRESS_SLICES then
+			slot = #PROGRESS_SLICES
+		end
+		return { glyph = PROGRESS_SLICES[slot] }
+	end
+	if progress.Error ~= nil then
+		return { glyph = wezterm.nerdfonts.md_alert_circle_outline, is_error = true }
+	end
+	return nil
+end
+
 return function(config)
 	-- 描画バックエンド: macOS では wgpu 経由で Metal を使う WebGpu を明示
 	config.front_end = "WebGpu"
+
+	config.native_macos_fullscreen_mode = false
+	config.macos_fullscreen_extend_behind_notch = true
 
 	-- カラースキーマ
 	config.color_scheme = "Catppuccin Mocha"
@@ -47,21 +90,26 @@ return function(config)
 
 	-- タブタイトルのフォーマット
 	wezterm.on("format-tab-title", function(tab)
-		local title = tab.active_pane.title
-		title = title:gsub(".*[/\\]", "")
+		local title = tab.active_pane.title:gsub(".*[/\\]", "")
+		local mark = progress_mark(tab.active_pane.progress)
+		local elements = {}
 
-		local icon = " "
-
-		if tab.is_active then
-			return {
-				{ Text = " " .. icon .. title .. " " },
-			}
-		else
-			return {
-				{ Foreground = { Color = "#6c7086" } },
-				{ Text = " " .. icon .. title .. " " },
-			}
+		if mark then
+			if mark.is_error then
+				table.insert(elements, { Foreground = { Color = TAB_ERROR_FG } })
+				table.insert(elements, { Text = " " .. mark.glyph })
+				table.insert(elements, "ResetAttributes")
+			else
+				table.insert(elements, { Text = " " .. mark.glyph })
+			end
 		end
+
+		if not tab.is_active then
+			table.insert(elements, { Foreground = { Color = TAB_INACTIVE_FG } })
+		end
+		table.insert(elements, { Text = (mark and " " or "  ") .. title .. " " })
+
+		return elements
 	end)
 
 	-- フォント
