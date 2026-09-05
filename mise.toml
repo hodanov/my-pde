@@ -531,7 +531,7 @@ run = "actionlint"
 description = "Run tombi, prettier, and markdownlint via environment/tools/node"
 dir = "{{config_root}}"
 run = '''
-npm --prefix environment/tools/node install
+npm --prefix environment/tools/node ci
 export PATH="$PWD/environment/tools/node/node_modules/.bin:$PATH"
 tombi lint
 prettier --check .
