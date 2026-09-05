@@ -1,6 +1,7 @@
 #!/bin/bash
 # mise-managed tools (non-interactive contexts do not run mise activate)
 export PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$PATH"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # stdin から JSON を読み込む
 INPUT=$(cat)
 
@@ -18,7 +19,7 @@ fi
 rc=0
 
 # markdownlint-cli2
-if ! markdownlint-cli2 --config "$HOME/.claude/hooks/.markdownlint-cli2.yaml" --fix "$FILE_PATH" 2>&1; then
+if ! markdownlint-cli2 --config "$SCRIPT_DIR/.markdownlint-cli2.yaml" --fix "$FILE_PATH" 2>&1; then
 	echo "[markdownlint] fail: $FILE_PATH" >&2
 	rc=1
 fi
