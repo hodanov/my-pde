@@ -6,3 +6,7 @@ node_modules/
 # このリポは public のためコミットしない（ローカル専用。SKILL.md のみ追跡）。
 ai-agents/skills/*/observations/
 ai-agents/skills/*/records/
+ai-agents/personal/skills/*/observations/
+ai-agents/personal/skills/*/records/
+.claude/skills/*/observations/
+.claude/skills/*/records/

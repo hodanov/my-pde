@@ -2,7 +2,7 @@
 name: deploy-ai-config
 description: ai-agents/ と dotfiles/ の編集内容を各 AI CLI（~/.claude, ~/.cursor, ~/.codex, ~/.copilot）と ~/.config へ反映するデプロイ手順。「設定を反映」「デプロイ」「~/.claude に配って」「スキル/エージェント/設定を更新したから配布」等を求められたときに使用する。
 metadata:
-  version: 1
+  version: 2
 ---
 
 # Deploy AI config
@@ -17,6 +17,7 @@ metadata:
 | ---------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------- |
 | `ai-agents/agents.xml`                               | `mise run claude-link`（Cursor/Codex/Copilot は `*-link`） | `~/.claude/CLAUDE.md`（symlink）             |
 | `ai-agents/skills/**`                                | `mise run skills-copy`                                     | 各 CLI の `skills/`（全 CLI 一括）           |
+| `ai-agents/personal/skills/**`                       | `mise run skills-copy`                                     | 各 CLI の `skills/`（汎用と同じ配布先）      |
 | `ai-agents/agents/**`                                | `mise run agents-copy`                                     | 各 CLI の `agents/`（Claude/Cursor/Copilot） |
 | `ai-agents/settings/**`（hooks/rules/settings.json） | `mise run settings-copy`                                   | 各 CLI のルート（Claude/Cursor/Copilot）     |
 | `dotfiles/wezterm/**`                                | `mise run dotfiles-link`                                   | `~/.config/wezterm`（symlink）               |
@@ -41,6 +42,10 @@ symlink（一度貼れば追従）。
 
 ## 注意
 
-- このリポジトリ直下の `.claude/`（rules・settings.json・guard hook）は **このリポジトリ専用** で、
+- このリポジトリ直下の `.claude/`（rules・settings.json・guard hook・`skills/`）は **このリポジトリ専用** で、
   デプロイ対象ではない。配布されるのは `ai-agents/` と `dotfiles/` 配下のみ。
+- `.claude/skills/` の my-pde 専用スキル（`skill-scaffold` / `hook-scaffold` / `agent-codex-convert` /
+  `routine-create-clean-connectors` / `deploy-ai-config`）はコミットするだけでよい。clone の一部として
+  ローカルにもクラウド Routine にも載る。配るとむしろ他リポで実行できないスキルが一覧に残る。
+- スキルをどのルートに置くかの判断軸は `.claude/rules/skill-authoring.md` にある。
 - バージョンピン（`environment/**`）はこのスキルの対象外。`guard-version-pins.sh` で保護されている。

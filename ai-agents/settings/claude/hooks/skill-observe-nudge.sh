@@ -40,7 +40,23 @@ else
 	fi
 fi
 [ -n "$OBS_HOME" ] || exit 0
-SKILLS_DIR="$OBS_HOME/ai-agents/skills"
+SHARED_SKILLS_DIR="$OBS_HOME/ai-agents/skills"
+SKILL_ROOTS="$SHARED_SKILLS_DIR
+$OBS_HOME/ai-agents/personal/skills
+$OBS_HOME/.claude/skills"
+
+resolve_skill_dir() {
+	while IFS= read -r root; do
+		[ -n "$root" ] || continue
+		if [ -f "$root/$1/SKILL.md" ]; then
+			printf '%s\n' "$root/$1"
+			return 0
+		fi
+	done <<ROOTS
+$SKILL_ROOTS
+ROOTS
+	return 1
+}
 
 # Skills extracted from this session's transcript (Skill tool invocations).
 used=$(
@@ -61,8 +77,7 @@ state_file="$state_dir/$SESSION_ID"
 pending=""
 while IFS= read -r skill; do
 	[ -n "$skill" ] || continue
-	# Only repository skills, excluding the improvement-loop skills themselves.
-	[ -f "$SKILLS_DIR/$skill/SKILL.md" ] || continue
+	skill_dir=$(resolve_skill_dir "$skill") || continue
 	case "$skill" in
 	skill-observe | skill-improve) continue ;;
 	esac
@@ -70,7 +85,7 @@ while IFS= read -r skill; do
 	if grep -qxF "$skill" "$state_file" 2>/dev/null; then
 		continue
 	fi
-	pending="${pending}${skill}"$'\n'
+	pending="${pending}- ${skill}: ${skill_dir}/observations/"$'\n'
 	printf '%s\n' "$skill" >>"$state_file"
 done <<EOF
 $used
@@ -78,18 +93,19 @@ EOF
 
 [ -n "$pending" ] || exit 0
 
-# Build a comma-separated list for the reason text.
-list=$(printf '%s' "$pending" | sed '/^$/d' | paste -sd ',' -)
+targets=$(printf '%s' "$pending" | sed '/^$/d')
 
 reason=$(
 	cat <<REASON
-今セッションで次のリポジトリスキルを使用したが observation が未記録です: ${list}
+今セッションで次のリポジトリスキルを使用したが observation が未記録です。
+
+${targets}
 
 各スキルについて、直近の使用結果を会話文脈から success / partial / failure で判定し、
-${SKILLS_DIR}/<スキル名>/observations/$(date +%Y-%m-%d)_NNN_obs.md を作成してください
+上記ディレクトリの $(date +%Y-%m-%d)_NNN_obs.md を作成してください
 （上記は絶対パス。現在の作業リポジトリと異なっても必ずこのパスに書く）。
 
-- 形式は ${SKILLS_DIR}/skill-observe/SKILL.md の6フィールド（タスク / スキル / 結果 /
+- 形式は ${SHARED_SKILLS_DIR}/skill-observe/SKILL.md の6フィールド（タスク / スキル / 結果 /
   問題 / フィードバック / コンテキスト）に従う。
 - 「コンテキスト」には実際の作業リポジトリ（cwd: ${CWD}）を必ず記録する。
 - NNN は当日連番。同日の既存ファイルと重複しないよう採番する。
