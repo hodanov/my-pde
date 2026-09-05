@@ -443,6 +443,25 @@ rm -f "$HOME/.config/wezterm"
 echo "Unlinked $HOME/.config/wezterm"
 '''
 
+# WezTerm tracks the nightly channel (see docs/plan/2026-09-05_wezterm-nightly-migration.md),
+# so the terminal underneath this config can move without warning. `show-keys` parses the
+# config in a separate process from the GUI, and `--json` exercises the `wezterm cli list`
+# schema the dashboard joins against; between them they catch a broken nightly immediately.
+[tasks.wezterm-verify]
+description = "Smoke-test the WezTerm config against the installed wezterm"
+dir = "{{config_root}}"
+run = '''
+wezterm --version
+wezterm --config-file dotfiles/wezterm/wezterm.lua show-keys >/dev/null
+echo "show-keys: ok"
+if [ -n "${WEZTERM_PANE:-}" ]; then
+	dotfiles/wezterm/bin/ai-panes.sh --json | jq -e 'type == "array"' >/dev/null
+	echo "ai-panes.sh --json: ok"
+else
+	echo "ai-panes.sh --json: skipped (not running inside a WezTerm pane)"
+fi
+'''
+
 # ~/.zshrc is deliberately not wired into dotfiles-link: replacing the login
 # shell config is far more disruptive than a wezterm directory symlink, so it
 # stays an explicit, opt-in command.
