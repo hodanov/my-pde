@@ -58,13 +58,13 @@ nightly の changelog（`20240203-110809-5046fc22` 以降の全件）と現行 d
 
 隔離インスタンス（`wezterm --config-file ~/.config/wezterm/wezterm.lua start --always-new-process`）に一時的な `wezterm.log_error` を仕込んで測った。
 
-| 観測点 | 結果 |
-| --- | --- |
-| `find_pane(6)`（実在） | `mux.get_pane` 成功、`pane:window():get_workspace()` が `my-pde` を返す。別 workspace のペインも 1 発で解決できる |
-| `find_pane(99999)`（不在） | `pcall` が `ok=false, err="pane id 99999 not found in mux"` を受ける。`find_pane` は `nil` を返し、gone トーストの経路が保たれる |
-| `update-status` ハンドラ 2 本 | `workspaces.lua` 側・`ai-panes.lua` 側とも毎秒発火する。片方だけ呼ばれることはない |
-| `gui-startup` | 4 workspace・タブ名・`stable-diffusion` の `Bottom` split すべて従来どおり生成される |
-| `mise run wezterm-verify` | `show-keys` exit 0、`ai-panes.sh --json` が配列を返す |
+| 観測点                        | 結果                                                                                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `find_pane(6)`（実在）        | `mux.get_pane` 成功、`pane:window():get_workspace()` が `my-pde` を返す。別 workspace のペインも 1 発で解決できる                |
+| `find_pane(99999)`（不在）    | `pcall` が `ok=false, err="pane id 99999 not found in mux"` を受ける。`find_pane` は `nil` を返し、gone トーストの経路が保たれる |
+| `update-status` ハンドラ 2 本 | `workspaces.lua` 側・`ai-panes.lua` 側とも毎秒発火する。片方だけ呼ばれることはない                                               |
+| `gui-startup`                 | 4 workspace・タブ名・`stable-diffusion` の `Bottom` split すべて従来どおり生成される                                             |
+| `mise run wezterm-verify`     | `show-keys` exit 0、`ai-panes.sh --json` が配列を返す                                                                            |
 
 `user-var-changed` は背景ウィンドウには配送されないので、`wezterm cli send-text` で OSC 1337 を流し込んでもハンドラは呼ばれない。これは `2026-09-05_wezterm-nightly-migration.md` に記録済みの既存の性質で、今回の変更とは無関係。`find_pane()` を直接叩く probe に切り替えて測った。
 
