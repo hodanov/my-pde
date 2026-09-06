@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - "scripts/config-diff/**"
+      - .github/workflows/go_module_ci.yml
       - mise.toml
 
 concurrency:
