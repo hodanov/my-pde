@@ -21,5 +21,13 @@
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "my-pde": {
+      "source": {
+        "source": "github",
+        "repo": "hodanov/my-pde"
+      }
+    }
   }
 }

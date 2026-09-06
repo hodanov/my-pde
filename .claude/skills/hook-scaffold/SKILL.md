@@ -4,12 +4,12 @@ description: >-
   新しいフックの雛形（スクリプト + 各 CLI の配線）を本リポジトリの規約どおりに生成する。
   イベント選定（PreToolUse / PostToolUse / Stop / SessionStart 等）とブロッキング可否、
   claude / cursor / copilot のどこまで配線するかを対話的に決め、
-  ai-agents/settings/<cli>/hooks/<name>.sh と settings.json / hooks.json への配線まで行う。
+  ai-agents/hooks/ か ai-agents/settings/<cli>/hooks/ への配置と、hooks.json / settings.json への配線まで行う。
   新しいフックを追加したいときに `/hook-scaffold <フック名> [用途の一言]` で呼び出す。
 disable-model-invocation: true
 argument-hint: "<フック名> [用途の一言]"
 metadata:
-  version: 3
+  version: 4
 ---
 
 # /hook-scaffold スキル
@@ -32,7 +32,7 @@ metadata:
 
 ### Step 2: 衝突チェックと既存重複の確認
 
-`ai-agents/settings/*/hooks/HOOK_NAME.sh` が **存在しないこと** を確認する。存在する場合は作成せず中断し、既存スクリプトの修正を案内する。
+`ai-agents/hooks/HOOK_NAME.sh` と `ai-agents/settings/*/hooks/HOOK_NAME.sh` の **いずれにも存在しないこと** を確認する。存在する場合は作成せず中断し、既存スクリプトの修正を案内する。
 
 あわせて既存フックを読み、同種の処理（formatter / lint / guard / notify）が既にないか確認する。
 formatter 系は 1 ファイル種別 1 スクリプトで揃っているので、対象拡張子が既存とかぶる場合は新規追加ではなく既存への追記を提案する。
@@ -41,15 +41,16 @@ formatter 系は 1 ファイル種別 1 スクリプトで揃っているので�
 
 「何をきっかけに走らせたいか」からイベントを選ぶ。現在このリポジトリが配線しているのは以下だけで、他イベントを使う場合は公式ドキュメント（<https://code.claude.com/docs/en/hooks>）で最新のスキーマを確認する。
 
-| 用途                   | claude のイベント                                 | 現行の配線                |
-| ---------------------- | ------------------------------------------------- | ------------------------- |
-| 起動時の環境チェック   | `SessionStart`                                    | `toolchain-doctor.sh`     |
-| 毎プロンプトの文脈注入 | `UserPromptSubmit`                                | `git-state.sh`            |
-| Bash 実行前の遮断      | `PreToolUse`（matcher `Bash`）                    | `guard-dangerous-bash.sh` |
-| ファイル編集後の整形   | `PostToolUse`（matcher `Write\|Edit\|MultiEdit`） | formatter 6 本            |
-| 応答終了時のまとめ処理 | `Stop`                                            | `lint-changed.sh` ほか    |
-| 通知                   | `Notification`                                    | `notify-macos.sh`         |
-| worktree 作成時        | `WorktreeCreate`                                  | `worktree-create.sh`      |
+| 用途                     | claude のイベント                                  | 現行の配線                            | 配線ファイル    |
+| ------------------------ | -------------------------------------------------- | ------------------------------------- | --------------- |
+| 起動時の環境チェック     | `SessionStart`                                     | `toolchain-doctor.sh`                 | `settings.json` |
+| コンパクション前後の退避 | `PreCompact` / `SessionStart`（matcher `compact`） | `context-anchor-save` / `-restore.sh` | `hooks.json`    |
+| 毎プロンプトの文脈注入   | `UserPromptSubmit`                                 | `git-state.sh`                        | `hooks.json`    |
+| Bash 実行前の遮断        | `PreToolUse`（matcher `Bash`）                     | `guard-dangerous-bash.sh`             | `hooks.json`    |
+| ファイル編集後の整形     | `PostToolUse`（matcher `Write\|Edit\|MultiEdit`）  | formatter 6 本                        | `hooks.json`    |
+| 応答終了時のまとめ処理   | `Stop`                                             | `lint-changed.sh` ほか                | `hooks.json`    |
+| 通知                     | `Notification`                                     | `notify-macos.sh`                     | `settings.json` |
+| worktree 作成時          | `WorktreeCreate`                                   | `worktree-create.sh`                  | `settings.json` |
 
 選定時に必ず確認すること:
 
@@ -58,6 +59,17 @@ formatter 系は 1 ファイル種別 1 スクリプトで揃っているので�
 - **`hookSpecificOutput` の形はイベントごとに違う**。使う場合は転記済みの記憶に頼らず、必ず上記ドキュメントで確認する。
 
 report-only（報告のみで止めない）で足りるなら、`exit 0` + stderr への出力に留めるのが既定。
+
+### Step 3.5: 置き場所の決定
+
+`.claude/rules/hook-authoring.md` の判断軸に従い、claude 側の置き場所を決める（以降 `HOOK_ROOT`）。判断が割れる場合はユーザーに確認する。
+
+| ルート                            | 選ぶ条件                                                                    | 配線先                          |
+| --------------------------------- | --------------------------------------------------------------------------- | ------------------------------- |
+| `ai-agents/hooks`                 | このマシン・このクローンに依存しない（既定）                                | `ai-agents/hooks/hooks.json`    |
+| `ai-agents/settings/claude/hooks` | macOS GUI・ローカル FS レイアウト・ローカル mise のツールチェーンに依存する | `settings/claude/settings.json` |
+
+サイドカー（設定ファイル等）を読むなら `$HOME` の絶対パスではなく `SCRIPT_DIR` 基準にする。plugin として動くときに `$HOME/.claude/hooks/` は存在しない。
 
 ### Step 4: 3 CLI 展開の要否判断
 
@@ -70,7 +82,7 @@ report-only（報告のみで止めない）で足りるなら、`exit 0` + stde
 
 ### Step 5: スクリプト生成
 
-`ai-agents/settings/claude/hooks/HOOK_NAME.sh` を既存フック準拠で作る。定型は次のとおり
+`HOOK_ROOT/HOOK_NAME.sh` を既存フック準拠で作る。定型は次のとおり
 （インデントは既存フックに合わせてタブにする。以下は markdownlint の hard-tab 検査を避けるためスペース表記にしてあるので、書き出し後に `shfmt -w` を通して揃える）:
 
 ```bash
@@ -111,9 +123,11 @@ FILE_PATH=$(printf '%s' "$INPUT" | python3 "$SCRIPT_DIR/get_file_path.py")
 
 選んだ CLI ごとに配線する。JSON は既存エントリの末尾に追記する形にし、並び順の慣習（formatter は既存の並びに続ける）に従う。
 
-- **claude**: `ai-agents/settings/claude/settings.json` の `hooks.<Event>` に
-  `{"type": "command", "command": "~/.claude/hooks/HOOK_NAME.sh"}` を追記する。
+- **claude（`HOOK_ROOT` が `ai-agents/hooks`）**: `ai-agents/hooks/hooks.json` の `hooks.<Event>` に
+  `{"type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/HOOK_NAME.sh\""}` を追記する。
   `PostToolUse` なら既存の `matcher: "Write|Edit|MultiEdit"` グループの `hooks` 配列に足す（新しいグループを作らない）。
+- **claude（`HOOK_ROOT` が `ai-agents/settings/claude/hooks`）**: `ai-agents/settings/claude/settings.json` の
+  `hooks.<Event>` に `{"type": "command", "command": "~/.claude/hooks/HOOK_NAME.sh"}` を追記する。
 - **cursor**: `ai-agents/settings/cursor/hooks.json` の `hooks.afterFileEdit` に
   `{"command": "~/.cursor/hooks/HOOK_NAME.sh"}` を追記する（`type` は不要）。
 - **copilot**: `ai-agents/settings/copilot/hooks/hooks.json` の `hooks.postToolUse` に
@@ -128,6 +142,10 @@ FILE_PATH=$(printf '%s' "$INPUT" | python3 "$SCRIPT_DIR/get_file_path.py")
 `ai-agents/scripts/copy-entries.sh` でディレクトリ単位に配るため、
 **既存ディレクトリにファイルを 1 本足すだけなら mise / `copy-entries.sh` の変更は不要**。
 新しいディレクトリ階層を導入する場合のみタスク追加を検討する。この前提自体を毎回確認する。
+
+`ai-agents/hooks/` に置いたフックは plugin（`ai-agents@my-pde`）と `claude-settings-copy` の
+両方から配られ、ローカルでは二重に発火する。移行期の既定の挙動なので、そのつもりで
+report-only か冪等かを設計する。
 
 ### Step 8: 検証
 
