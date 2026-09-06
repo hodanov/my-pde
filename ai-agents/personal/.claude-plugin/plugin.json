@@ -1,0 +1,9 @@
+{
+  "name": "personal",
+  "version": "0.1.0",
+  "description": "hodanov の私生活・趣味向けスキル一式。仕事でも使う汎用スキル（ai-agents plugin）と分けて配る。",
+  "author": {
+    "name": "hodanov"
+  },
+  "homepage": "https://github.com/hodanov/my-pde/tree/main/ai-agents/personal"
+}

@@ -6,7 +6,7 @@ description: >-
   `--apply` フラグで承認後の適用も可能。
 argument-hint: "<スキル名|all> [--apply]"
 metadata:
-  version: 1
+  version: 2
 ---
 
 # /skill-improve スキル
@@ -28,10 +28,16 @@ metadata:
 
 ### Step 2: observations 読み込み
 
-対象スキルの `ai-agents/skills/<スキル名>/observations/YYYY-MM-DD_NNN_obs.md` を全て読み込む。
+スキルは 3 つのルートに分かれている。次の順で `<ルート>/<スキル名>/SKILL.md` を探し、最初に見つかったルートを以降の基準にする。
+
+1. `ai-agents/skills/` — 汎用スキル（どのリポジトリでも使う）
+2. `ai-agents/personal/skills/` — 個人・趣味用スキル
+3. `.claude/skills/` — my-pde 専用スキル（配布されない）
+
+確定したルートの `<スキル名>/observations/YYYY-MM-DD_NNN_obs.md` を全て読み込む。
 
 - observations がない場合、その旨を通知して終了
-- `all` の場合、全スキルの `observations/*_obs.md` を走査（`amendments/` は除外）
+- `all` の場合、3 ルートすべての `*/observations/*_obs.md` を走査（`amendments/` は除外）
 
 ### Step 3: パターン分析
 
@@ -46,7 +52,7 @@ metadata:
 
 ### Step 4: 前回 amendment の効果評価（Evaluate フェーズ）
 
-`ai-agents/skills/<スキル名>/observations/amendments/` に過去の amendment がある場合:
+Step 2 で確定したルートの `<スキル名>/observations/amendments/` に過去の amendment がある場合:
 
 1. amendment 適用日をファイル名の `YYYY-MM-DD` 部分から特定（複数ある場合はファイル名の辞書順で最新を選択）
 2. 適用前後の failure/partial 率を比較
@@ -75,7 +81,7 @@ metadata:
 1. ユーザーに提案内容を表示し、**明示的な承認** を求める
 2. 承認されたら SKILL.md を編集
 3. SKILL.md の `version:` フィールドをインクリメント（なければ `metadata` 配下に `version: 1` を追加。 `metadata`もない場合は追加する）
-4. amendment 記録を `ai-agents/skills/<スキル名>/observations/amendments/YYYY-MM-DD_NNN_amendment.md` に保存（NNN は同日の連番、001 から開始。既存ファイルと重複しないようインクリメントする）
+4. amendment 記録を `<Step 2 で確定したルート>/<スキル名>/observations/amendments/YYYY-MM-DD_NNN_amendment.md` に保存（NNN は同日の連番、001 から開始。既存ファイルと重複しないようインクリメントする）
 5. 変更内容をユーザーに表示
 
 承認されなかった場合は適用せず終了。

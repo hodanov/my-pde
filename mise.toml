@@ -270,27 +270,11 @@ run = "rm -f pipeline-metrics coverage.out"
 
 [tasks."go:test"]
 description = "Run tests for all Go apps under scripts/"
-depends = [
-  "ai-bridge:test",
-  "nvim-sync:test",
-  "config-diff:test",
-  "go-verify:test",
-  "scaffold:test",
-  "agent-stats:test",
-  "pipeline-metrics:test"
-]
+depends = ["ai-bridge:test", "nvim-sync:test", "config-diff:test", "go-verify:test", "scaffold:test", "agent-stats:test", "pipeline-metrics:test"]
 
 [tasks."go:lint"]
 description = "Run lint for all Go apps under scripts/"
-depends = [
-  "ai-bridge:lint",
-  "nvim-sync:lint",
-  "config-diff:lint",
-  "go-verify:lint",
-  "scaffold:lint",
-  "agent-stats:lint",
-  "pipeline-metrics:lint"
-]
+depends = ["ai-bridge:lint", "nvim-sync:lint", "config-diff:lint", "go-verify:lint", "scaffold:lint", "agent-stats:lint", "pipeline-metrics:lint"]
 
 # ---- AI agents deploy: agents.xml symlinks ----
 
@@ -369,29 +353,36 @@ fi
 # ---- AI agents deploy: skills / agents / settings copy ----
 
 [tasks.codex-skills-copy]
-description = "Copy skills to ~/.codex/skills"
-run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.codex/skills"'
+description = "Copy shared and personal skills to ~/.codex/skills"
+run = '''
+"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.codex/skills"
+"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/personal/skills" "$HOME/.codex/skills"
+'''
 
 [tasks.claude-skills-copy]
-description = "Copy skills to ~/.claude/skills"
-run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.claude/skills"'
+description = "Copy shared and personal skills to ~/.claude/skills"
+run = '''
+"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.claude/skills"
+"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/personal/skills" "$HOME/.claude/skills"
+'''
 
 [tasks.cursor-skills-copy]
-description = "Copy skills to ~/.cursor/skills"
-run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.cursor/skills"'
+description = "Copy shared and personal skills to ~/.cursor/skills"
+run = '''
+"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.cursor/skills"
+"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/personal/skills" "$HOME/.cursor/skills"
+'''
 
 [tasks.copilot-skills-copy]
-description = "Copy skills to ~/.copilot/skills"
-run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.copilot/skills"'
+description = "Copy shared and personal skills to ~/.copilot/skills"
+run = '''
+"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.copilot/skills"
+"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/personal/skills" "$HOME/.copilot/skills"
+'''
 
 [tasks.skills-copy]
 description = "Copy skills to all AI CLIs"
-depends = [
-  "codex-skills-copy",
-  "claude-skills-copy",
-  "cursor-skills-copy",
-  "copilot-skills-copy"
-]
+depends = ["codex-skills-copy", "claude-skills-copy", "cursor-skills-copy", "copilot-skills-copy"]
 
 [tasks.claude-agents-copy]
 description = "Copy agent definitions to ~/.claude/agents"
