@@ -23,7 +23,6 @@ argument-hint: "[抽出したい旅の情報 例: 2026-04-18 佐賀行き]"
 ## 前提
 
 - Google Calendar MCP が利用可能
-- 未認証の場合は `authenticate` → `complete_authentication` を先に案内する
 - 参照カレンダーは primary のみ
 - タイムゾーンは `Asia/Tokyo`
 

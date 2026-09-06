@@ -26,7 +26,6 @@ argument-hint: "[旅の情報 例: 2026-04-18 から 2026-04-19 の佐賀旅行�
 ## 前提
 
 - Google Calendar MCP が利用可能（`mcp__claude_ai_Google_Calendar__*`）
-- 未認証の場合は `mcp__claude_ai_Google_Calendar__authenticate` → `complete_authentication` を先に案内する
 - 参照カレンダーは primary のみ
 - タイムゾーンは `Asia/Tokyo`
 
