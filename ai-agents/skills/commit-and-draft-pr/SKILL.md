@@ -2,7 +2,7 @@
 name: commit-and-draft-pr
 description: 変更をコミットしてドラフトPRを作成する一連のGit/ghワークフロー。ユーザーが「コミットして」「PR作って」「draft PR」等を求めたときに使用し、status/diff確認・命令形コミット・push・gh pr create --draft（--assignee hodanov）まで実行する。ユーザーの明示リクエストが無くても、実装完了後にcommitやPRが必要になった場面（dev-workflowのcommitフェーズ等）では必ずこれを使う。`git commit` や `gh pr create` を単体でBash直接実行しない。
 metadata:
-  version: 6
+  version: 7
 ---
 
 # Commit and Draft PR
@@ -24,8 +24,9 @@ metadata:
 - `git log --oneline -5` で直近の履歴を把握する
 - `git branch` で現在ブランチを確認する
 - `main`・detached HEAD・既にマージ済みのブランチ上の場合は feature ブランチを作成する（マージ済みブランチ上に変更がある場合は `git stash -u` → 最新 main を fetch → 新ブランチ作成 → `git stash pop` で移す）
-- ブランチ名が worktree の仮名のまま（worktree ディレクトリ名と同名、または `bright-running-fox` のような自動生成名）の場合は、作業内容を表す prefix なしの `<slug>` を命名して `git branch -m <slug>` でリネームしてから進める（AGENTS.md「Parallel Work (git worktrees)」の規約）
+- ブランチ名が worktree の仮名のまま（worktree ディレクトリ名と同名、または `bright-running-fox` のような自動生成名）の場合は、対象リポジトリの AGENTS.md と既存ブランチの命名規約を確認し、作業内容を表す名前へ `git branch -m <名前>` でリネームしてから進める。prefix の有無は対象リポジトリの規約を優先する
 - マージやコンフリクト解消の途中なら、`git status` に未解決（`UU`）が残っていないことを確認する
+- 複数セッションや並行実装の形跡がある場合は、同じ変更領域・目的の open PR が別ブランチに無いか確認する。ブランチが予期せず切り替わっていた場合は `git reflog` で経緯を確認し、無関係な変更を操作する前にユーザーへ判断を求める
 - 変更が無い（diff が空）場合は中断して報告する
 
 ## 検証
@@ -39,7 +40,8 @@ metadata:
 
 - 今回の変更の意図に沿うファイルだけ `git add` する
 - 次は原則除外する: 一時/デバッグ用ファイル、ローカル設定、秘密情報（`.env` 等）、生成物・ビルド成果物
-- add 後に `git status --short` と `git diff --cached --name-only` でステージ内容を確認する（`git status` は `--cached` を取らない）
+- add 後に `git status --short` と `git diff --cached` で、対象ファイルと内容を確認する。秘密情報・PII・生成物が含まれないことも確認する（`git status` は `--cached` を取らない）
+- 変更を複数 PR へ分割する場合は、各 PR が単独で成立し、未収録ファイルへのリンクや参照を残していないことを確認する
 - add したはずのファイルが staged に現れない場合は `git check-ignore -v <パス>` で除外理由を確認する。`ai-agents/skills/*/observations/` のような意図的な除外は force-add せず、除外した旨をコミット本文に書く
 
 ## コミット
@@ -104,6 +106,7 @@ push 後、まず対象ブランチの open PR を確認する: `gh pr list --he
   - PR 本文が現在の diff と食い違っていないか `gh pr view <番号>` で確認する。記述した実装を削除した・前提が実測で覆った・設計方針が変わった場合は `gh pr edit <番号> --body` で本文を直す（コンフリクト解消や方針変更を伴う追従 push では本文が失効しているのが普通）
   - そのブランチを base にした子 PR が無いか `gh pr list --base <ブランチ名> --state open` で確認する。あれば下流へ順にマージして伝播させ、それぞれ push する
 - **open PR が無い**: 以下の手順で新規ドラフト PR を作成する
+- 複数リポジトリを対象にする場合は、リポジトリごとにチェックリスト全体を独立して実行する。関連 PR が揃ったら、各 PR 本文に相互リンクとマージ順序・前提条件を記載する
 
 ### 新規ドラフト PR 作成
 
