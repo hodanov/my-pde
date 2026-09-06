@@ -73,7 +73,7 @@ Phase 2 は未確定事項が多いため PoC を先行させ、結果を設計�
 
 1. `ai-agents/.claude-plugin/plugin.json` を追加する（`name` / `version` / `description`。`skills` と `agents` は既定パスと一致するので指定不要）。
 2. repo ルートに `.claude-plugin/marketplace.json` を追加する。plugin 1 件、`"source": "./ai-agents"`（相対パスは marketplace ルート = `.claude-plugin/` を含むディレクトリから解決される）。marketplace 名は予約語を避ける。
-3. `.claude/settings.json` に `extraKnownMarketplaces`（`{"source": "github", "repo": "hodanov/my-pde"}`）と `enabledPlugins` を追加する。
+3. `.claude/settings.json` に `extraKnownMarketplaces`（`{"source": "github", "repo": "hodanov/my-pde"}`）を追加する。`enabledPlugins` は**入れない**。マージ時点で `~/.claude` 側の mise 配布が現役のため、有効化すると my-pde のセッションだけ hooks が plugin と user settings の両経路で二重発火する。カタログとマニフェストを先に main へ置き、有効化は Phase 2-2 の検証で経路を一本化できると判断してから 1 行足す。
 4. `ai-agents/scripts/copy-entries.sh` は `ai-agents/skills` / `ai-agents/agents` を直接読むため、`.claude-plugin/` の追加による影響を受けない。cursor / codex / copilot 向けの配布は現状維持。
 
 ### Phase 2-2: クラウドでの実地検証
@@ -97,7 +97,7 @@ Routine を新規作成する必要はない。ドキュメントに「同じ環
 | 編集 | `ai-agents/scripts/verify-changed.sh`               | Phase 1-3: mise 不在時の Go フォールバック（計画外）                        |
 | 新規 | `ai-agents/.claude-plugin/plugin.json`              | Phase 2: plugin マニフェスト                                                |
 | 新規 | `.claude-plugin/marketplace.json`                   | Phase 2: marketplace カタログ                                               |
-| 編集 | `.claude/settings.json`                             | Phase 2: `extraKnownMarketplaces` / `enabledPlugins`                        |
+| 編集 | `.claude/settings.json`                             | Phase 2: `extraKnownMarketplaces`（`enabledPlugins` は検証後まで入れない）  |
 
 対象外: `AGENTS.md` の更新（`routines/` が Project Structure に無いギャップは `update-agents-md` 経由で別途）。`ai-agents/settings/claude/rules/` の 5 本を repo `.claude/rules/` へ複製すること（二重管理になる。lint コマンドは `verify-changed.sh` が担保する）。
 

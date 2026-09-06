@@ -22,9 +22,6 @@
       }
     ]
   },
-  "enabledPlugins": {
-    "ai-agents@my-pde": true
-  },
   "extraKnownMarketplaces": {
     "my-pde": {
       "source": {
