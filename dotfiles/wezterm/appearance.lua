@@ -1,8 +1,13 @@
 local wezterm = require("wezterm")
 
+local TAB_INACTIVE_FG = "#6c7086"
+
 return function(config)
 	-- 描画バックエンド: macOS では wgpu 経由で Metal を使う WebGpu を明示
 	config.front_end = "WebGpu"
+
+	config.native_macos_fullscreen_mode = false
+	config.macos_fullscreen_extend_behind_notch = true
 
 	-- カラースキーマ
 	config.color_scheme = "Catppuccin Mocha"
@@ -47,21 +52,15 @@ return function(config)
 
 	-- タブタイトルのフォーマット
 	wezterm.on("format-tab-title", function(tab)
-		local title = tab.active_pane.title
-		title = title:gsub(".*[/\\]", "")
+		local title = tab.active_pane.title:gsub(".*[/\\]", "")
+		local elements = {}
 
-		local icon = " "
-
-		if tab.is_active then
-			return {
-				{ Text = " " .. icon .. title .. " " },
-			}
-		else
-			return {
-				{ Foreground = { Color = "#6c7086" } },
-				{ Text = " " .. icon .. title .. " " },
-			}
+		if not tab.is_active then
+			table.insert(elements, { Foreground = { Color = TAB_INACTIVE_FG } })
 		end
+		table.insert(elements, { Text = "  " .. title .. " " })
+
+		return elements
 	end)
 
 	-- フォント
