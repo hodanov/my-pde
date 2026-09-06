@@ -1,19 +1,17 @@
-name: Lint Actions
+name: "[CI] Dockerfile Lint"
 permissions:
   contents: read
 
 on:
-  pull_request:
+  push:
     paths:
-      - ".github/workflows/**"
+      - environment/docker/nvim.dockerfile
+      - .github/workflows/ci-dockerfile-lint.yml
+      - .hadolint.yml
       - mise.toml
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
-
 jobs:
-  actions-lint:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -26,5 +24,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run actionlint
-        run: mise run lint:actions
+      - name: Run hadolint
+        run: mise run lint:docker

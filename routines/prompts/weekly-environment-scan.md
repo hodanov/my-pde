@@ -8,8 +8,8 @@
 
 ## リポジトリ構成（提案の土台。ここを実際に読んで現状を把握する）
 
-- `environment/docker/`: Neovim 用コンテナ（`nvim.dockerfile`, `docker-compose.yml`）。dockerfile は hadolint（`lint_dockerfile.yml`）対象。
-- `environment/tools/`: go / node / python のツールバージョンのピン管理と `sync-pins.sh`。`check_pins.yml` / `bump-versions.yml` と連動。
+- `environment/docker/`: Neovim 用コンテナ（`nvim.dockerfile`, `docker-compose.yml`）。dockerfile は hadolint（`ci-dockerfile-lint.yml`）対象。
+- `environment/tools/`: go / node / python のツールバージョンのピン管理と `sync-pins.sh`。`check-pins-sync.yml` / `automation-tools-bump.yml` と連動。
 - `dotfiles/`: `.zshrc` と WezTerm 設定（`wezterm/*.lua`。Lua は stylua 対象）。
 - `mise.toml`: リポジトリのタスクランナー・ツール管理。
 

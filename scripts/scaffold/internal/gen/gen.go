@@ -164,10 +164,9 @@ func ensureNoCollisions(files []file, exists ExistsFunc) error {
 	return nil
 }
 
-// workflowPath returns the CI workflow path for a module. The filename uses
-// underscores (ci_config_diff.yml) while the in-file token stays kebab-case.
+// workflowPath returns the CI workflow path for a module.
 func workflowPath(module string) string {
-	return path.Join(".github", "workflows", "ci_"+strings.ReplaceAll(module, "-", "_")+".yml")
+	return path.Join(".github", "workflows", "ci-"+module+".yml")
 }
 
 // modulePath joins a repository-relative path under scripts/<module>/.
@@ -175,9 +174,25 @@ func modulePath(module, rel string) string {
 	return path.Join("scripts", module, rel)
 }
 
-// renderToken replaces every occurrence of the from module token with to.
+// renderToken rewrites both spellings a module name appears in: the kebab-case
+// token (paths, mise tasks, workflow inputs) and the Title Case form used by
+// the workflow display name.
 func renderToken(src, from, to string) string {
-	return strings.ReplaceAll(src, from, to)
+	return strings.ReplaceAll(
+		strings.ReplaceAll(src, from, to),
+		titleCase(from), titleCase(to),
+	)
+}
+
+// titleCase renders a kebab-case module name as the Title Case words used in a
+// workflow display name ("config-diff" becomes "Config Diff"). nameRe
+// guarantees every word is non-empty and starts with an ASCII lowercase letter.
+func titleCase(module string) string {
+	words := strings.Split(module, "-")
+	for i, w := range words {
+		words[i] = strings.ToUpper(w[:1]) + w[1:]
+	}
+	return strings.Join(words, " ")
 }
 
 // extractMiseSection returns the "# ---- <from> (Go) ----" marker block from
@@ -269,7 +284,7 @@ func readmeContent(name string) string {
 	return fmt.Sprintf(`# %[1]s
 
 `+"`scripts/%[1]s`"+` の Go ツール雛形。scaffold で生成された。CI ワークフロー
-（`+"`.github/workflows/ci_%[2]s.yml`"+`）と mise タスク（`+"`%[1]s:build|test|lint|clean`"+`）が
+（`+"`.github/workflows/ci-%[1]s.yml`"+`）と mise タスク（`+"`%[1]s:build|test|lint|clean`"+`）が
 生成時に配線されている。
 
 ## 次の手順
@@ -278,5 +293,5 @@ func readmeContent(name string) string {
 2. mise タスクブロックを `+"`mise.toml`"+` 末尾へ貼り、`+"`go:test`"+` / `+"`go:lint`"+` の
    `+"`depends`"+` に `+"`%[1]s:test`"+` / `+"`%[1]s:lint`"+` を追加する。
 3. `+"`mise run %[1]s:test`"+` と `+"`mise run %[1]s:lint`"+` で検証する。
-`, name, strings.ReplaceAll(name, "-", "_"))
+`, name)
 }

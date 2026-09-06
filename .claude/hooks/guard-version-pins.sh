@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PreToolUse(Edit|Write|MultiEdit) guard.
 # ピン留めされたツールバージョンの手動編集をブロックする。
-# 更新は mise use --pin / bump-versions.yml 経由で行う想定。
+# 更新は mise use --pin / automation-tools-bump.yml 経由で行う想定。
 set -eu
 
 INPUT=$(cat)
@@ -68,7 +68,7 @@ if blocked:
         "[guard-version-pins] ブロック: %s を手動編集しようとしています。\n"
         "ピン留めされたツールバージョンは手動で変更しないでください。更新は次のいずれか経由で行ってください:\n"
         "  - mise use --pin <tool>@<version> + mise run pins:sync （Bash 経由）\n"
-        "  - .github/workflows/bump-versions.yml （週次自動更新）\n"
+        "  - .github/workflows/automation-tools-bump.yml （週次自動更新）\n"
         % blocked
     )
     raise SystemExit(2)

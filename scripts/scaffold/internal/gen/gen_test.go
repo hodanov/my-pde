@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// fakeCITemplate is a minimal stand-in for .github/workflows/ci_config_diff.yml.
-const fakeCITemplate = `name: CI config-diff
+// fakeCITemplate is a minimal stand-in for .github/workflows/ci-config-diff.yml.
+const fakeCITemplate = `name: "[CI] Config Diff"
 on:
   pull_request:
     paths:
@@ -16,7 +16,7 @@ on:
       - mise.toml
 jobs:
   ci:
-    uses: ./.github/workflows/go_module_ci.yml
+    uses: ./.github/workflows/ci-go-module.yml
     with:
       module: config-diff
 `
@@ -40,7 +40,7 @@ dir = "scripts/go-verify"
 // fakeRead returns the fake templates keyed by repository-relative path.
 func fakeRead(rel string) ([]byte, error) {
 	switch rel {
-	case ".github/workflows/ci_config_diff.yml":
+	case ".github/workflows/ci-config-diff.yml":
 		return []byte(fakeCITemplate), nil
 	case "mise.toml":
 		return []byte(fakeMise), nil
@@ -147,7 +147,7 @@ func TestPlan(t *testing.T) {
 		"scripts/log-tail/cmd/log-tail/main.go":      false,
 		"scripts/log-tail/cmd/log-tail/main_test.go": false,
 		"scripts/log-tail/README.md":                 false,
-		".github/workflows/ci_log_tail.yml":          false,
+		".github/workflows/ci-log-tail.yml":          false,
 	}
 	for p, content := range written {
 		if _, ok := wantPaths[p]; !ok {
@@ -157,6 +157,9 @@ func TestPlan(t *testing.T) {
 		wantPaths[p] = true
 		if strings.Contains(content, "config-diff") {
 			t.Errorf("file %q still contains template token config-diff", p)
+		}
+		if strings.Contains(content, "Config Diff") {
+			t.Errorf("file %q still contains title-cased template token Config Diff", p)
 		}
 	}
 	for p, seen := range wantPaths {
@@ -313,8 +316,8 @@ func TestWorkflowPath(t *testing.T) {
 		module string
 		want   string
 	}{
-		{name: "kebab becomes underscore", module: "config-diff", want: ".github/workflows/ci_config_diff.yml"},
-		{name: "single word", module: "doctor", want: ".github/workflows/ci_doctor.yml"},
+		{name: "kebab stays kebab", module: "config-diff", want: ".github/workflows/ci-config-diff.yml"},
+		{name: "single word", module: "doctor", want: ".github/workflows/ci-doctor.yml"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

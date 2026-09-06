@@ -17,7 +17,7 @@ claude.ai のスケジュール Routine（クラウドエージェント / CCR�
 | `weekly-ci-workflows-scan.json`      | `Weekly CI Workflows Scan`      | 毎週金曜 7:00 JST (`0 22 * * 4`) | `.github/workflows/` の CI 改善を Issue 起票（最大1件）      |
 | `monthly-routine-improve.json`       | `Monthly Routine Improve`       | 毎月2日 7:00 JST (`0 22 1 * *`)  | 運用実績からプロンプト改善を draft PR で提案（メタループ）   |
 
-このほか、LLM を使わない定型処理として `.github/workflows/pipeline-digest.yml`（毎週土曜 7:00 JST）が、`digest` ラベルの付いた単一 Issue の body を上書き更新する。内容は 2 段構え。
+このほか、LLM を使わない定型処理として `.github/workflows/automation-pipeline-digest.yml`（毎週土曜 7:00 JST）が、`digest` ラベルの付いた単一 Issue の body を上書き更新する。内容は 2 段構え。
 
 - **滞留（ストック）**: triage 待ち Issue・PR 化待ちの adopted・Open な `auto/*` PR・14 日以上 Open の scan Issue。
 - **フロー指標**: [`scripts/pipeline-metrics`](../scripts/pipeline-metrics/README.md) がスキャン別に集計した採用率・PR 化率・マージ率・リードタイム・月次トレンドと、ラベル運用の異常。閾値を超えると body 冒頭に警告ブロックが出て Issue に `alert` ラベルが付く（回復すると自動で外れる）。末尾には機械可読な JSON ブロックが埋め込まれ、`Monthly Routine Improve` がそれを読んで改善テーマを絞る。

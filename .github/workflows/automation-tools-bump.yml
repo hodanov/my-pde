@@ -1,4 +1,4 @@
-name: Bump tool versions
+name: "[Automation] Tools Bump"
 
 on:
   schedule:

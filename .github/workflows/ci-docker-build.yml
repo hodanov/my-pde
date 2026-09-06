@@ -1,4 +1,4 @@
-name: Build nvim image on dependency PRs
+name: "[CI] Docker Build"
 permissions:
   contents: read
 
@@ -7,7 +7,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
-  group: pr-docker-build-${{ github.event.pull_request.number }}
+  group: ci-docker-build-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:

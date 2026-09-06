@@ -1,4 +1,4 @@
-name: CI nvim-sync
+name: "[CI] Nvim Sync"
 permissions:
   contents: read
   pull-requests: write
@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
       - "scripts/nvim-sync/**"
-      - .github/workflows/go_module_ci.yml
+      - .github/workflows/ci-go-module.yml
       - mise.toml
 
 concurrency:
@@ -16,6 +16,6 @@ concurrency:
 
 jobs:
   ci:
-    uses: ./.github/workflows/go_module_ci.yml
+    uses: ./.github/workflows/ci-go-module.yml
     with:
       module: nvim-sync

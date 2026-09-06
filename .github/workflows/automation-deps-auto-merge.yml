@@ -1,4 +1,4 @@
-name: Auto-merge dependency PRs
+name: "[Automation] Deps Auto Merge"
 
 on:
   pull_request:

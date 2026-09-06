@@ -88,5 +88,5 @@ func run(args []string, out, errOut io.Writer) int {
 // usage prints command usage.
 func usage(out io.Writer) {
 	_, _ = fmt.Fprintln(out, "Usage: scaffold new <name> [--from <module>] [--root <dir>]")
-	_, _ = fmt.Fprintln(out, "  Generates scripts/<name>/, .github/workflows/ci_<name>.yml, and a mise block.")
+	_, _ = fmt.Fprintln(out, "  Generates scripts/<name>/, .github/workflows/ci-<name>.yml, and a mise block.")
 }
