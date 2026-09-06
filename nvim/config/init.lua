@@ -499,6 +499,8 @@ vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n>]], { desc = "Exit terminal mode" 
 -- ----------------------------------------
 -- Undo tree viewer (Neovim 0.12 builtin).
 -- ----------------------------------------
+pcall(vim.cmd.packadd, "nvim.undotree")
+
 vim.api.nvim_set_keymap("n", "<Leader>u", ":Undotree<CR>", { noremap = true, silent = true })
 
 -- ----------------------------------------
