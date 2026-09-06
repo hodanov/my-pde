@@ -1,4 +1,4 @@
-name: Pipeline digest
+name: "[Automation] Pipeline Digest"
 permissions:
   contents: read
   issues: write
@@ -97,7 +97,7 @@ jobs:
               echo
             fi
 
-            echo "自律改善パイプラインの週次ダイジェスト（$(date -u +%Y-%m-%d) UTC 時点）。\`pipeline-digest.yml\` がこの Issue の body を毎週上書き更新する。前半が滞留（ストック）、後半が \`scripts/pipeline-metrics\` の集計したフロー指標。"
+            echo "自律改善パイプラインの週次ダイジェスト（$(date -u +%Y-%m-%d) UTC 時点）。\`automation-pipeline-digest.yml\` がこの Issue の body を毎週上書き更新する。前半が滞留（ストック）、後半が \`scripts/pipeline-metrics\` の集計したフロー指標。"
             echo
             echo "## Triage 待ちの scan Issue（adopted / rejected 未判定）"
             echo

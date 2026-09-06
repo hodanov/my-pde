@@ -57,7 +57,7 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 
 ### Tool version updates
 
-- `mise.toml` is the single source of truth for tool versions. Weekly CI (`bump-versions.yml`) bumps the pins and regenerates the derived artifacts.
+- `mise.toml` is the single source of truth for tool versions. Weekly CI (`automation-tools-bump.yml`) bumps the pins and regenerates the derived artifacts.
 - `mise run pins:sync` — regenerate `environment/tools/go/go-tools.txt` and the Dockerfile ARG defaults from `mise.toml` (CI verifies sync via `pins:check`).
 
 ## Parallel Work (git worktrees)

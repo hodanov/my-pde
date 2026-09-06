@@ -2,7 +2,7 @@
 
 自律改善パイプライン（スキャン → triage → PR Bot → PR Care Bot → マージ）の**フロー指標**を、
 `gh` が吐いた JSON から決定論的に集計する **read-only** な CLI。週次 digest
-（`.github/workflows/pipeline-digest.yml`）が警告ブロック・フロー節・機械可読 JSON を作るのに使い、
+（`.github/workflows/automation-pipeline-digest.yml`）が警告ブロック・フロー節・機械可読 JSON を作るのに使い、
 月次メタループ（`routines/prompts/monthly-routine-improve.md`）がその JSON を読んで改善テーマを絞る。
 
 ## 設計の前提

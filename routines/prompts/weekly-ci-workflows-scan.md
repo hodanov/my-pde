@@ -8,7 +8,7 @@
 
 ## リポジトリ構成（提案の土台。ここを実際に読んで現状を把握する）
 
-- `.github/workflows/` に lint 系（format/shell/stylua/dockerfile）、Go モジュール CI（reusable workflow `go_module_ci.yml` と呼び出し側 `ci_*.yml`）、依存更新系（auto-merge-deps, bump-versions, check_pins）、docker build 等が稼働している。
+- `.github/workflows/` に lint 系（format/shell/stylua/dockerfile）、Go モジュール CI（reusable workflow `ci-go-module.yml` と呼び出し側 `ci-<module>.yml`）、依存更新系（automation-deps-auto-merge, automation-tools-bump, check-pins-sync）、docker build 等が稼働している。
 - 既存ワークフローは actions をコミット SHA でピン留めする流儀。提案もこれに合わせる。
 
 ## 今日のタスク

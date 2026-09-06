@@ -2,7 +2,7 @@
 
 `scripts/` 配下に**新しい Go モジュールを 1 コマンドで生成する**ジェネレータ。Go 骨格
 （`go.mod` / `cmd/<name>/main.go` + テスト / `README.md`）に加え、対になる CI ワークフロー
-（`.github/workflows/ci_<name>.yml`）を生成し、`mise.toml` へ貼るタスクブロックを標準出力に出す。
+（`.github/workflows/ci-<name>.yml`）を生成し、`mise.toml` へ貼るタスクブロックを標準出力に出す。
 
 新モジュールを足すたびに CI ワークフローと mise タスクを手作業でコピペ・書き換えする運用は、
 ペアのワークフローを作り忘れるとそのモジュールが **CI のパススコープから丸ごと外れる**（検証

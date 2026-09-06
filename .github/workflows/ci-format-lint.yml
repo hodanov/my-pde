@@ -1,20 +1,16 @@
-name: Lint Stylua
+name: "[CI] Format Lint"
 permissions:
   contents: read
 
 on:
   pull_request:
-    paths:
-      - "**/*.lua"
-      - .github/workflows/lint_stylua.yml
-      - mise.toml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  lint:
+  lint-format:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -27,5 +23,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run stylua check
-        run: mise run lint:stylua
+      - name: Run tombi, prettier, and markdownlint
+        run: mise run lint:format

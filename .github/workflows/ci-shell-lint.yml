@@ -1,16 +1,20 @@
-name: Lint Format
+name: "[CI] Shell Lint"
 permissions:
   contents: read
 
 on:
   pull_request:
+    paths:
+      - "**/*.sh"
+      - .github/workflows/ci-shell-lint.yml
+      - mise.toml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  lint-format:
+  shell-lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -23,5 +27,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run tombi, prettier, and markdownlint
-        run: mise run lint:format
+      - name: Run shfmt and shellcheck
+        run: mise run lint:shell

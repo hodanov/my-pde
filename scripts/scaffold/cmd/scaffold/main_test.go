@@ -10,13 +10,13 @@ import (
 // writeTemplates lays down the minimal template files run() reads from root.
 func writeTemplates(t *testing.T, root string) {
 	t.Helper()
-	ci := "name: CI config-diff\n" +
+	ci := "name: \"[CI] Config Diff\"\n" +
 		"on:\n  pull_request:\n    paths:\n      - \"scripts/config-diff/**\"\n" +
-		"jobs:\n  ci:\n    uses: ./.github/workflows/go_module_ci.yml\n    with:\n      module: config-diff\n"
+		"jobs:\n  ci:\n    uses: ./.github/workflows/ci-go-module.yml\n    with:\n      module: config-diff\n"
 	mise := "# ---- config-diff (Go) ----\n\n" +
 		"[tasks.\"config-diff:build\"]\ndir = \"scripts/config-diff\"\n\n" +
 		"# ---- next (Go) ----\n"
-	mustWrite(t, filepath.Join(root, ".github", "workflows", "ci_config_diff.yml"), ci)
+	mustWrite(t, filepath.Join(root, ".github", "workflows", "ci-config-diff.yml"), ci)
 	mustWrite(t, filepath.Join(root, "mise.toml"), mise)
 	// NewSpec requires the --from module to exist under scripts/.
 	mustWrite(t, filepath.Join(root, "scripts", "config-diff", "go.mod"), "module config-diff\n")

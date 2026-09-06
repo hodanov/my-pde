@@ -1,20 +1,21 @@
-name: Lint Shell
+name: "[Check] Pins Sync"
 permissions:
   contents: read
 
 on:
   pull_request:
     paths:
-      - "**/*.sh"
-      - .github/workflows/lint_shell.yml
       - mise.toml
+      - environment/tools/go/go-tools.txt
+      - environment/tools/sync-pins.sh
+      - environment/docker/nvim.dockerfile
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  shell-lint:
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -27,5 +28,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run shfmt and shellcheck
-        run: mise run lint:shell
+      - name: Verify go-tools.txt and Dockerfile ARGs are in sync with mise.toml
+        run: mise run pins:check

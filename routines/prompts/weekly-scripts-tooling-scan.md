@@ -11,7 +11,7 @@
 ## リポジトリ構成（提案の土台。ここを実際に読んで現状を把握する）
 
 - `scripts/ai-bridge/`: Neovim（Docker 内）とホスト側 AI CLI を仲介する Go daemon。エントリは `cmd/ai-bridge/main.go`（サブコマンド: daemon / install-launchd）。内部パッケージは `internal/{daemon,launcher,watcher,launchd,testutil}`。Go 1.26 + 外部依存は github.com/fsnotify/fsnotify のみ。設定は環境変数 `AI_BRIDGE_CLI` / `AI_BRIDGE_LAUNCHER` / `AI_BRIDGE_DIR`。`~/.ai-bridge/request.json` を監視してターミナルタブで AI CLI を起動する。
-- 検証(CI): `scripts/` 配下の Go モジュールの変更で lint（goimports -d + golangci-lint）と test（go test ./... + カバレッジ）が PR 上で走る。シェルスクリプトを足す場合は `lint_shell.yml`（shfmt + shellcheck）が対象になる。
+- 検証(CI): `scripts/` 配下の Go モジュールの変更で lint（goimports -d + golangci-lint）と test（go test ./... + カバレッジ）が PR 上で走る。シェルスクリプトを足す場合は `ci-shell-lint.yml`（shfmt + shellcheck）が対象になる。
 - 新しいツールは `scripts/<name>/` に置く想定。既存ツールの一覧は `scripts/` 配下を実際に読んで確認する。
 
 ## 今日のタスク
