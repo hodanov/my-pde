@@ -37,6 +37,10 @@ run = "rm -f config-diff coverage.out"
 dir = "scripts/go-verify"
 `
 
+// fakeGoMod is the template module's go.mod, the source of the go directive the
+// generated module inherits.
+const fakeGoMod = "module config-diff\n\ngo 1.27.0\n"
+
 // fakeRead returns the fake templates keyed by repository-relative path.
 func fakeRead(rel string) ([]byte, error) {
 	switch rel {
@@ -44,6 +48,8 @@ func fakeRead(rel string) ([]byte, error) {
 		return []byte(fakeCITemplate), nil
 	case "mise.toml":
 		return []byte(fakeMise), nil
+	case "scripts/config-diff/go.mod":
+		return []byte(fakeGoMod), nil
 	default:
 		return nil, errors.New("no such file: " + rel)
 	}
@@ -201,6 +207,56 @@ func TestWritePropagatesError(t *testing.T) {
 	}
 }
 
+// TestPlanCopiesTheTemplateGoVersion pins the property that makes a generated
+// module current rather than a release behind: the go directive comes from the
+// live template module, not from a literal in the generator.
+func TestPlanCopiesTheTemplateGoVersion(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		template string
+		want     string
+	}{
+		{name: "patch pinned version", template: "module config-diff\n\ngo 1.27.0\n", want: "module log-tail\n\ngo 1.27.0\n"},
+		{name: "minor only version", template: "module config-diff\n\ngo 1.28\n", want: "module log-tail\n\ngo 1.28\n"},
+		{
+			name:     "toolchain line does not shadow the directive",
+			template: "module config-diff\n\ngo 1.27.0\n\ntoolchain go1.28.1\n",
+			want:     "module log-tail\n\ngo 1.27.0\n",
+		},
+		{
+			name:     "a require on a go-prefixed module is not the directive",
+			template: "module config-diff\n\ngo 1.27.0\n\nrequire go.uber.org/mock v0.6.0\n",
+			want:     "module log-tail\n\ngo 1.27.0\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			read := func(rel string) ([]byte, error) {
+				if rel == "scripts/config-diff/go.mod" {
+					return []byte(tt.template), nil
+				}
+				return fakeRead(rel)
+			}
+			res, planErr := mustSpec(t, "log-tail", "config-diff").Plan(read, noneExist)
+			if planErr != nil {
+				t.Fatalf("Plan returned error: %v", planErr)
+			}
+			written := map[string]string{}
+			if writeErr := res.Write(func(rel string, content []byte) error {
+				written[rel] = string(content)
+				return nil
+			}); writeErr != nil {
+				t.Fatalf("Write returned error: %v", writeErr)
+			}
+			if got := written["scripts/log-tail/go.mod"]; got != tt.want {
+				t.Errorf("go.mod = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPlanErrors(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -233,6 +289,28 @@ func TestPlanErrors(t *testing.T) {
 			},
 			exists:  noneExist,
 			wantSub: "no",
+		},
+		{
+			name: "template go.mod missing",
+			read: func(rel string) ([]byte, error) {
+				if rel == "scripts/config-diff/go.mod" {
+					return nil, errors.New("no such file")
+				}
+				return fakeRead(rel)
+			},
+			exists:  noneExist,
+			wantSub: "read template go.mod scripts/config-diff/go.mod",
+		},
+		{
+			name: "template go.mod without a go directive",
+			read: func(rel string) ([]byte, error) {
+				if rel == "scripts/config-diff/go.mod" {
+					return []byte("module config-diff\n"), nil
+				}
+				return fakeRead(rel)
+			},
+			exists:  noneExist,
+			wantSub: "has no go directive to copy",
 		},
 		{
 			name:    "collision refuses overwrite",

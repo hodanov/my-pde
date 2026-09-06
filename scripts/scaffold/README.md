@@ -35,8 +35,10 @@ scaffold new log-tail
 - **テンプレートは生きた既存ファイルから**取る。CI ワークフローと mise タスクは
   テンプレート元モジュール（既定 `config-diff`）の実ファイルを読み、モジュール名トークンを
   置換して生成するため、pinned action SHA や `paths:` などの現行規約が自動的に引き継がれ、
-  テンプレートがリポジトリの実体から drift しない。Go 骨格だけは pinned SHA を持たない
-  最小テンプレート。
+  テンプレートがリポジトリの実体から drift しない。`go.mod` の `go` directive も
+  テンプレート元の実ファイルから写す（`mise.toml` の `[tools] go` が source of truth で、
+  既存モジュールがそれを追う）。`main.go` / `main_test.go` / `README.md` の骨格だけは、
+  追従すべき現行規約を持たない最小テンプレート。
 - **安全性**：生成は付加のみ。生成先が既に存在する場合は**上書きせず非ゼロ終了**し、
   既存ファイルは一切 mutate しない。`mise.toml` も in-place 編集はせず、貼るべきブロックを
   stdout に出すだけ。
