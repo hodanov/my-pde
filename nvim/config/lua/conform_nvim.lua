@@ -24,6 +24,6 @@ require("conform").setup({
 	},
 })
 
-vim.keymap.set({ "n", "v" }, "<space>f", function()
+vim.keymap.set({ "n", "v" }, "<space>F", function()
 	require("conform").format({ async = true, lsp_format = "fallback" })
 end, { desc = "Format buffer or range (conform)" })

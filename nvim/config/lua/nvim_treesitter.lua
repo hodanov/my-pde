@@ -37,6 +37,7 @@ vim.api.nvim_create_autocmd("FileType", {
 		"hcl",
 		"lua",
 		"yaml",
+		"yaml.ghaction",
 		"json",
 		"sh",
 		"dockerfile",
