@@ -87,7 +87,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends xz-utils \
 COPY ./environment/tools/node/ /opt/npm-tools/
 WORKDIR /opt/npm-tools
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-  npm install --omit=dev --no-audit --no-fund
+  npm ci --omit=dev --no-audit --no-fund
 
 ####################
 # Stage 3: Build Go toolchain and tools

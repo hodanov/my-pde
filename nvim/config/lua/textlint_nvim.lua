@@ -18,8 +18,16 @@ local notified = {}
 -- diagnosticsの名前空間を作成
 local ns_id = vim.api.nvim_create_namespace("textlint")
 
+local function byte_col(bufnr, lnum, char_col)
+	local line = vim.api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)[1]
+	if not line then
+		return char_col
+	end
+	return vim.str_byteindex(line, "utf-16", char_col, false)
+end
+
 -- textlintの結果をneovimのdiagnosticsに変換
-local function parse_textlint_output(output)
+local function parse_textlint_output(output, bufnr)
 	local ok, result = pcall(vim.json.decode, output)
 	if not ok or type(result) ~= "table" then
 		return nil, vim.trim(output)
@@ -29,11 +37,14 @@ local function parse_textlint_output(output)
 	local messages = result[1] and result[1].messages or {}
 
 	for _, msg in ipairs(messages) do
+		local lnum = msg.line - 1 -- neovimは0-indexedなので-1
+		local char_col = msg.column - 1
+		local fix_len = msg.fix and msg.fix.range and (msg.fix.range[2] - msg.fix.range[1]) or 0
 		local diagnostic = {
-			lnum = msg.line - 1, -- neovimは0-indexedなので-1
-			col = msg.column - 1,
-			end_lnum = msg.line - 1,
-			end_col = msg.column - 1 + (msg.fix and msg.fix.range and (msg.fix.range[2] - msg.fix.range[1]) or 0),
+			lnum = lnum,
+			col = byte_col(bufnr, lnum, char_col),
+			end_lnum = lnum,
+			end_col = byte_col(bufnr, lnum, char_col + fix_len),
 			severity = msg.severity == 2 and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.WARN,
 			message = msg.message,
 			source = "textlint",
@@ -99,7 +110,7 @@ local function run_textlint(bufnr)
 					return
 				end
 
-				local diagnostics, err = parse_textlint_output(output)
+				local diagnostics, err = parse_textlint_output(output, bufnr)
 				vim.schedule(function()
 					if not diagnostics then
 						notify_unparsable(bufnr, err)
