@@ -26,7 +26,6 @@ metadata:
 ## 前提
 
 - Google Calendar MCP が利用可能
-- 未認証の場合は `mcp__claude_ai_Google_Calendar__authenticate` → `complete_authentication` を先に案内する
 - 書き込み対象は primary のみ
 - タイムゾーンは `Asia/Tokyo`
 - リマインダーは各イベント作成時に `overrideReminders: [{ method: "popup", minutes: 30 }]` を渡して個別に付与する（カレンダー側のデフォルト設定には依存しない）
