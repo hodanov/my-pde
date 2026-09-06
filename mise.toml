@@ -266,15 +266,51 @@ description = "Remove pipeline-metrics build artifacts"
 dir = "scripts/pipeline-metrics"
 run = "rm -f pipeline-metrics coverage.out"
 
+# ---- cover-diff (Go) ----
+
+[tasks."cover-diff:build"]
+description = "Build the cover-diff binary"
+dir = "scripts/cover-diff"
+run = "go build -o cover-diff ./cmd/cover-diff"
+
+[tasks."cover-diff:run"]
+description = "Run cover-diff to report patch coverage for changed lines (pass flags after --)"
+dir = "scripts/cover-diff"
+run = "go run ./cmd/cover-diff"
+
+[tasks."cover-diff:test"]
+description = "Run cover-diff Go tests"
+dir = "scripts/cover-diff"
+run = "go test ./..."
+
+[tasks."cover-diff:lint"]
+description = "Run golangci-lint and goimports check for cover-diff"
+dir = "scripts/cover-diff"
+run = [
+  "golangci-lint run --allow-parallel-runners",
+  '''
+diff=$(find . -name '*.go' -exec goimports -d {} +)
+if [ -n "$diff" ]; then
+  echo "$diff"
+  exit 1
+fi
+''',
+]
+
+[tasks."cover-diff:clean"]
+description = "Remove cover-diff build artifacts"
+dir = "scripts/cover-diff"
+run = "rm -f cover-diff coverage.out"
+
 # ---- Aggregates ----
 
 [tasks."go:test"]
 description = "Run tests for all Go apps under scripts/"
-depends = ["ai-bridge:test", "nvim-sync:test", "config-diff:test", "go-verify:test", "scaffold:test", "agent-stats:test", "pipeline-metrics:test"]
+depends = ["ai-bridge:test", "nvim-sync:test", "config-diff:test", "go-verify:test", "scaffold:test", "agent-stats:test", "pipeline-metrics:test", "cover-diff:test"]
 
 [tasks."go:lint"]
 description = "Run lint for all Go apps under scripts/"
-depends = ["ai-bridge:lint", "nvim-sync:lint", "config-diff:lint", "go-verify:lint", "scaffold:lint", "agent-stats:lint", "pipeline-metrics:lint"]
+depends = ["ai-bridge:lint", "nvim-sync:lint", "config-diff:lint", "go-verify:lint", "scaffold:lint", "agent-stats:lint", "pipeline-metrics:lint", "cover-diff:lint"]
 
 # ---- AI agents deploy: agents.xml symlinks ----
 

@@ -1,0 +1,71 @@
+{
+  "modules": [
+    {
+      "module": "other-app",
+      "total": {
+        "statements": 2,
+        "covered": 2,
+        "coverage": 1
+      },
+      "files": [
+        {
+          "path": "scripts/other-app/main.go",
+          "statements": 2,
+          "covered": 2,
+          "uncovered_lines": []
+        }
+      ]
+    },
+    {
+      "module": "sample-app",
+      "total": {
+        "statements": 9,
+        "covered": 3,
+        "coverage": 0.3333
+      },
+      "files": [
+        {
+          "path": "scripts/sample-app/cmd/sample-app/main.go",
+          "statements": 3,
+          "covered": 0,
+          "uncovered_lines": [
+            9,
+            10,
+            11
+          ]
+        },
+        {
+          "path": "scripts/sample-app/internal/core/core.go",
+          "statements": 5,
+          "covered": 3,
+          "uncovered_lines": [
+            20,
+            21
+          ]
+        },
+        {
+          "path": "scripts/sample-app/internal/port/mock/mock_port.go",
+          "statements": 1,
+          "covered": 0,
+          "uncovered_lines": [
+            30
+          ]
+        }
+      ]
+    }
+  ],
+  "total": {
+    "statements": 11,
+    "covered": 5,
+    "coverage": 0.4545
+  },
+  "unmeasured_modules": [
+    "third-app"
+  ],
+  "warnings": [
+    "parse profile for third-app: unknown profile header \"mode: lines\" (want one of \"mode: set\", \"mode: count\", \"mode: atomic\")",
+    "profile path \"example.com/vendored/x.go\" does not belong to module \"other-app\"",
+    "scripts/sample-app/cmd/sample-app/main.go: malformed hunk header \"@@ broken @@\""
+  ],
+  "threshold": null
+}

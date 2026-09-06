@@ -1,0 +1,21 @@
+name: "[CI] Cover Diff"
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+    paths:
+      - "scripts/cover-diff/**"
+      - .github/workflows/ci-go-module.yml
+      - mise.toml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci-go-module.yml
+    with:
+      module: cover-diff

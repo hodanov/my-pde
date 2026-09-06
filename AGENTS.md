@@ -7,7 +7,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 
 - `environment/`: Docker image and toolchain pins.
 - `nvim/`: Neovim configuration (`init.lua` + modular Lua).
-- `scripts/`: Go apps, one module per directory (`agent-stats`, `ai-bridge`, `config-diff`, `go-verify`, `nvim-sync`, `pipeline-metrics`, `scaffold`). Each has its own `README.md`.
+- `scripts/`: Go apps, one module per directory (`agent-stats`, `ai-bridge`, `config-diff`, `cover-diff`, `go-verify`, `nvim-sync`, `pipeline-metrics`, `scaffold`). Each has its own `README.md`.
   - `scripts/ai-bridge/`: Go daemon bridging Neovim to host-side AI CLIs. See `scripts/ai-bridge/AGENTS.md`.
 - `ai-agents/`: AI agent/skill definitions and settings deployed to `~/.claude`, `~/.cursor`, `~/.codex`.
   - `ai-agents/agents/`: subagent definitions (review, investigation).
@@ -34,7 +34,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 
 Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mise.toml` at the repo root. Run `mise tasks ls` for the full list.
 
-### Go apps under `scripts/` (agent-stats, ai-bridge, config-diff, go-verify, nvim-sync, pipeline-metrics, scaffold)
+### Go apps under `scripts/` (agent-stats, ai-bridge, config-diff, cover-diff, go-verify, nvim-sync, pipeline-metrics, scaffold)
 
 - `mise run <app>:build` — build the binary (e.g. `mise run ai-bridge:build`).
 - `mise run <app>:test` — run Go tests; `mise run go:test` runs all apps.
