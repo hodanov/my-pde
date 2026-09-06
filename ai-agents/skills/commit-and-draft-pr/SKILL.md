@@ -2,7 +2,7 @@
 name: commit-and-draft-pr
 description: 変更をコミットしてドラフトPRを作成する一連のGit/ghワークフロー。ユーザーが「コミットして」「PR作って」「draft PR」等を求めたときに使用し、status/diff確認・命令形コミット・push・gh pr create --draft（--assignee hodanov）まで実行する。ユーザーの明示リクエストが無くても、実装完了後にcommitやPRが必要になった場面（dev-workflowのcommitフェーズ等）では必ずこれを使う。`git commit` や `gh pr create` を単体でBash直接実行しない。
 metadata:
-  version: 5
+  version: 6
 ---
 
 # Commit and Draft PR
@@ -20,11 +20,12 @@ metadata:
 
 ## 事前確認
 
-- `git status` と `git diff` で変更を把握する
+- `git status` と `git diff` で変更を把握する。diff は中身まで読み、意図した変更と一致するか確かめる（ツールの副作用でファイルが空洞化しても `git status` では `M` としか出ない）
 - `git log --oneline -5` で直近の履歴を把握する
 - `git branch` で現在ブランチを確認する
 - `main`・detached HEAD・既にマージ済みのブランチ上の場合は feature ブランチを作成する（マージ済みブランチ上に変更がある場合は `git stash -u` → 最新 main を fetch → 新ブランチ作成 → `git stash pop` で移す）
 - ブランチ名が worktree の仮名のまま（worktree ディレクトリ名と同名、または `bright-running-fox` のような自動生成名）の場合は、作業内容を表す prefix なしの `<slug>` を命名して `git branch -m <slug>` でリネームしてから進める（AGENTS.md「Parallel Work (git worktrees)」の規約）
+- マージやコンフリクト解消の途中なら、`git status` に未解決（`UU`）が残っていないことを確認する
 - 変更が無い（diff が空）場合は中断して報告する
 
 ## 検証
@@ -38,7 +39,8 @@ metadata:
 
 - 今回の変更の意図に沿うファイルだけ `git add` する
 - 次は原則除外する: 一時/デバッグ用ファイル、ローカル設定、秘密情報（`.env` 等）、生成物・ビルド成果物
-- add 後に `git status` で意図しないファイルが混ざっていないか確認する
+- add 後に `git status --short` と `git diff --cached --name-only` でステージ内容を確認する（`git status` は `--cached` を取らない）
+- add したはずのファイルが staged に現れない場合は `git check-ignore -v <パス>` で除外理由を確認する。`ai-agents/skills/*/observations/` のような意図的な除外は force-add せず、除外した旨をコミット本文に書く
 
 ## コミット
 
@@ -56,6 +58,8 @@ metadata:
   - docs: ドキュメント
   - test: テスト
   - chore: 雑務（CI・設定など）
+- マージコミットも `<type>: <summary>` に揃え、既定の `Merge branch ...` は使わない。type は取り込んだ内容ではなくマージの目的で選ぶ（コンフリクト解消なら `chore:`）
+- コミット前に本文を読み返し、下書きの断片や diff と矛盾する記述が残っていないか確認する
 
 ### コミットメッセージ例
 
@@ -96,7 +100,9 @@ feat: PDFテキスト抽出を pdfplumber に切り替え
 push 後、まず対象ブランチの open PR を確認する: `gh pr list --head <ブランチ名> --state open`
 
 - **ユーザーが「push のみ／PR 不要」と指示**: このステップをスキップする（引数を最優先）
-- **既存の open PR がある**: 新規作成せず push 追従で反映する（重複作成を回避）
+- **既存の open PR がある**: 新規作成せず push 追従で反映する（重複作成を回避）。あわせて次を確認する:
+  - PR 本文が現在の diff と食い違っていないか `gh pr view <番号>` で確認する。記述した実装を削除した・前提が実測で覆った・設計方針が変わった場合は `gh pr edit <番号> --body` で本文を直す（コンフリクト解消や方針変更を伴う追従 push では本文が失効しているのが普通）
+  - そのブランチを base にした子 PR が無いか `gh pr list --base <ブランチ名> --state open` で確認する。あれば下流へ順にマージして伝播させ、それぞれ push する
 - **open PR が無い**: 以下の手順で新規ドラフト PR を作成する
 
 ### 新規ドラフト PR 作成
