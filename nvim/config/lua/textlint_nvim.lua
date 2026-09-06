@@ -30,6 +30,9 @@ end
 local function parse_textlint_output(output, bufnr)
 	local ok, result = pcall(vim.json.decode, output)
 	if not ok or type(result) ~= "table" then
+		if output:find("== No rules found, textlint hasn’t done anything ==", 1, true) then
+			return {}, nil
+		end
 		return nil, vim.trim(output)
 	end
 
