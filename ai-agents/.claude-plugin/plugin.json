@@ -1,7 +1,7 @@
 {
   "name": "ai-agents",
-  "version": "0.1.0",
-  "description": "hodanov の共通スキル・サブエージェント一式。ローカル（mise 配布）とクラウド（Routine / claude --cloud）の双方へ同じ実体を届けるための plugin マニフェスト。",
+  "version": "0.2.0",
+  "description": "hodanov の共通スキル・サブエージェント・hooks 一式。ローカル（mise 配布）とクラウド（Routine / claude --cloud）の双方へ同じ実体を届けるための plugin マニフェスト。",
   "author": {
     "name": "hodanov"
   },

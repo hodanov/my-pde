@@ -401,8 +401,11 @@ description = "Copy agent definitions to all AI CLIs"
 depends = ["claude-agents-copy", "cursor-agents-copy", "copilot-agents-copy"]
 
 [tasks.claude-settings-copy]
-description = "Copy settings and hooks to ~/.claude"
-run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/settings/claude" "$HOME/.claude"'
+description = "Copy settings, machine-local hooks, and plugin hooks to ~/.claude"
+run = '''
+"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/settings/claude" "$HOME/.claude"
+"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/hooks" "$HOME/.claude/hooks"
+'''
 
 [tasks.cursor-settings-copy]
 description = "Copy settings and hooks to ~/.cursor"

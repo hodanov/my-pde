@@ -11,7 +11,7 @@
 - Neovim 設定: `nvim/config/`（`init.lua`、lazy.nvim: `lazy_nvim.lua`/`plugins.lua`、LSP: `nvim/config/lua/lsp/`。Lua は stylua でフォーマット）
 - Go モジュール: `scripts/` 配下（golangci-lint / go test 対象）
 - Skill 定義: 汎用は `ai-agents/skills/<name>/SKILL.md`、趣味・私生活用は `ai-agents/personal/skills/`、my-pde のパスを書き換えるものは `.claude/skills/`。付随スクリプトは `<name>/scripts/`。書式規約と置き場所の判断軸は `.claude/rules/skill-authoring.md` に従う（3 ルートのいずれかを触ると自動で載る）。
-- Hook 定義: `ai-agents/settings/{claude,cursor,copilot}/hooks/*.sh` と各エディタの配線（claude: `settings/claude/settings.json` の hooks、cursor: `settings/cursor/hooks.json`、copilot: `settings/copilot/hooks/hooks.json`）。シェルは shellcheck / shfmt 対象。
+- Hook 定義: claude は環境非依存なら `ai-agents/hooks/*.sh`（配線は `ai-agents/hooks/hooks.json`）、ローカル依存なら `ai-agents/settings/claude/hooks/*.sh`（配線は `settings/claude/settings.json`）。cursor は `settings/cursor/hooks/*.sh` と `settings/cursor/hooks.json`、copilot は `settings/copilot/hooks/*.sh` と `settings/copilot/hooks/hooks.json`。置き場所の判断軸は `.claude/rules/hook-authoring.md`。シェルは shellcheck / shfmt 対象。
 - ai-agents の skills/hooks は mise タスク（`mise run skills-copy` / `agents-copy` / `settings-copy`、実体は `ai-agents/scripts/copy-entries.sh`）で `~/.{codex,claude,cursor,copilot}` へ配布される。新規 hook を足す場合は 3 エディタ分の配線まで揃える。
 - CI: `.github/workflows/`（lint_format: markdownlint+prettier、lint_shell: shfmt+shellcheck、lint_stylua、Go の lint/test。PR で実行される）
 

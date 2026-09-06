@@ -18,6 +18,7 @@ config-diff <mode> <src> <dest>    # mode: skills | agents | settings
 
 ```sh
 config-diff settings ai-agents/settings/claude   ~/.claude
+config-diff settings ai-agents/hooks             ~/.claude/hooks
 config-diff skills   ai-agents/skills            ~/.claude/skills
 config-diff skills   ai-agents/personal/skills   ~/.claude/skills
 config-diff agents   ai-agents/agents            ~/.claude/agents
