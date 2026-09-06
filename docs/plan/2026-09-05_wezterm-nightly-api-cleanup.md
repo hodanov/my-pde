@@ -78,9 +78,10 @@ nightly で挙動が変わったが対応不要と判断したもの:
 - **Copy Mode `Close` がスクロール位置を変えなくなった** — copy mode を自前定義していないので影響なし
 - **`ShowTabNavigator` が既定でアクティブタブを選ぶ** — 未使用
 
-見た目・挙動を変えるので今回は入れなかった新機能。採用するなら個別に判断する:
+見た目・挙動を変えるので今回は入れなかった新機能。以下は後続の調査で決着した。
 
-- `text_min_contrast_ratio` — 背景画像 `opacity = 0.13` と Catppuccin Mocha の組み合わせで効きそう
-- `command_palette_font` / `char_select_font` / `pane_select_font` — 既定は `window_frame.font`（Roboto）なので日本語グリフを持たない
-- `PromptInputLine` の `prompt` / `initial_value`、`launcher_alphabet`、`macos_fullscreen_extend_behind_notch`
-- `pane:get_progress()` — ConEmu 形式の進捗。AI ペインダッシュボードに「動いているか」を出す材料になりうる。`2026-09-05_wezterm-resident-dashboard-pane.md` でもスコープ外としたので、まだ手つかず
+- `pane:get_progress()` — **採用。** `2026-09-05_wezterm-agent-progress-indicator.md` で実装した。Claude Code が既定 on の `terminalProgressBarEnabled`（"Emit OSC 9;4 progress sequences during long operations"）を持つので実弾がある
+- `macos_fullscreen_extend_behind_notch` — **採用。** ハードは MacBook Air M2（Mac14,2）で notch がある。同上の文書で入れた
+- `command_palette_font` / `char_select_font` / `pane_select_font` — **却下。** `pane_select_font` は PaneSelect に既定キーが無く設定でも割り当てていないので完全に不発。残り 2 つも、ここに書いた「Roboto は日本語グリフを持たない」は言い過ぎで、WezTerm がグリフ不足を自動フォールバックする以上、実害は見た目の不統一だけだった
+- `PromptInputLine` の `prompt` / `initial_value`、`launcher_alphabet` — **見送り。** どちらも操作感の微調整に留まる。`initial_value` は `mux.rename_workspace()` と組んだ「現在の workspace 名を prefill してリネーム」に使い道があるので、必要になったら単独で検討する
+- `text_min_contrast_ratio` — **未決。** 背景画像 `opacity = 0.13` と Catppuccin Mocha の組み合わせで効きそうだが未検証
