@@ -93,7 +93,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
 # Stage 3: Build Go toolchain and tools
 FROM base AS go-builder
 
-ARG GO_VERSION=1.27.0
+ARG GO_VERSION=1.27.1
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH="$(dpkg --print-architecture)" \
@@ -197,7 +197,7 @@ RUN set -eux; \
 # Stage 7: Fetch Terraform CLI binary only
 FROM base AS terraform-builder
 
-ARG TERRAFORM_VERSION=1.16.0
+ARG TERRAFORM_VERSION=1.16.1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
