@@ -227,6 +227,44 @@ Open な `auto/*` PR に対して（月曜）：
 
 ---
 
+## Cursor でも使える？ ― 役割を分ける
+
+**Routine の定期実行基盤は Claude 固有。**
+一方、日々の開発を支える Skills / hooks は Cursor Plugin でも共有できる。
+
+| 役割                     | Claude Code     | Cursor          |
+| ------------------------ | --------------- | --------------- |
+| cron で調査・Issue 起票  | Claude Routine  | 対象外          |
+| 自動整形・危険操作ガード | `quality-hooks` | `quality-hooks` |
+| セキュリティ対策         | `security`      | `security`      |
+| コミット・Draft PR       | `git-pr`        | `git-pr`        |
+
+> **自律改善ループは Claude、普段の実装支援は両方**で使い分ける。
+
+---
+
+## Cursor での導入と使い方
+
+### 管理者：Team Marketplace に登録
+
+`Dashboard` → `Plugins` → `Add Marketplace` → `Import from Repo`
+
+```text
+dmm-com/pf-csp-claude-marketplace
+```
+
+### 利用者：Customize から必要な Plugin をインストール
+
+| Plugin          | 使い方                                                   |
+| --------------- | -------------------------------------------------------- |
+| `quality-hooks` | 編集・Shell 実行・終了時に自動で働く                     |
+| `security`      | `/credential-leak-prevention`・`/supply-chain-hardening` |
+| `git-pr`        | `/commit-and-draft-pr`                                   |
+
+<span class="small">Teams / Enterprise プランと private repo への GitHub App 権限が必要。</span>
+
+---
+
 ## 学び
 
 - **人間はゲートに徹する**：判断を握れば自動化は怖くない（全部 draft）
