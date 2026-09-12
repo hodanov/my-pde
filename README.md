@@ -78,7 +78,7 @@ Tool versions are pinned in `mise.toml` at the repo root; the `ARG` defaults in 
 
 ## AI Bridge
 
-Neovim (Docker container) from selected code to host-side AI CLI (Claude Code, Cursor, etc.) with context. See [docs/ai-bridge.md](docs/ai-bridge.md) for setup and usage.
+Neovim (Docker container) from selected code to host-side AI CLI (Claude Code, Cursor, etc.) with context. See [./scripts/ai-bridge/README.md](./scripts/ai-bridge/README.md) for setup and usage.
 
 ## AI Agents
 
