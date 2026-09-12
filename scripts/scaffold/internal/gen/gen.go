@@ -113,8 +113,18 @@ func (s spec) Plan(read ReadFunc, exists ExistsFunc) (result, error) {
 		return result{}, sectionErr
 	}
 
+	goModSrcPath := modulePath(s.from, "go.mod")
+	goModSrc, readGoModErr := read(goModSrcPath)
+	if readGoModErr != nil {
+		return result{}, fmt.Errorf("read template go.mod %s: %w", goModSrcPath, readGoModErr)
+	}
+	goVersion, versionErr := extractGoVersion(string(goModSrc), goModSrcPath)
+	if versionErr != nil {
+		return result{}, versionErr
+	}
+
 	files := []file{
-		{path: modulePath(s.name, "go.mod"), content: goModContent(s.name)},
+		{path: modulePath(s.name, "go.mod"), content: goModContent(s.name, goVersion)},
 		{path: modulePath(s.name, path.Join("cmd", s.name, "main.go")), content: mainContent(s.name)},
 		{path: modulePath(s.name, path.Join("cmd", s.name, "main_test.go")), content: mainTestContent(s.name)},
 		{path: modulePath(s.name, "README.md"), content: readmeContent(s.name)},
@@ -209,10 +219,26 @@ func extractMiseSection(mise, from string) (string, error) {
 	return marker + strings.TrimRight(section, "\n") + "\n", nil
 }
 
-// goModContent renders the module's go.mod, matching the Go version other
-// scripts/ modules pin.
-func goModContent(name string) string {
-	return fmt.Sprintf("module %s\n\ngo 1.26\n", name)
+// extractGoVersion reads the go directive out of a module's go.mod. Taking the
+// version from the live template module rather than a literal here is what
+// keeps a generated module from being born a release behind: mise.toml is the
+// source of truth for the toolchain, and the existing modules track it.
+func extractGoVersion(goMod, srcPath string) (string, error) {
+	for line := range strings.Lines(goMod) {
+		version, found := strings.CutPrefix(strings.TrimSpace(line), "go ")
+		if !found {
+			continue
+		}
+		if version = strings.TrimSpace(version); version != "" {
+			return version, nil
+		}
+	}
+	return "", fmt.Errorf("%s has no go directive to copy", srcPath)
+}
+
+// goModContent renders the module's go.mod.
+func goModContent(name, goVersion string) string {
+	return fmt.Sprintf("module %s\n\ngo %s\n", name, goVersion)
 }
 
 // mainContent renders a minimal, testable command skeleton.

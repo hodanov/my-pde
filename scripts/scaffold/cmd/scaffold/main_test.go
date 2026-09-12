@@ -18,8 +18,9 @@ func writeTemplates(t *testing.T, root string) {
 		"# ---- next (Go) ----\n"
 	mustWrite(t, filepath.Join(root, ".github", "workflows", "ci-config-diff.yml"), ci)
 	mustWrite(t, filepath.Join(root, "mise.toml"), mise)
-	// NewSpec requires the --from module to exist under scripts/.
-	mustWrite(t, filepath.Join(root, "scripts", "config-diff", "go.mod"), "module config-diff\n")
+	// NewSpec requires the --from module to exist under scripts/, and Plan copies
+	// its go directive into the generated module.
+	mustWrite(t, filepath.Join(root, "scripts", "config-diff", "go.mod"), "module config-diff\n\ngo 1.27.0\n")
 }
 
 func mustWrite(t *testing.T, abs, content string) {
