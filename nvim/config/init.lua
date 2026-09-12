@@ -389,11 +389,6 @@ vim.api.nvim_create_autocmd("FileType", {
 vim.api.nvim_set_keymap("n", "<Leader>.", ":vs ~/.config/nvim/init.lua<CR>", { noremap = true, silent = true })
 
 -- ----------------------------------------
--- Clear highlighted characters.
--- ----------------------------------------
-vim.api.nvim_set_keymap("n", "<C-[><C-[>", ":nohlsearch<CR>", { noremap = true, silent = true })
-
--- ----------------------------------------
 -- 内蔵ターミナル（同じ端末を出し入れするトグル）
 --
 --   <Leader>- : 水平分割 / <Leader>l : 垂直分割
