@@ -82,6 +82,9 @@ vim.lsp.enable("bashls")
 -- Lua
 vim.lsp.enable("lua_ls")
 
+-- Markdown
+vim.lsp.enable("marksman")
+
 -- Global mappings.
 -- See `:help vim.diagnostic.*` for documentation on any of the below functions
 vim.keymap.set("n", "<space>e", vim.diagnostic.open_float)
