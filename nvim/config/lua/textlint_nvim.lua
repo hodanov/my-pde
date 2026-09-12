@@ -91,6 +91,7 @@ local function run_textlint(bufnr)
 	stop_job(bufnr)
 
 	local content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+	local tick = vim.api.nvim_buf_get_changedtick(bufnr)
 
 	if content == "" then
 		vim.diagnostic.set(ns_id, bufnr, {})
@@ -113,8 +114,15 @@ local function run_textlint(bufnr)
 					return
 				end
 
-				local diagnostics, err = parse_textlint_output(output, bufnr)
 				vim.schedule(function()
+					if not vim.api.nvim_buf_is_valid(bufnr) then
+						return
+					end
+					if vim.api.nvim_buf_get_changedtick(bufnr) ~= tick then
+						return
+					end
+
+					local diagnostics, err = parse_textlint_output(output, bufnr)
 					if not diagnostics then
 						notify_unparsable(bufnr, err)
 						return

@@ -73,7 +73,7 @@ nvim() {
   docker container exec -it \
     -w "$host_pwd" \
     nvim-dev \
-    bash --login -c "nvim \"\$@\""
+    bash --login -c 'nvim "$@"' nvim "$@"
 }
 
 ####################
