@@ -279,6 +279,7 @@ type rawLine struct {
 	IsSidechain     bool        `json:"isSidechain"`
 	DurationMs      int64       `json:"durationMs"`
 	CompactMetadata *rawCompact `json:"compactMetadata"`
+	ToolDenialKind  string      `json:"toolDenialKind"`
 	Message         *rawMsg     `json:"message"`
 }
 
@@ -303,11 +304,13 @@ type rawUsage struct {
 }
 
 type rawContent struct {
-	Type    string          `json:"type"`
-	Name    string          `json:"name"`
-	Input   json.RawMessage `json:"input"`
-	IsError bool            `json:"is_error"`
-	Content json.RawMessage `json:"content"`
+	Type      string          `json:"type"`
+	ID        string          `json:"id"`
+	ToolUseID string          `json:"tool_use_id"`
+	Name      string          `json:"name"`
+	Input     json.RawMessage `json:"input"`
+	IsError   bool            `json:"is_error"`
+	Content   json.RawMessage `json:"content"`
 }
 
 // maxLineBytes caps a single JSONL line so an unexpectedly huge record cannot
@@ -366,6 +369,10 @@ func AppendReader(s *Session, r io.Reader) {
 // oversized line, and its tail comes back as one unparseable line that is
 // skipped like any other.
 func appendLines(s *Session, r io.Reader, maxLine int) {
+	scanLines(r, maxLine, func(raw *rawLine) { applyLine(s, raw) })
+}
+
+func scanLines(r io.Reader, maxLine int, apply func(*rawLine)) {
 	for {
 		sc := bufio.NewScanner(r)
 		sc.Buffer(make([]byte, 0, min(initialLineBytes, maxLine)), maxLine)
@@ -378,7 +385,7 @@ func appendLines(s *Session, r io.Reader, maxLine int) {
 			if err := json.Unmarshal(line, &raw); err != nil {
 				continue
 			}
-			applyLine(s, &raw)
+			apply(&raw)
 		}
 		if !errors.Is(sc.Err(), bufio.ErrTooLong) {
 			return
