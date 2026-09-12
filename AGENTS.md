@@ -18,7 +18,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
   - Skills that rewrite this repository's own paths live in `.claude/skills/` instead and are not distributed. Placement rules: `.claude/rules/skill-authoring.md`.
   - Deployment to each CLI (Claude, Cursor, Codex, Copilot) is done via mise tasks (`mise.toml` at the repo root).
 - `dotfiles/`: Shell and terminal configs (`.zshrc`, `wezterm/`). Both are deployed as symlinks (`mise run zshrc-link` / `dotfiles-link`), so host edits show up as repo diffs.
-- `docs/plan/`: implementation plans. `docs/log/`: work logs.
+- `docs/plan/`: implementation plans. `docs/adr/`: architecture decision records (why, not how). `docs/log/`: work logs.
 - `assets/`: screenshots and static media.
 - `.github/workflows/`: CI workflows (lint, test, version bumps).
 

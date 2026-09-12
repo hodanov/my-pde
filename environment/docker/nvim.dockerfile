@@ -93,7 +93,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
 # Stage 3: Build Go toolchain and tools
 FROM base AS go-builder
 
-ARG GO_VERSION=1.27.0
+ARG GO_VERSION=1.27.1
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH="$(dpkg --print-architecture)" \
@@ -197,7 +197,7 @@ RUN set -eux; \
 # Stage 7: Fetch Terraform CLI binary only
 FROM base AS terraform-builder
 
-ARG TERRAFORM_VERSION=1.16.0
+ARG TERRAFORM_VERSION=1.16.1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
@@ -226,7 +226,7 @@ FROM base AS lua-ls-builder
 ARG LUA_LS_VERSION=3.19.1
 # LuaLS publishes no aggregate checksum file with its releases (there is no
 # equivalent of hadolint's checksums.sha256 or terraform's SHA256SUMS), so the
-# per-asset sha256 is pinned here instead. Update BOTH when bumping the version.
+# per-asset sha256 is pinned in mise.toml [env] and synced here by pins:sync.
 ARG LUA_LS_SHA256_AMD64=e9235d2d72ef55bc41cf8c99cda2ed64777682024b4bb81f5dea425060c5cbb8
 ARG LUA_LS_SHA256_ARM64=abd2572e8fc929dc838a81ffb8473c5bce0bf39bfe8edb4b120b3b623176ce83
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -249,16 +249,47 @@ RUN set -eux; \
   rm -rf "$TMPDIR"
 
 ####################
+# Stage 9: Fetch marksman binary only (Markdown LSP: symbols, links, rename)
+FROM base AS marksman-builder
+
+ARG MARKSMAN_VERSION=2026-02-08
+# marksman publishes no aggregate checksum file with its releases (there is no
+# equivalent of hadolint's checksums.sha256 or terraform's SHA256SUMS), so the
+# per-asset sha256 is pinned in mise.toml [env] and synced here by pins:sync.
+ARG MARKSMAN_SHA256_AMD64=be5098e8213219269c47fc0d916a66fa31ce0602ec967475c722260aabf26087
+ARG MARKSMAN_SHA256_ARM64=db8e124527f7f8048e3e6c91821b9c52ef173d92c01e47d221bf1337afd962fb
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN set -eux; \
+  ARCH="$(dpkg --print-architecture)"; \
+  case "$ARCH" in \
+    amd64) MS_ARCH="x64"; REF_SHA="$MARKSMAN_SHA256_AMD64" ;; \
+    arm64) MS_ARCH="arm64"; REF_SHA="$MARKSMAN_SHA256_ARM64" ;; \
+    *) echo "Unsupported arch for marksman: $ARCH" >&2; exit 1 ;; \
+  esac; \
+  BASE_URL="https://github.com/artempyanykh/marksman/releases/download/${MARKSMAN_VERSION}"; \
+  TMPDIR="/tmp/marksman"; \
+  mkdir -p "$TMPDIR"; \
+  BIN_PATH="$TMPDIR/marksman"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/marksman-linux-${MS_ARCH}" -o "$BIN_PATH"; \
+  ACT_SHA="$(sha256sum "$BIN_PATH" | awk '{print $1}')"; \
+  [ "$ACT_SHA" = "$REF_SHA" ] || (echo "marksman checksum mismatch: expected=$REF_SHA actual=$ACT_SHA" >&2; exit 1); \
+  install -m 0755 "$BIN_PATH" /usr/local/bin/marksman; \
+  rm -rf "$TMPDIR"
+
+####################
 # Final stage
 FROM base
 
 COPY ./nvim/config/.bash_profile /root/
 COPY ./nvim/config/.bashrc /root/
 
+# The number in libicu78 is the soname, not a version pin: marksman is a .NET
+# binary that aborts at startup without ICU, and Ubuntu ships no unversioned
+# runtime package. Bumping the base image may require a new number here.
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ripgrep fd-find python3 mysql-client luarocks \
-  shellcheck \
+  shellcheck libicu78 \
   && mkdir -p /root/.local/state/nvim/undo \
   && apt-get autoremove -y \
   && apt-get clean -y \
@@ -281,6 +312,7 @@ COPY --from=python-builder /root/.local/bin/uvx /usr/local/bin/uvx
 COPY --from=rust-builder /root/.cargo/bin/stylua /usr/local/bin/stylua
 COPY --from=rust-builder /root/.cargo/bin/tree-sitter /usr/local/bin/tree-sitter
 COPY --from=lua-ls-builder /opt/lua-language-server/ /opt/lua-language-server/
+COPY --from=marksman-builder /usr/local/bin/marksman /usr/local/bin/marksman
 
 ENV PATH="/opt/python/.venv/bin:/opt/node/bin:/opt/npm-tools/node_modules/.bin:/usr/local/go/bin:/root/go/bin:/opt/lua-language-server/bin:${PATH}"
 ENV NODE_PATH="/opt/npm-tools/node_modules"
