@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PreToolUse(Edit|Write|MultiEdit) guard.
-# ピン留めされたツールバージョンの手動編集をブロックする。
-# 更新は mise use --pin / automation-tools-bump.yml 経由で行う想定。
+# ピン留めされたツールバージョン（と per-asset SHA256）の手動編集をブロックする。
+# 更新は mise use --pin / mise set / automation-tools-bump.yml 経由で行う想定。
 set -eu
 
 INPUT=$(cat)
@@ -26,13 +26,14 @@ PIN_MANIFESTS = (
     "environment/tools/node/package.json",
 )
 
-ARG_PIN = re.compile(r"^\s*ARG\s+[A-Z0-9_]+(?:VERSION|TOOLCHAIN)\s*=", re.MULTILINE)
-# mise.toml: [tools] pins (bare or quoted backend keys) and [env] version values.
-# [tasks.*] entries (run/description/dir/depends) are free to edit. Requires
+PIN_KEY = r"[A-Z0-9_]+(?:VERSION|TOOLCHAIN|SHA256_(?:AMD64|ARM64))"
+ARG_PIN = re.compile(r"^\s*ARG\s+" + PIN_KEY + r"\s*=", re.MULTILINE)
+# mise.toml: [tools] pins (bare or quoted backend keys) and [env] version/checksum
+# values. [tasks.*] entries (run/description/dir/depends) are free to edit. Requires
 # spaces around "=" (tombi style) so shell assignments in task bodies don't match.
 MISE_PIN = re.compile(
     r"^(?:\"[^\"]+\"|go|node|shfmt|shellcheck|stylua|hadolint|golangci-lint"
-    r"|terraform-ls|tflint|[A-Z0-9_]+(?:VERSION|TOOLCHAIN)) = \"",
+    r"|terraform-ls|tflint|" + PIN_KEY + r") = \"",
     re.MULTILINE,
 )
 
@@ -67,7 +68,7 @@ if blocked:
     sys.stderr.write(
         "[guard-version-pins] ブロック: %s を手動編集しようとしています。\n"
         "ピン留めされたツールバージョンは手動で変更しないでください。更新は次のいずれか経由で行ってください:\n"
-        "  - mise use --pin <tool>@<version> + mise run pins:sync （Bash 経由）\n"
+        "  - mise use --pin <tool>@<version>（[tools]）または mise set <KEY>=<value>（[env]）+ mise run pins:sync （Bash 経由）\n"
         "  - .github/workflows/automation-tools-bump.yml （週次自動更新）\n"
         % blocked
     )

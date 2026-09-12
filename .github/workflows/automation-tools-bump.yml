@@ -49,15 +49,48 @@ jobs:
           # Terraform latest GA (Checkpoint API matches releases.hashicorp.com download source)
           TERRAFORM_VERSION=$("${CURL[@]}" https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r '.current_version')
 
+          latest_release() {
+            "${CURL[@]}" -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/$1/releases/latest"
+          }
+          asset_sha256() {
+            jq -r --arg name "$2" '.assets[] | select(.name == $name) | .digest // "" | ltrimstr("sha256:")' <<<"$1"
+          }
+
+          LUA_LS_RELEASE=$(latest_release LuaLS/lua-language-server)
+          LUA_LS_VERSION=$(jq -r '.tag_name' <<<"$LUA_LS_RELEASE")
+          LUA_LS_SHA256_AMD64=$(asset_sha256 "$LUA_LS_RELEASE" "lua-language-server-${LUA_LS_VERSION}-linux-x64.tar.gz")
+          LUA_LS_SHA256_ARM64=$(asset_sha256 "$LUA_LS_RELEASE" "lua-language-server-${LUA_LS_VERSION}-linux-arm64.tar.gz")
+
+          MARKSMAN_RELEASE=$(latest_release artempyanykh/marksman)
+          MARKSMAN_VERSION=$(jq -r '.tag_name' <<<"$MARKSMAN_RELEASE")
+          MARKSMAN_SHA256_AMD64=$(asset_sha256 "$MARKSMAN_RELEASE" marksman-linux-x64)
+          MARKSMAN_SHA256_ARM64=$(asset_sha256 "$MARKSMAN_RELEASE" marksman-linux-arm64)
+
           # Validate resolved values before writing outputs: fail fast instead of
           # generating a broken bump PR (and a wasted docker build) when an upstream
           # endpoint errors or returns an empty/null/non-version value.
           for pair in "node=$NODE_VERSION" "go=$GO_VERSION" "neovim=$NEOVIM_VERSION" \
-                      "npm=$NPM_VERSION" "terraform=$TERRAFORM_VERSION"; do
+                      "npm=$NPM_VERSION" "terraform=$TERRAFORM_VERSION" \
+                      "lua-language-server=$LUA_LS_VERSION"; do
             name=${pair%%=*}
             val=${pair#*=}
             if [[ -z "$val" || "$val" == "null" || ! "$val" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
               echo "::error::resolved $name version is invalid: '$val'" >&2
+              exit 1
+            fi
+          done
+          if [[ ! "$MARKSMAN_VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "::error::resolved marksman version is invalid: '$MARKSMAN_VERSION'" >&2
+            exit 1
+          fi
+          for pair in "lua-language-server linux-x64=$LUA_LS_SHA256_AMD64" \
+                      "lua-language-server linux-arm64=$LUA_LS_SHA256_ARM64" \
+                      "marksman linux-x64=$MARKSMAN_SHA256_AMD64" \
+                      "marksman linux-arm64=$MARKSMAN_SHA256_ARM64"; do
+            name=${pair%%=*}
+            val=${pair#*=}
+            if [[ ! "$val" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "::error::resolved $name sha256 is invalid: '$val'" >&2
               exit 1
             fi
           done
@@ -68,6 +101,12 @@ jobs:
             echo "neovim=$NEOVIM_VERSION"
             echo "npm=$NPM_VERSION"
             echo "terraform=$TERRAFORM_VERSION"
+            echo "lua_ls=$LUA_LS_VERSION"
+            echo "lua_ls_sha256_amd64=$LUA_LS_SHA256_AMD64"
+            echo "lua_ls_sha256_arm64=$LUA_LS_SHA256_ARM64"
+            echo "marksman=$MARKSMAN_VERSION"
+            echo "marksman_sha256_amd64=$MARKSMAN_SHA256_AMD64"
+            echo "marksman_sha256_arm64=$MARKSMAN_SHA256_ARM64"
           } >> "$GITHUB_OUTPUT"
 
       - name: Update mise.toml pins
@@ -81,6 +120,12 @@ jobs:
             go@${{ steps.resolve.outputs.go }} \
             node@${{ steps.resolve.outputs.node }}
           mise set \
+            LUA_LS_VERSION=${{ steps.resolve.outputs.lua_ls }} \
+            LUA_LS_SHA256_AMD64=${{ steps.resolve.outputs.lua_ls_sha256_amd64 }} \
+            LUA_LS_SHA256_ARM64=${{ steps.resolve.outputs.lua_ls_sha256_arm64 }} \
+            MARKSMAN_VERSION=${{ steps.resolve.outputs.marksman }} \
+            MARKSMAN_SHA256_AMD64=${{ steps.resolve.outputs.marksman_sha256_amd64 }} \
+            MARKSMAN_SHA256_ARM64=${{ steps.resolve.outputs.marksman_sha256_arm64 }} \
             NEOVIM_VERSION=${{ steps.resolve.outputs.neovim }} \
             NPM_VERSION=${{ steps.resolve.outputs.npm }} \
             TERRAFORM_VERSION=${{ steps.resolve.outputs.terraform }}
@@ -107,6 +152,8 @@ jobs:
             - Neovim: ${{ steps.resolve.outputs.neovim }}
             - npm: ${{ steps.resolve.outputs.npm }}
             - Terraform: ${{ steps.resolve.outputs.terraform }}
+            - lua-language-server: ${{ steps.resolve.outputs.lua_ls }}
+            - marksman: ${{ steps.resolve.outputs.marksman }}
             - mise-managed tools: latest (see mise.toml diff)
           title: "chore: bump tool versions"
           body: |-
@@ -119,6 +166,8 @@ jobs:
             - Neovim: `${{ steps.resolve.outputs.neovim }}`
             - npm CLI: `${{ steps.resolve.outputs.npm }}`
             - Terraform: `${{ steps.resolve.outputs.terraform }}`
+            - lua-language-server: `${{ steps.resolve.outputs.lua_ls }}` (sha256 from release asset digests)
+            - marksman: `${{ steps.resolve.outputs.marksman }}` (sha256 from release asset digests)
             - Other mise-managed tools: bumped to latest (see `mise.toml` diff)
 
             Automated by scheduled workflow.

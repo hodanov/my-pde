@@ -57,6 +57,10 @@ terraform_version=$(pin 'TERRAFORM_VERSION')
 hadolint_version=$(pin 'hadolint')
 lua_ls_version=$(pin 'LUA_LS_VERSION')
 marksman_version=$(pin 'MARKSMAN_VERSION')
+lua_ls_sha256_amd64=$(pin 'LUA_LS_SHA256_AMD64')
+lua_ls_sha256_arm64=$(pin 'LUA_LS_SHA256_ARM64')
+marksman_sha256_amd64=$(pin 'MARKSMAN_SHA256_AMD64')
+marksman_sha256_arm64=$(pin 'MARKSMAN_SHA256_ARM64')
 
 sed -i.bak -E \
 	-e "s|^ARG GO_VERSION(=.*)?$|ARG GO_VERSION=${go_version}|" \
@@ -69,6 +73,10 @@ sed -i.bak -E \
 	-e "s|^ARG HADOLINT_VERSION(=.*)?$|ARG HADOLINT_VERSION=${hadolint_version}|" \
 	-e "s|^ARG LUA_LS_VERSION(=.*)?$|ARG LUA_LS_VERSION=${lua_ls_version}|" \
 	-e "s|^ARG MARKSMAN_VERSION(=.*)?$|ARG MARKSMAN_VERSION=${marksman_version}|" \
+	-e "s|^ARG LUA_LS_SHA256_AMD64(=.*)?$|ARG LUA_LS_SHA256_AMD64=${lua_ls_sha256_amd64}|" \
+	-e "s|^ARG LUA_LS_SHA256_ARM64(=.*)?$|ARG LUA_LS_SHA256_ARM64=${lua_ls_sha256_arm64}|" \
+	-e "s|^ARG MARKSMAN_SHA256_AMD64(=.*)?$|ARG MARKSMAN_SHA256_AMD64=${marksman_sha256_amd64}|" \
+	-e "s|^ARG MARKSMAN_SHA256_ARM64(=.*)?$|ARG MARKSMAN_SHA256_ARM64=${marksman_sha256_arm64}|" \
 	"$DOCKERFILE"
 rm -f "${DOCKERFILE}.bak"
 echo "Synced ARG defaults in $DOCKERFILE"
