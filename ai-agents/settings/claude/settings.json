@@ -21,6 +21,7 @@
       "Bash(go test *)",
       "Bash(go tool *)",
       "Bash(go build *)",
+      "Bash(gofmt *)",
       "Bash(golangci-lint run *)",
       "Bash(go mod *)",
       "Bash(goimports *)",
@@ -148,6 +149,17 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/guard-dangerous-bash.sh"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/permission-ledger.sh",
+            "async": true
           }
         ]
       }
