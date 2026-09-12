@@ -1,6 +1,10 @@
 {
   "version": 1,
   "hooks": {
+    "beforeReadFile": [{ "command": "~/.cursor/hooks/guard-secret-read.sh" }],
+    "beforeShellExecution": [
+      { "command": "~/.cursor/hooks/guard-secret-read.sh" }
+    ],
     "afterFileEdit": [
       { "command": "~/.cursor/hooks/goimports.sh" },
       { "command": "~/.cursor/hooks/markdown-format.sh" },

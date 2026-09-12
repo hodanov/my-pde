@@ -93,6 +93,39 @@ go run ./cmd/agent-stats --json --detail | jq '.list[0]'
 `--detail` を分けているのは、`list` が他の全項目を合わせたより大きく、集計値だけを見たい用途に
 そのコストを払わせないため。`list` 抜きでも `top_sessions` / `projects` は出る。
 
+## permission-audit（allow 昇格候補）
+
+同じモジュールの 2 本目の CLI。`ai-agents/hooks/permission-ledger.sh`（PermissionRequest hook）が
+`${XDG_STATE_HOME:-~/.local/state}/claude-permission-ledger/ledger.jsonl` に記録した permission prompt に、
+transcript 上のその呼び出しの結末と各リポの `.claude/settings.local.json` の allow を合わせ、
+グローバル allow への昇格候補をルール単位で集計する。read-only。レビューと反映は `.claude/skills/permission-review` が行う。
+
+```sh
+mise run permission-audit                       # 直近 30 日をテーブル表示
+mise run permission-audit -- --since 0 --json   # 全期間を JSON で
+```
+
+| フラグ       | 既定                                                                  | 意味                                                                     |
+| ------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `--settings` | 必須（mise task が `ai-agents/settings/claude/settings.json` を渡す） | ここにある allow / ask / deny は決定済みとして候補から外す               |
+| `--ledger`   | `<state>/ledger.jsonl`                                                | hook の記録                                                              |
+| `--declined` | `<state>/declined.txt`                                                | レビューで見送ったルール（1 行 1 ルール）。候補から外す                  |
+| `--dir`      | `~/.claude/projects`                                                  | 結末を引く transcript                                                    |
+| `--since`    | `720h`                                                                | この期間の記録と、この期間に更新された transcript だけを見る。`0` で全件 |
+| `--json`     | `false`                                                               | テーブルの代わりに JSON を出力する                                       |
+
+- transcript は承認を記録しない（拒否にだけ `toolDenialKind` が付く）。「プロンプトが出た」事実は hook の記録にしかなく、
+  承認はその呼び出しが実行されたことから導く。
+- 候補のルール文字列は Claude Code 自身の提案（`permission_suggestions`）をそのまま使う。提案が無かった呼び出しは
+  先頭コマンド・ドメイン・パスから下書きし、`unsuggested` に分けて出す。
+- tool_use と tool_result は同じファイルに書かれるため、transcript はファイル単位で索引する（セッションへの畳み込みは不要）。
+- hook の入力には `tool_use_id` が無い（ドキュメントの例と異なる）。そこで hook は `tool_input`（ファイル本文系のフィールドは除去）を
+  記録し、同じ transcript ファイル（subagent なら agent transcript）の中で「ツール名が同じ・記録したキーがすべて一致・
+  記録時刻以前で最も新しい」呼び出しに対応づける。照合できなかった記録は `pending` として残り、下書きと例は記録した入力から作る。
+- hook は plugin と settings の二重配線で 2 回発火しうるので、同じセッション・同じ入力で 10 秒以内の記録は 1 件にまとめる。
+- 質問や plan 承認のような、許可ではなく対話のためのダイアログも PermissionRequest を通るが、hook 側で記録から外す。
+- state ディレクトリ名（`claude-permission-ledger`）は hook と CLI の両方に書かれている。変えるときは両方を直す。
+
 ## 設計・制約
 
 - **read-only**: transcript を open して読むだけ。書き込み・変更は一切しない。
@@ -106,9 +139,11 @@ go run ./cmd/agent-stats --json --detail | jq '.list[0]'
 
 ```text
 scripts/agent-stats/
-  cmd/agent-stats/main.go     # フラグ解釈 → 走査 → 集計 → 出力
-  internal/parser/            # JSONL → Session（CLI 別実装を差し替えられるよう分離）
-  internal/report/            # 集計 + table / json 整形（純粋関数中心でテスト容易）
+  cmd/agent-stats/main.go       # フラグ解釈 → 走査 → 集計 → 出力
+  cmd/permission-audit/main.go  # ledger + transcript + settings.local.json → allow 昇格候補
+  internal/parser/              # JSONL → Session / ToolCallIndex（CLI 別実装を差し替えられるよう分離）
+  internal/report/              # 集計 + table / json 整形（純粋関数中心でテスト容易）
+  internal/permission/          # ledger の読み取りと昇格候補の集計
 ```
 
 標準ライブラリのみに依存する。

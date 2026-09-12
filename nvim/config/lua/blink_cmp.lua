@@ -16,6 +16,8 @@ require("blink.cmp").setup({
 	-- See :h blink-cmp-config-keymap for defining your own keymap
 	keymap = {
 		preset = "default",
+		["<C-n>"] = { "show", "select_next", "fallback_to_mappings" },
+		["<C-p>"] = { "show", "select_prev", "fallback_to_mappings" },
 		["<Tab>"] = false,
 		["<S-Tab>"] = false,
 		-- preset = "super-tab",
@@ -29,7 +31,15 @@ require("blink.cmp").setup({
 	},
 
 	-- (Default) Only show the documentation popup when manually triggered
-	completion = { documentation = { auto_show = true } },
+	completion = {
+		documentation = { auto_show = true },
+		menu = {
+			auto_show = function(ctx)
+				local prose = { markdown = true, text = true, plaintext = true, gitcommit = true }
+				return not prose[vim.bo.filetype] or ctx.trigger.initial_kind == "trigger_character"
+			end,
+		},
+	},
 
 	-- Default list of enabled providers defined so that you can extend it
 	-- elsewhere in your config, without redefining it, due to `opts_extend`
@@ -63,4 +73,19 @@ require("blink.cmp").setup({
 	--
 	-- See the fuzzy documentation for more information
 	fuzzy = { implementation = "prefer_rust_with_warning" },
+})
+
+-- nvim-autopairs が閉じ括弧を足すと blink が "[" "(" のトリガー文字を取りこぼすため、marksman の補完を明示的に出し直す。
+vim.api.nvim_create_autocmd("TextChangedI", {
+	group = vim.api.nvim_create_augroup("BlinkMarksmanTrigger", { clear = true }),
+	callback = function()
+		if vim.bo.filetype ~= "markdown" then
+			return
+		end
+		local col = vim.fn.col(".") - 1
+		local char_before_cursor = vim.api.nvim_get_current_line():sub(col, col)
+		if char_before_cursor == "[" or char_before_cursor == "(" then
+			require("blink.cmp").show({ providers = { "lsp" } })
+		end
+	end,
 })

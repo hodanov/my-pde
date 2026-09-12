@@ -231,6 +231,11 @@ fi
 ''',
 ]
 
+[tasks.permission-audit]
+description = "List allow-rule candidates from recorded permission prompts (read-only)"
+dir = "scripts/agent-stats"
+run = 'go run ./cmd/permission-audit --settings "{{config_root}}/ai-agents/settings/claude/settings.json"'
+
 [tasks."agent-stats:clean"]
 description = "Remove agent-stats build artifacts"
 dir = "scripts/agent-stats"

@@ -18,7 +18,7 @@ Skills live in three roots. Pick by **where the skill can actually run**, not by
 | `.claude/skills/`            | Rewrites this repository's own paths, so my-pde only | None — it is part of the clone (and of cloud Routines) |
 
 - A skill that writes to `ai-agents/**`, `routines/**`, or `agents/codex/` belongs in `.claude/skills/`.
-- A skill a Stop hook launches from an arbitrary repository (`skill-observe`, `permission-prompt-tuner`) must stay in `ai-agents/skills/`, even when its records land in the my-pde checkout.
+- A skill a Stop hook launches from an arbitrary repository (`skill-observe`) must stay in `ai-agents/skills/`, even when its records land in the my-pde checkout.
 - `skill-observe` / `skill-improve` resolve a skill by searching the three roots in the order above.
 
 ## SKILL.md
