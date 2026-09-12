@@ -47,8 +47,8 @@ vim.api.nvim_create_autocmd("FileType", {
 		-- highlight
 		vim.treesitter.start()
 		-- folds（treesitter の構文木ベースで関数/ブロック単位に折りたたむ）
-		vim.wo.foldmethod = "expr"
-		vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+		vim.opt_local.foldmethod = "expr"
+		vim.opt_local.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 		-- indent
 		-- vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
 	end,
