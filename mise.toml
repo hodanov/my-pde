@@ -4,7 +4,7 @@
 
 [tools]
 actionlint = "1.7.12"
-go = "1.27.0"
+go = "1.27.1"
 golangci-lint = "2.13.2"
 node = "24.20.0"
 shfmt = "3.14.0"
@@ -26,7 +26,7 @@ MARKSMAN_VERSION = "2026-02-08"
 NEOVIM_VERSION = "0.12.5"
 NPM_VERSION = "12.0.2"
 RUST_TOOLCHAIN = "stable"
-TERRAFORM_VERSION = "1.16.0"
+TERRAFORM_VERSION = "1.16.1"
 
 # ---- ai-bridge (Go) ----
 
