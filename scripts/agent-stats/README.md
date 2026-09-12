@@ -123,6 +123,7 @@ mise run permission-audit -- --since 0 --json   # 全期間を JSON で
   記録し、同じ transcript ファイル（subagent なら agent transcript）の中で「ツール名が同じ・記録したキーがすべて一致・
   記録時刻以前で最も新しい」呼び出しに対応づける。照合できなかった記録は `pending` として残り、下書きと例は記録した入力から作る。
 - hook は plugin と settings の二重配線で 2 回発火しうるので、同じセッション・同じ入力で 10 秒以内の記録は 1 件にまとめる。
+- 質問や plan 承認のような、許可ではなく対話のためのダイアログも PermissionRequest を通るが、hook 側で記録から外す。
 - state ディレクトリ名（`claude-permission-ledger`）は hook と CLI の両方に書かれている。変えるときは両方を直す。
 
 ## 設計・制約
