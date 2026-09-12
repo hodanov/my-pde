@@ -7,7 +7,7 @@ state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/claude-permission-ledger"
 umask 077
 mkdir -p "$state_dir"
 
-jq -c '{
+jq -c 'select(.tool_name | IN("AskUserQuestion", "ExitPlanMode") | not) | {
 	ts: (now | todate),
 	session_id,
 	prompt_id,
