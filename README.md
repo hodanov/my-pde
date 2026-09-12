@@ -14,7 +14,7 @@ This repository manages the entire PDE in a single monorepo:
 | `environment/`       | Docker environment (Dockerfile, docker-compose, tool versions)                  |
 | `scripts/ai-bridge/` | AI Bridge daemon (Go) — connects Neovim to host-side AI CLIs                    |
 | `ai-agents/`         | AI agent definitions, skills, and settings for Claude Code / Codex CLI / Cursor |
-| `docs/`              | Plans and work logs                                                             |
+| `docs/`              | Plans, architecture decision records, and work logs                             |
 
 ## Getting Started
 

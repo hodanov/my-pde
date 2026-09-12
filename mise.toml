@@ -4,7 +4,7 @@
 
 [tools]
 actionlint = "1.7.12"
-go = "1.27.0"
+go = "1.27.1"
 golangci-lint = "2.13.2"
 node = "24.20.0"
 shfmt = "3.14.0"
@@ -18,14 +18,20 @@ hadolint = "2.15.1"
 terraform-ls = "0.39.0"
 tflint = "0.64.0"
 
-# Docker-only versions: synced into the Dockerfile ARG defaults by
-# `mise run pins:sync` and injected as --build-arg by `mise run docker:build`.
+# Docker-only versions and per-asset SHA256s (for releases without an upstream
+# checksum file): synced into the Dockerfile ARG defaults by `mise run pins:sync`
+# and injected as --build-arg by `mise run docker:build`.
 [env]
 LUA_LS_VERSION = "3.19.1"
+MARKSMAN_VERSION = "2026-02-08"
 NEOVIM_VERSION = "0.12.5"
 NPM_VERSION = "12.0.2"
 RUST_TOOLCHAIN = "stable"
-TERRAFORM_VERSION = "1.16.0"
+TERRAFORM_VERSION = "1.16.1"
+LUA_LS_SHA256_AMD64 = "e9235d2d72ef55bc41cf8c99cda2ed64777682024b4bb81f5dea425060c5cbb8"
+LUA_LS_SHA256_ARM64 = "abd2572e8fc929dc838a81ffb8473c5bce0bf39bfe8edb4b120b3b623176ce83"
+MARKSMAN_SHA256_AMD64 = "be5098e8213219269c47fc0d916a66fa31ce0602ec967475c722260aabf26087"
+MARKSMAN_SHA256_ARM64 = "db8e124527f7f8048e3e6c91821b9c52ef173d92c01e47d221bf1337afd962fb"
 
 # ---- ai-bridge (Go) ----
 
@@ -568,6 +574,11 @@ docker buildx build \
   --file environment/docker/nvim.dockerfile \
   --tag my-pde-nvim:dev \
   --build-arg LUA_LS_VERSION="$LUA_LS_VERSION" \
+  --build-arg LUA_LS_SHA256_AMD64="$LUA_LS_SHA256_AMD64" \
+  --build-arg LUA_LS_SHA256_ARM64="$LUA_LS_SHA256_ARM64" \
+  --build-arg MARKSMAN_VERSION="$MARKSMAN_VERSION" \
+  --build-arg MARKSMAN_SHA256_AMD64="$MARKSMAN_SHA256_AMD64" \
+  --build-arg MARKSMAN_SHA256_ARM64="$MARKSMAN_SHA256_ARM64" \
   --build-arg NEOVIM_VERSION="$NEOVIM_VERSION" \
   --build-arg NPM_VERSION="$NPM_VERSION" \
   --build-arg RUST_TOOLCHAIN="$RUST_TOOLCHAIN" \
