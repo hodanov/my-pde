@@ -1,6 +1,7 @@
 # ADR-0004: Adopt marksman for Markdown navigation
 
 - Status: Accepted (2026-09-12)
+- Amended by [ADR-0005](0005-auto-bump-checksum-less-binaries-via-release-digests.md) (2026-09-12): バージョン管理（手動 bump）の部分
 
 ## Context
 

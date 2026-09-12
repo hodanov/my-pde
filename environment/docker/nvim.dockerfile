@@ -226,7 +226,7 @@ FROM base AS lua-ls-builder
 ARG LUA_LS_VERSION=3.19.1
 # LuaLS publishes no aggregate checksum file with its releases (there is no
 # equivalent of hadolint's checksums.sha256 or terraform's SHA256SUMS), so the
-# per-asset sha256 is pinned here instead. Update BOTH when bumping the version.
+# per-asset sha256 is pinned in mise.toml [env] and synced here by pins:sync.
 ARG LUA_LS_SHA256_AMD64=e9235d2d72ef55bc41cf8c99cda2ed64777682024b4bb81f5dea425060c5cbb8
 ARG LUA_LS_SHA256_ARM64=abd2572e8fc929dc838a81ffb8473c5bce0bf39bfe8edb4b120b3b623176ce83
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -255,7 +255,7 @@ FROM base AS marksman-builder
 ARG MARKSMAN_VERSION=2026-02-08
 # marksman publishes no aggregate checksum file with its releases (there is no
 # equivalent of hadolint's checksums.sha256 or terraform's SHA256SUMS), so the
-# per-asset sha256 is pinned here instead. Update BOTH when bumping the version.
+# per-asset sha256 is pinned in mise.toml [env] and synced here by pins:sync.
 ARG MARKSMAN_SHA256_AMD64=be5098e8213219269c47fc0d916a66fa31ce0602ec967475c722260aabf26087
 ARG MARKSMAN_SHA256_ARM64=db8e124527f7f8048e3e6c91821b9c52ef173d92c01e47d221bf1337afd962fb
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
