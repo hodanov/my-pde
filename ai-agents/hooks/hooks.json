@@ -44,6 +44,26 @@
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/guard-dangerous-bash.sh\""
           }
         ]
+      },
+      {
+        "matcher": "Read|Grep|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/guard-secret-read.sh\""
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/permission-ledger.sh\"",
+            "async": true
+          }
+        ]
       }
     ],
     "PostToolUse": [
