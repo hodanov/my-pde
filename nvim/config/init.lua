@@ -383,6 +383,32 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
+local function open_markdown_outline(buf)
+	local parser = vim.treesitter.get_parser(buf, "markdown", { error = false })
+	if not parser then
+		return
+	end
+	local query = vim.treesitter.query.parse("markdown", "[(atx_heading) (setext_heading)] @heading")
+	local items = {}
+	for _, node in query:iter_captures(parser:parse()[1]:root(), buf) do
+		local lnum = node:start() + 1
+		items[#items + 1] = { bufnr = buf, lnum = lnum, text = vim.fn.getbufoneline(buf, lnum) }
+	end
+	vim.fn.setloclist(0, items, " ")
+	vim.cmd("lopen")
+end
+
+vim.api.nvim_create_augroup("markdown_outline", { clear = true })
+vim.api.nvim_create_autocmd("FileType", {
+	group = "markdown_outline",
+	pattern = "markdown",
+	callback = function(args)
+		vim.keymap.set("n", "gO", function()
+			open_markdown_outline(args.buf)
+		end, { buffer = args.buf, desc = "Open markdown outline in location list" })
+	end,
+})
+
 -- ----------------------------------------
 -- Open init.vim.
 -- ----------------------------------------

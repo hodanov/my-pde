@@ -24,7 +24,7 @@ $ gh run list --branch chore/bump-tool-versions
 | ---------------------- | ---------------------------------------- | ---------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 手動で Approve and run | なし                                     | —                            | なし                 | secret を増やさず CI は通せる。ただし週 1 回の手作業が残り、auto-merge による無人化を達成しない                                                                                                                                      |
 | fine-grained PAT       | 最長 366 日、ローテーション必須          | PAT 本体（最長 366 日）      | 失効または気付くまで | 「無期限にして漏洩時の被害を永続させる」か「期限を切って年 1 回のローテーションを背負う」かの二択になる。後者は期限切れが週次 bump の失敗としてしか現れず、`[Automation] Pipeline Digest` が週 1 回なので気付くまで最悪 2 週間かかる |
-| GitHub App             | private key は無期限、ローテーション不要 | installation token（1 時間） | 最大 1 時間          | App の作成とインストールが初期コストとして要る。secret は App ID と private key の 2 つに増えるが、どちらも期限管理が不要                                                                                                            |
+| GitHub App             | private key は無期限、ローテーション不要 | installation token（1 時間） | 最大 1 時間          | App の作成とインストールが初期コストとして要る。secret は Client ID と private key の 2 つに増えるが、どちらも期限管理が不要                                                                                                         |
 
 ## Decision
 
@@ -38,7 +38,7 @@ $ gh run list --branch chore/bump-tool-versions
 
 今後 workflow から bot identity が必要になったときは、PAT を新たに発行せずこの App を使い回す。権限が足りなければ App の permission を広げる。これを既定とし、fine-grained PAT は採らない。
 
-`BUMP_APP_ID` と `BUMP_APP_PRIVATE_KEY` が未設定の場合、token 発行 step が失敗して週次 bump が丸ごと落ちる。失敗が見えるのは `[Automation] Pipeline Digest`（週 1 回）になる。
+`BUMP_APP_CLIENT_ID` と `BUMP_APP_PRIVATE_KEY` が未設定の場合、token 発行 step が失敗して週次 bump が丸ごと落ちる。失敗が見えるのは `[Automation] Pipeline Digest`（週 1 回）になる。
 
 `peter-evans/create-pull-request` に token を渡す構造上、この action が侵害されれば token も漏れる。全 action の SHA pin を維持し、pin の bump 時は差分を確認する。
 
