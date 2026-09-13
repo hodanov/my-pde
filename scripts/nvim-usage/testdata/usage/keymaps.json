@@ -1,0 +1,44 @@
+{
+  "nvim": "0.12.5+v0.12.5",
+  "keymaps": [
+    {
+      "mode": "n",
+      "lhs": "<Space>y",
+      "desc": "Yank <path>:<line> reference to clipboard",
+      "buffer_local": false
+    },
+    {
+      "mode": "x",
+      "lhs": "<Space>y",
+      "desc": "Yank <path>:<from>-<to> reference to clipboard",
+      "buffer_local": false
+    },
+    {
+      "mode": "n",
+      "lhs": "<Space>ff",
+      "desc": "Find Files (include hidden)",
+      "buffer_local": false
+    },
+    {
+      "mode": "n",
+      "lhs": "<Space>q",
+      "rhs": "<Cmd>lua vim.diagnostic.setloclist()<CR>",
+      "desc": "Diagnostics | loclist",
+      "buffer_local": false
+    },
+    {
+      "mode": "n",
+      "lhs": "co",
+      "rhs": ":copen<CR>",
+      "desc": "Open quickfix list",
+      "buffer_local": false
+    },
+    {
+      "mode": "n",
+      "lhs": "<Space>gp",
+      "desc": "Preview hunk",
+      "buffer_local": true
+    },
+    { "mode": "o", "lhs": "ih", "desc": "Select hunk", "buffer_local": true }
+  ]
+}

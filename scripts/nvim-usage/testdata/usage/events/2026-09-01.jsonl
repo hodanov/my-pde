@@ -1,0 +1,7 @@
+{"kind":"keys","ts":1788253200,"family":"normal","ft":"go","keys":["j","j","j","j","j","d","d","<Space>y"]}
+{"kind":"cmd","ts":1788253210,"name":"vsplit"}
+{"kind":"keys","ts":1788253220,"family":"normal","ft":"go","keys":["<C-W>","l","v"]}
+{"kind":"keys","ts":1788253225,"family":"visual","ft":"go","keys":["j","j","<Space>y"]}
+not json
+{"kind":"search","ts":1788253230}
+{"kind":"cmd","ts":1788253240,"name":"write"}

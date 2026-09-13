@@ -1,0 +1,210 @@
+{
+  "nvim": "0.12.5+v0.12.5",
+  "period": {
+    "from": "2026-09-01",
+    "to": "2026-09-02",
+    "days": 2
+  },
+  "totals": {
+    "chunks": 4,
+    "normal_keys": 24,
+    "visual_keys": 3,
+    "commands": 4,
+    "searches": 1
+  },
+  "keymaps": [
+    {
+      "mode": "n",
+      "lhs": "<Space>ff",
+      "desc": "Find Files (include hidden)",
+      "buffer_local": false,
+      "count": 1
+    },
+    {
+      "mode": "n",
+      "lhs": "<Space>y",
+      "desc": "Yank <path>:<line> reference to clipboard",
+      "buffer_local": false,
+      "count": 1
+    },
+    {
+      "mode": "x",
+      "lhs": "<Space>y",
+      "desc": "Yank <path>:<from>-<to> reference to clipboard",
+      "buffer_local": false,
+      "count": 1
+    },
+    {
+      "mode": "n",
+      "lhs": "<Space>gp",
+      "desc": "Preview hunk",
+      "buffer_local": true,
+      "count": 0
+    },
+    {
+      "mode": "n",
+      "lhs": "<Space>q",
+      "desc": "Diagnostics | loclist",
+      "rhs": "<Cmd>lua vim.diagnostic.setloclist()<CR>",
+      "buffer_local": false,
+      "count": 0
+    },
+    {
+      "mode": "n",
+      "lhs": "co",
+      "desc": "Open quickfix list",
+      "rhs": ":copen<CR>",
+      "buffer_local": false,
+      "count": 0
+    },
+    {
+      "mode": "o",
+      "lhs": "ih",
+      "desc": "Select hunk",
+      "buffer_local": true,
+      "count": 0
+    }
+  ],
+  "repeats": [
+    {
+      "family": "normal",
+      "key": "j",
+      "runs": 1,
+      "presses": 5,
+      "longest": 5
+    },
+    {
+      "family": "normal",
+      "key": "x",
+      "runs": 1,
+      "presses": 4,
+      "longest": 4
+    }
+  ],
+  "sequences": [
+    {
+      "family": "normal",
+      "keys": "d w",
+      "count": 2
+    },
+    {
+      "family": "normal",
+      "keys": "<C-W> l",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "<C-W> l v",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "<Space>ff g",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "<Space>ff g g",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "<Space>ff g g d",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "` a",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "d <Space>y",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "d d <Space>y",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "d w `",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "d w ` a",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "d w d",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "d w d w",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "g d",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "g d w",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "g d w d",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "g g d",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "g g d w",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "j d",
+      "count": 1
+    },
+    {
+      "family": "normal",
+      "keys": "j d d",
+      "count": 1
+    },
+    {
+      "family": "visual",
+      "keys": "j <Space>y",
+      "count": 1
+    },
+    {
+      "family": "visual",
+      "keys": "j j <Space>y",
+      "count": 1
+    }
+  ],
+  "commands": [
+    {
+      "name": "vsplit",
+      "count": 2
+    },
+    {
+      "name": "Telescope",
+      "count": 1
+    },
+    {
+      "name": "write",
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+name: "[CI] Nvim Usage"
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+    paths:
+      - "scripts/nvim-usage/**"
+      - .github/workflows/ci-go-module.yml
+      - mise.toml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci-go-module.yml
+    with:
+      module: nvim-usage
