@@ -557,6 +557,7 @@ require("lsp")
 -- ai_bridge setting.
 -- ----------------------------------------
 require("ai_bridge")
+require("usage_recorder")
 
 -- ----------------------------------------
 -- textlint setting.

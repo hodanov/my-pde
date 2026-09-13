@@ -30,6 +30,7 @@ services:
       # Container-side path for ai-bridge; matches the volume mount target below.
       # The Lua client reads this via os.getenv("AI_BRIDGE_DIR").
       - AI_BRIDGE_DIR=/.ai-bridge
+      - NVIM_USAGE_DIR=/.nvim-usage
     volumes:
       # - ..:/workspace
       - ${HOME}/workspace:/${HOME}/workspace
@@ -40,6 +41,7 @@ services:
       # compromised, this becomes an escape vector. Accepted as a design
       # trade-off for the dev-only workflow. Do NOT use in production.
       - ${HOME}/.ai-bridge:/.ai-bridge
+      - ${HOME}/.nvim-usage:/.nvim-usage
 networks:
   my-nvim:
     driver: bridge
