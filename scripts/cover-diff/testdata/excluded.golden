@@ -1,0 +1,10 @@
+scripts/other-app   changed 2 / covered 2 / uncovered 0  (100.0%)
+scripts/sample-app  changed 8 / covered 3 / uncovered 5  (37.5%)
+  cmd/sample-app/main.go:9-11
+  internal/core/core.go:20-21
+----
+patch coverage: 5/10 (50.0%)
+unmeasured modules (no coverage profile): third-app
+warning: parse profile for third-app: unknown profile header "mode: lines" (want one of "mode: set", "mode: count", "mode: atomic")
+warning: profile path "example.com/vendored/x.go" does not belong to module "other-app"
+warning: scripts/sample-app/cmd/sample-app/main.go: malformed hunk header "@@ broken @@"

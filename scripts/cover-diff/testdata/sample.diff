@@ -1,0 +1,71 @@
+diff --git a/scripts/sample-app/cmd/sample-app/main.go b/scripts/sample-app/cmd/sample-app/main.go
+--- a/scripts/sample-app/cmd/sample-app/main.go
++++ b/scripts/sample-app/cmd/sample-app/main.go
+@@ broken @@
+@@ -8,0 +9,3 @@ func main() {
++	cfg := load()
++	run(cfg)
++	report(cfg)
+diff --git a/scripts/sample-app/internal/core/core.go b/scripts/sample-app/internal/core/core.go
+--- a/scripts/sample-app/internal/core/core.go
++++ b/scripts/sample-app/internal/core/core.go
+@@ -2,0 +3,3 @@
++import "fmt"
++
++// Config is the parsed configuration.
+@@ -10,0 +12,3 @@ func describe() string {
++	name := lookup()
++	size := measure()
++	return fmt.Sprintf("%s/%d", name, size)
+@@ -17,0 +20,2 @@ func validate() error {
++	if broken {
++		return errInvalid
+diff --git a/scripts/sample-app/internal/core/core_test.go b/scripts/sample-app/internal/core/core_test.go
+--- a/scripts/sample-app/internal/core/core_test.go
++++ b/scripts/sample-app/internal/core/core_test.go
+@@ -40,0 +41,2 @@ func TestDescribe(t *testing.T) {
++	t.Parallel()
++	_ = describe()
+diff --git a/scripts/sample-app/internal/port/mock/mock_port.go b/scripts/sample-app/internal/port/mock/mock_port.go
+--- a/scripts/sample-app/internal/port/mock/mock_port.go
++++ b/scripts/sample-app/internal/port/mock/mock_port.go
+@@ -29,0 +30 @@ func (m *MockPort) Send() error {
++	return m.sendErr
+diff --git a/scripts/other-app/main.go b/scripts/other-app/main.go
+--- a/scripts/other-app/main.go
++++ b/scripts/other-app/main.go
+@@ -4,2 +5,2 @@ func main() {
+-	oldCall()
+-	oldTail()
++	newCall()
++	newTail()
+\ No newline at end of file
+diff --git a/scripts/third-app/x.go b/scripts/third-app/x.go
+--- a/scripts/third-app/x.go
++++ b/scripts/third-app/x.go
+@@ -3,0 +4 @@ func x() {
++	work()
+diff --git a/scripts/sample-app/README.md b/scripts/sample-app/README.md
+--- a/scripts/sample-app/README.md
++++ b/scripts/sample-app/README.md
+@@ -0,0 +1 @@
++# sample-app
+diff --git a/scripts/sample-app/old_name.go b/scripts/sample-app/new_name.go
+similarity index 100%
+rename from scripts/sample-app/old_name.go
+rename to scripts/sample-app/new_name.go
+diff --git a/scripts/sample-app/tool.go b/scripts/sample-app/tool.go
+old mode 100644
+new mode 100755
+diff --git a/scripts/sample-app/internal/core/gone.go b/scripts/sample-app/internal/core/gone.go
+deleted file mode 100644
+--- a/scripts/sample-app/internal/core/gone.go
++++ /dev/null
+@@ -1,2 +0,0 @@
+-package core
+-
+diff --git a/nvim/config/lua/init.lua b/nvim/config/lua/init.lua
+--- a/nvim/config/lua/init.lua
++++ b/nvim/config/lua/init.lua
+@@ -1,0 +2 @@
++require("core")

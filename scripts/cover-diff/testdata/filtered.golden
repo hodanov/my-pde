@@ -1,0 +1,5 @@
+scripts/other-app  changed 2 / covered 2 / uncovered 0  (100.0%)
+----
+patch coverage: 2/2 (100.0%)
+warning: profile path "example.com/vendored/x.go" does not belong to module "other-app"
+warning: scripts/sample-app/cmd/sample-app/main.go: malformed hunk header "@@ broken @@"
