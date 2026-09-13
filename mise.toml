@@ -277,15 +277,51 @@ description = "Remove pipeline-metrics build artifacts"
 dir = "scripts/pipeline-metrics"
 run = "rm -f pipeline-metrics coverage.out"
 
+# ---- nvim-usage (Go) ----
+
+[tasks."nvim-usage:build"]
+description = "Build the nvim-usage binary"
+dir = "scripts/nvim-usage"
+run = "go build -o nvim-usage ./cmd/nvim-usage"
+
+[tasks."nvim-usage:report"]
+description = "Aggregate the Neovim usage log in ~/.nvim-usage (pass flags after --)"
+dir = "scripts/nvim-usage"
+run = "go run ./cmd/nvim-usage"
+
+[tasks."nvim-usage:test"]
+description = "Run nvim-usage Go tests"
+dir = "scripts/nvim-usage"
+run = "go test ./..."
+
+[tasks."nvim-usage:lint"]
+description = "Run golangci-lint and goimports check for nvim-usage"
+dir = "scripts/nvim-usage"
+run = [
+  "golangci-lint run --allow-parallel-runners",
+  '''
+diff=$(find . -name '*.go' -exec goimports -d {} +)
+if [ -n "$diff" ]; then
+  echo "$diff"
+  exit 1
+fi
+''',
+]
+
+[tasks."nvim-usage:clean"]
+description = "Remove nvim-usage build artifacts"
+dir = "scripts/nvim-usage"
+run = "rm -f nvim-usage coverage.out"
+
 # ---- Aggregates ----
 
 [tasks."go:test"]
 description = "Run tests for all Go apps under scripts/"
-depends = ["ai-bridge:test", "nvim-sync:test", "config-diff:test", "go-verify:test", "scaffold:test", "agent-stats:test", "pipeline-metrics:test"]
+depends = ["ai-bridge:test", "nvim-sync:test", "config-diff:test", "go-verify:test", "scaffold:test", "agent-stats:test", "pipeline-metrics:test", "nvim-usage:test"]
 
 [tasks."go:lint"]
 description = "Run lint for all Go apps under scripts/"
-depends = ["ai-bridge:lint", "nvim-sync:lint", "config-diff:lint", "go-verify:lint", "scaffold:lint", "agent-stats:lint", "pipeline-metrics:lint"]
+depends = ["ai-bridge:lint", "nvim-sync:lint", "config-diff:lint", "go-verify:lint", "scaffold:lint", "agent-stats:lint", "pipeline-metrics:lint", "nvim-usage:lint"]
 
 # ---- AI agents deploy: agents.xml symlinks ----
 
