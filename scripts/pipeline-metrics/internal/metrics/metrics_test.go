@@ -505,7 +505,7 @@ func TestEvaluateAlertsNamesTheResponsiblePrompt(t *testing.T) {
 	if len(alerts) != 2 {
 		t.Fatalf("alerts = %d, want 2", len(alerts))
 	}
-	if alerts[0].OwnerPrompt != "routines/prompts/daily-neovim-trend-scan.md" {
+	if alerts[0].OwnerPrompt != "routines/prompts/weekly-neovim-trend-scan.md" {
 		t.Errorf("owner prompt = %q, want the nvim scan prompt", alerts[0].OwnerPrompt)
 	}
 	if alerts[1].OwnerPrompt != "" {

@@ -672,7 +672,7 @@ const (
 )
 
 var scanPrompts = map[string]string{
-	"scan:nvim":        "routines/prompts/daily-neovim-trend-scan.md",
+	"scan:nvim":        "routines/prompts/weekly-neovim-trend-scan.md",
 	"scan:scripts":     "routines/prompts/weekly-scripts-tooling-scan.md",
 	"scan:environment": "routines/prompts/weekly-environment-scan.md",
 	"scan:ai-agents":   "routines/prompts/weekly-devx-skills-hooks-scan.md",

@@ -30,7 +30,7 @@
 3. この開発環境で実際に効く改善点を「1つだけ」選ぶ。
    - 【重要】手順 1 で取得した Open Issue（提案済み）と Close 済み rejected Issue（不採用）のいずれとも重複しないものを選ぶこと。有力候補が被る場合は採用せず、被らない別の角度の提案を選び直す。
    - 選定の確認（重複チェック・除外条件）は起票前に自分で行い、body には結論だけを書く。確認した過程・検討して外した代替手段の網羅列挙を body に入れない。
-   - Neovim 設定そのもの（`nvim/config/`）は Daily Neovim Trend Scan の縄張りなので対象外。
+   - Neovim 設定そのもの（`nvim/config/`）は Weekly Neovim Trend Scan の縄張りなので対象外。
 4. ラベル `scan:environment` が無ければ `gh label create scan:environment` で作成。選んだ改善提案を Issue として 1 件だけ起票する: `gh issue create --label "scan:environment" --title "..." --body "..."`。body には以下を含める:
    - **課題** — どの操作・運用が具体的にどう不便か。既存手段（既定機能・既存ツール・現行設定）で足りない理由を最大 2 点、各 1〜2 行。
    - **変更** — 対象ファイルと、そこに入る差分。コード / diff は 20 行以内、コメントは書かない（`.claude/rules/code-comments.md` は Issue のコード例にも適用される）。20 行を超える規模なら、コードを載せず方針と対象ファイルだけ書く。
