@@ -17,22 +17,41 @@ concurrency:
 jobs:
   build:
     name: Docker build (environment/docker/nvim.dockerfile)
-    if: |
-      contains(toJson(github.event.pull_request.labels), 'dependencies') ||
-      github.actor == 'dependabot[bot]' ||
-      startsWith((github.head_ref || ''), 'chore/bump-tool-versions')
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 2
           persist-credentials: false
 
+      # This job is a required status check, so the image-input filter lives in
+      # a step instead of `on.pull_request.paths`: a workflow that never starts
+      # leaves the required check pending and blocks auto-merge.
+      - name: Detect image build inputs
+        id: changes
+        env:
+          FORCE_BUILD: >-
+            ${{
+              contains(toJson(github.event.pull_request.labels), 'dependencies') ||
+              github.actor == 'dependabot[bot]' ||
+              startsWith((github.head_ref || ''), 'chore/bump-tool-versions')
+            }}
+        run: |
+          image_inputs='^(environment/docker/|environment/tools/|mise\.toml$|\.dockerignore$|\.github/workflows/ci-docker-build\.yml$)'
+          if [ "$FORCE_BUILD" = "true" ] || git diff --name-only HEAD^1 HEAD | grep -qE "$image_inputs"; then
+            echo "image=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "image=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Docker Buildx
+        if: steps.changes.outputs.image == 'true'
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
       - name: Setup mise
+        if: steps.changes.outputs.image == 'true'
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -41,9 +60,11 @@ jobs:
       # only injects into JS actions. This step exports them to later `run:` steps
       # so the cache backend works when buildx is invoked through `mise run`.
       - name: Expose GitHub Actions runtime (required by the gha cache backend)
+        if: steps.changes.outputs.image == 'true'
         uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
 
       - name: Build image with versions from mise.toml
+        if: steps.changes.outputs.image == 'true'
         env:
           # Import/export BuildKit layer cache so dependency PRs stop rebuilding
           # every stage from scratch. mode=max also exports intermediate builder
