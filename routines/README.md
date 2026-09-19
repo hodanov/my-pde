@@ -8,13 +8,13 @@ claude.ai のスケジュール Routine（クラウドエージェント / CCR�
 
 | ファイル                             | 名前                            | スケジュール                     | 役割                                                         |
 | ------------------------------------ | ------------------------------- | -------------------------------- | ------------------------------------------------------------ |
-| `daily-neovim-trend-scan.json`       | `Daily Neovim Trend Scan`       | 毎日 8:00 JST (`0 23 * * *`)     | Neovim 動向を調べ改善を Issue 起票（最大1件）                |
 | `weekly-adopted-issue-pr-bot.json`   | `Weekly Adopted-Issue PR Bot`   | 毎週日曜 8:00 JST (`0 23 * * 6`) | `adopted` Issue を実装しドラフト PR を作成                   |
 | `weekly-pr-care-bot.json`            | `Weekly PR Care Bot`            | 毎週月曜 7:00 JST (`0 22 * * 0`) | Open な `auto/*` PR の CI 失敗・コンフリクト・レビュー対応   |
 | `weekly-scripts-tooling-scan.json`   | `Weekly Scripts Tooling Scan`   | 毎週火曜 7:00 JST (`0 22 * * 1`) | `scripts/` 向け新アプリ/スクリプトを Issue 起票（最大1件）   |
 | `weekly-environment-scan.json`       | `Weekly Environment Scan`       | 毎週水曜 7:00 JST (`0 22 * * 2`) | `environment/`・`dotfiles/`・`mise.toml` の改善を Issue 起票 |
 | `weekly-devx-skills-hooks-scan.json` | `Weekly DevX Skills/Hooks Scan` | 毎週木曜 7:00 JST (`0 22 * * 3`) | ai-agents 向け汎用 hooks/skills を Issue 起票（最大1件）     |
 | `weekly-ci-workflows-scan.json`      | `Weekly CI Workflows Scan`      | 毎週金曜 7:00 JST (`0 22 * * 4`) | `.github/workflows/` の CI 改善を Issue 起票（最大1件）      |
+| `weekly-neovim-trend-scan.json`      | `Weekly Neovim Trend Scan`      | 毎週土曜 8:00 JST (`0 23 * * 5`) | Neovim 動向を調べ改善を Issue 起票（最大1件）                |
 | `monthly-routine-improve.json`       | `Monthly Routine Improve`       | 毎月2日 7:00 JST (`0 22 1 * *`)  | 運用実績からプロンプト改善を draft PR で提案（メタループ）   |
 
 このほか、LLM を使わない定型処理として `.github/workflows/automation-pipeline-digest.yml`（毎週土曜 7:00 JST）が、`digest` ラベルの付いた単一 Issue の body を上書き更新する。内容は 2 段構え。
