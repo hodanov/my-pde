@@ -510,8 +510,6 @@ vim.api.nvim_create_autocmd("TermClose", {
 		end)
 	end,
 })
--- terminal-mode からの脱出を簡略化（<Esc><Esc> を <C-\><C-n> の代替に）
-vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n>]], { desc = "Exit terminal mode" })
 
 -- ----------------------------------------
 -- Undo tree viewer (Neovim 0.12 builtin).
