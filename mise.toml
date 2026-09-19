@@ -511,6 +511,18 @@ if [ -n "$backup" ]; then
 fi
 '''
 
+# ---- Repo-local node toolchain ----
+
+[tasks."tools:node-install"]
+description = "Install environment/tools/node dependencies (tombi, prettier, markdownlint-cli2, ...)"
+dir = "{{config_root}}"
+run = "npm --prefix environment/tools/node ci"
+sources = [
+  "environment/tools/node/package.json",
+  "environment/tools/node/package-lock.json",
+]
+outputs = ["environment/tools/node/node_modules/.package-lock.json"]
+
 # ---- Repo-wide lint (CI parity) ----
 
 [tasks."lint:shell"]
@@ -534,9 +546,9 @@ run = "actionlint"
 
 [tasks."lint:format"]
 description = "Run tombi, prettier, and markdownlint via environment/tools/node"
+depends = ["tools:node-install"]
 dir = "{{config_root}}"
 run = '''
-npm --prefix environment/tools/node ci
 export PATH="$PWD/environment/tools/node/node_modules/.bin:$PATH"
 tombi lint
 prettier --check .
@@ -558,6 +570,7 @@ depends = [
 
 [tasks."verify:changed"]
 description = "Run tests/linters mapped to changed files (pass files after --)"
+depends = ["tools:node-install"]
 run = '"{{config_root}}/ai-agents/scripts/verify-changed.sh"'
 
 # ---- Docker ----
