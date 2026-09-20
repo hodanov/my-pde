@@ -32,7 +32,6 @@ vim.opt.smartcase = true -- ただし大文字が1文字でも含まれる場合
 if vim.fn.executable("rg") == 1 then
 	vim.opt.grepprg = "rg --vimgrep --smart-case --hidden --glob '!.git'"
 	vim.opt.grepformat = "%f:%l:%c:%m"
-	vim.keymap.set("n", "co", ":copen<CR>", { noremap = true, silent = true, desc = "Open quickfix list" })
 end
 vim.opt.wildmenu = true -- Show completion suggestions at command line mode
 vim.opt.conceallevel = 0 -- Show double quotations in json file and so on.
@@ -111,9 +110,6 @@ vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 -- 将来 runtime から外れても init.lua 全体を巻き添えにしないよう pcall で包む。
 -- ----------------------------------------
 pcall(vim.cmd.packadd, "cfilter")
-
-vim.keymap.set("n", "<Leader>c[", "<cmd>colder<CR><cmd>botright copen<CR>", { desc = "Older quickfix list" })
-vim.keymap.set("n", "<Leader>c]", "<cmd>cnewer<CR><cmd>botright copen<CR>", { desc = "Newer quickfix list" })
 
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
