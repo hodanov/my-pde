@@ -58,6 +58,17 @@ ROOTS
 	return 1
 }
 
+skill_opts_out_of_observation() {
+	awk '
+		NR == 1 && $0 == "---" { in_frontmatter = 1; next }
+		in_frontmatter && $0 == "---" { exit }
+		in_frontmatter && /^metadata:/ { in_metadata = 1; next }
+		in_frontmatter && /^[^ ]/ { in_metadata = 0 }
+		in_frontmatter && in_metadata && $1 == "observe:" && $2 == "false" { opted_out = 1; exit }
+		END { exit !opted_out }
+	' "$1/SKILL.md"
+}
+
 # Skills extracted from this session's transcript (Skill tool invocations).
 used=$(
 	jq -r 'select(.message.content != null)
@@ -78,9 +89,7 @@ pending=""
 while IFS= read -r skill; do
 	[ -n "$skill" ] || continue
 	skill_dir=$(resolve_skill_dir "$skill") || continue
-	case "$skill" in
-	skill-observe | skill-improve) continue ;;
-	esac
+	skill_opts_out_of_observation "$skill_dir" && continue
 	# Skip if already nudged this session.
 	if grep -qxF "$skill" "$state_file" 2>/dev/null; then
 		continue
