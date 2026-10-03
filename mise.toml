@@ -6,6 +6,10 @@
 actionlint = "1.7.12"
 go = "1.27.1"
 golangci-lint = "2.14.0"
+# wezterm-verify の dotfiles/wezterm/tests/ai-panes_test.lua を走らせるランタイム。
+# mise のレジストリは luajit を conda バックエンドで解決するため、版表記は
+# conda-forge の `2.1.<upstream commit の epoch>` 形式になり、他のピンと揃わない。
+luajit = "2.1.1744318430"
 node = "24.21.0"
 shfmt = "3.14.1"
 shellcheck = "0.11.0"
@@ -429,11 +433,7 @@ run = '''
 wezterm --version
 wezterm --config-file dotfiles/wezterm/wezterm.lua show-keys >/dev/null
 echo "show-keys: ok"
-if command -v luajit >/dev/null 2>&1; then
-	luajit dotfiles/wezterm/tests/ai-panes_test.lua
-else
-	echo "ai-panes_test.lua: skipped (luajit not on PATH)"
-fi
+luajit dotfiles/wezterm/tests/ai-panes_test.lua
 '''
 
 # ~/.zshrc is deliberately not wired into dotfiles-link: replacing the login
