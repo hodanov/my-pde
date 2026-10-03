@@ -1,6 +1,6 @@
-# Daily Neovim Trend Scan
+# Weekly Neovim Trend Scan
 
-`routines/daily-neovim-trend-scan.json` から参照される Routine プロンプト本文。このファイルを編集して main にマージすれば、次回実行から反映される（`/schedule` での apply は不要）。
+`routines/weekly-neovim-trend-scan.json` から参照される Routine プロンプト本文。このファイルを編集して main にマージすれば、次回実行から反映される（`/schedule` での apply は不要）。
 
 ## 役割
 

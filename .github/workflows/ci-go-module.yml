@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup mise
-        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -52,12 +52,16 @@ jobs:
 
       - name: Verify generated code is up to date
         if: inputs.generate-check
+        env:
+          MODULE: ${{ inputs.module }}
         run: |
-          mise run ${{ inputs.module }}:generate
-          git diff --exit-code -- scripts/${{ inputs.module }}
+          mise run "$MODULE:generate"
+          git diff --exit-code -- "scripts/$MODULE"
 
       - name: Run lint
-        run: mise run ${{ inputs.module }}:lint
+        env:
+          MODULE: ${{ inputs.module }}
+        run: mise run "$MODULE:lint"
 
   test:
     runs-on: ubuntu-latest
@@ -71,7 +75,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup mise
-        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

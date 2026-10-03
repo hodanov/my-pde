@@ -5,18 +5,19 @@
 [tools]
 actionlint = "1.7.12"
 go = "1.27.1"
-golangci-lint = "2.13.2"
-node = "24.20.0"
-shfmt = "3.14.0"
+golangci-lint = "2.14.0"
+node = "24.21.0"
+shfmt = "3.14.1"
 shellcheck = "0.11.0"
 stylua = "2.5.2"
 hadolint = "2.15.1"
-"go:golang.org/x/tools/cmd/goimports" = "0.49.0"
+"go:golang.org/x/tools/cmd/goimports" = "0.50.0"
 "go:golang.org/x/tools/gopls" = "0.23.0"
-"go:github.com/go-delve/delve/cmd/dlv" = "1.27.1"
+"go:github.com/go-delve/delve/cmd/dlv" = "1.27.2"
 "go:github.com/nametake/golangci-lint-langserver" = "0.0.12"
 terraform-ls = "0.39.0"
 tflint = "0.64.0"
+zizmor = "1.30.1"
 
 # Docker-only versions and per-asset SHA256s (for releases without an upstream
 # checksum file): synced into the Dockerfile ARG defaults by `mise run pins:sync`
@@ -25,9 +26,9 @@ tflint = "0.64.0"
 LUA_LS_VERSION = "3.19.1"
 MARKSMAN_VERSION = "2026-02-08"
 NEOVIM_VERSION = "0.12.5"
-NPM_VERSION = "12.0.2"
+NPM_VERSION = "12.1.0"
 RUST_TOOLCHAIN = "stable"
-TERRAFORM_VERSION = "1.16.1"
+TERRAFORM_VERSION = "1.16.4"
 LUA_LS_SHA256_AMD64 = "e9235d2d72ef55bc41cf8c99cda2ed64777682024b4bb81f5dea425060c5cbb8"
 LUA_LS_SHA256_ARM64 = "abd2572e8fc929dc838a81ffb8473c5bce0bf39bfe8edb4b120b3b623176ce83"
 MARKSMAN_SHA256_AMD64 = "be5098e8213219269c47fc0d916a66fa31ce0602ec967475c722260aabf26087"
@@ -511,6 +512,18 @@ if [ -n "$backup" ]; then
 fi
 '''
 
+# ---- Repo-local node toolchain ----
+
+[tasks."tools:node-install"]
+description = "Install environment/tools/node dependencies (tombi, prettier, markdownlint-cli2, ...)"
+dir = "{{config_root}}"
+run = "npm --prefix environment/tools/node ci"
+sources = [
+  "environment/tools/node/package.json",
+  "environment/tools/node/package-lock.json",
+]
+outputs = ["environment/tools/node/node_modules/.package-lock.json"]
+
 # ---- Repo-wide lint (CI parity) ----
 
 [tasks."lint:shell"]
@@ -532,11 +545,15 @@ run = "hadolint environment/docker/nvim.dockerfile"
 description = "Run actionlint (with shellcheck integration) on GitHub Actions workflows"
 run = "actionlint"
 
+[tasks."lint:zizmor"]
+description = "Run zizmor security audit on GitHub Actions workflows"
+run = "zizmor --min-severity high .github/workflows"
+
 [tasks."lint:format"]
 description = "Run tombi, prettier, and markdownlint via environment/tools/node"
+depends = ["tools:node-install"]
 dir = "{{config_root}}"
 run = '''
-npm --prefix environment/tools/node ci
 export PATH="$PWD/environment/tools/node/node_modules/.bin:$PATH"
 tombi lint
 prettier --check .
@@ -550,6 +567,7 @@ depends = [
   "lint:stylua",
   "lint:docker",
   "lint:actions",
+  "lint:zizmor",
   "lint:format",
 ]
 
@@ -558,6 +576,7 @@ depends = [
 
 [tasks."verify:changed"]
 description = "Run tests/linters mapped to changed files (pass files after --)"
+depends = ["tools:node-install"]
 run = '"{{config_root}}/ai-agents/scripts/verify-changed.sh"'
 
 # ---- Docker ----

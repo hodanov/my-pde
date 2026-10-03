@@ -61,7 +61,6 @@ require("blink.cmp").setup({
 	cmdline = {
 		enabled = true,
 		keymap = { preset = "cmdline" },
-		sources = { "buffer", "cmdline" },
 		completion = {
 			menu = { auto_show = false },
 		},

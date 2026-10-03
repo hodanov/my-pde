@@ -8,7 +8,8 @@ description: >-
   implement 以降（テスト戦略 → 検証 → コミット）の規律として適用する。
   新規プロダクト開発と既存プロダクト改修で手順が分岐する。
 metadata:
-  version: 7
+  version: 8
+  observe: false
 ---
 
 # /dev-workflow スキル

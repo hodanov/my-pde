@@ -6,7 +6,8 @@ description: >-
   `--apply` フラグで承認後の適用も可能。
 argument-hint: "<スキル名|all> [--apply]"
 metadata:
-  version: 2
+  version: 3
+  observe: false
 ---
 
 # /skill-improve スキル

@@ -6,7 +6,8 @@ description: >-
   使用後に `/skill-observe <スキル名> <結果> [問題/フィードバック]` で呼び出す。
 argument-hint: "<スキル名> <success|partial|failure> [問題やフィードバック]"
 metadata:
-  version: 5
+  version: 6
+  observe: false
 ---
 
 # /skill-observe スキル
@@ -83,7 +84,7 @@ date: YYYY-MM-DD
 
 引数なしで呼ばれた場合:
 
-1. 現在の会話でスキルを使用した形跡を確認する
+1. 現在の会話でスキルを使用した形跡を確認する（`metadata.observe: false` のスキルは除く）
 2. 使用したスキルごとに結果を尋ねる
 3. 各スキルについて Step 3-4 を実行する
 4. 使用スキルが見つからない場合、手動入力を促す
@@ -91,6 +92,7 @@ date: YYYY-MM-DD
 ## Notes
 
 - observation は Stop hook（`ai-agents/hooks/skill-observe-nudge.sh`）が**自動記録**する。リポジトリスキルを使ったセッション終了時に、Claude がその場の文脈から結果を判定して observation を書き出す。本スキルは手動・補足記録およびバッチモード（引数なし）用として残る
+- SKILL.md の frontmatter に `metadata.observe: false` を持つスキルは、Stop hook の自動記録から除外される（`skill-observe` / `skill-improve` 自身もこれで除外している）。観測しなくてよい段階まで磨けたスキルに付け、再び観測したくなったらその行を消す。`/skill-observe <スキル名>` で名指しされた場合は明示リクエストなので、フラグがあっても記録する
 - 保存先の起点は環境変数 `SKILL_OBSERVE_HOME`（my-pde のクローンパス。`settings.json` の `env` で `~/workspace/my-pde` を設定。先頭の `~` は hook 側で `$HOME` に展開するので別 PC でも動く）で決まる。これにより**どのリポジトリで作業していてもスキル使用が my-pde のクローンに集約**される。`SKILL_OBSERVE_HOME` 未設定時は現在の git リポジトリ直下にフォールバックし、そこに `ai-agents/skills` が無ければ何もしない
 - observation ファイルは **git 追跡対象外**（`.gitignore` の `*/observations/` 3 ルート分）。生の作業ログはリポ名・パス・インフラ情報を含みうるが、このリポは public のためコミットしない。追跡するのは SKILL.md までで、蓄積はローカル専用（クローンを作り直すと失われる）
 - `mise run claude-skills-copy` は skill ディレクトリごと `cp -R` するため observations も配布先に入る。ただし hook の書き込み先は `SKILL_OBSERVE_HOME`（リポジトリ側）なので、配布先のコピーは読まれず古くなる。`.claude/skills/` の my-pde 専用スキルはそもそも配布されない

@@ -55,8 +55,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Stage 2: Build Node runtime and npm tools
 FROM base AS node-builder
 
-ARG NODE_VERSION=24.20.0
-ARG NPM_VERSION=12.0.2
+ARG NODE_VERSION=24.21.0
+ARG NPM_VERSION=12.1.0
 ENV NODE_HOME="/opt/node"
 ENV PATH="${NODE_HOME}/bin:${PATH}"
 
@@ -197,7 +197,7 @@ RUN set -eux; \
 # Stage 7: Fetch Terraform CLI binary only
 FROM base AS terraform-builder
 
-ARG TERRAFORM_VERSION=1.16.1
+ARG TERRAFORM_VERSION=1.16.4
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
@@ -325,5 +325,5 @@ COPY ./environment/tools/python/ruff.toml /root/.config/ruff/
 
 WORKDIR /workspace
 
-HEALTHCHECK --interval=10m --timeout=1m --start-period=10m --retries=1 \
-  CMD ["sh", "-c", "nvim --headless -c 'checkhealth' -c 'qall' 2>/dev/null || exit 1"]
+HEALTHCHECK --interval=10m --timeout=30s --retries=3 \
+  CMD ["nvim", "--headless", "-c", "if v:errmsg !=# '' | cquit | endif", "-c", "qall"]

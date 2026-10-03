@@ -39,7 +39,7 @@ func TestAlertMessages(t *testing.T) {
 			name: "rejected after pr keeps one decimal",
 			alert: metrics.Alert{
 				Kind: metrics.AlertRejectedAfterPRRate, Scope: "scan:nvim", Value: 0.1224, Threshold: 0.1,
-				Observed: 6, Sample: 49, OwnerPrompt: "routines/prompts/daily-neovim-trend-scan.md",
+				Observed: 6, Sample: 49, OwnerPrompt: "routines/prompts/weekly-neovim-trend-scan.md",
 			},
 			wantAll: []string{"12.2%", "10.0%", "（6/49）"},
 		},
