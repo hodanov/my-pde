@@ -144,37 +144,6 @@ description = "Remove config-diff build artifacts"
 dir = "scripts/config-diff"
 run = "rm -f config-diff coverage.out"
 
-# ---- go-verify (Go) ----
-
-[tasks."go-verify:build"]
-description = "Build the go-verify binary"
-dir = "scripts/go-verify"
-run = "go build -o go-verify ./cmd/go-verify"
-
-[tasks."go-verify:test"]
-description = "Run go-verify Go tests"
-dir = "scripts/go-verify"
-run = "go test ./..."
-
-[tasks."go-verify:lint"]
-description = "Run golangci-lint and goimports check for go-verify"
-dir = "scripts/go-verify"
-run = [
-  "golangci-lint run --allow-parallel-runners",
-  '''
-diff=$(find . -name '*.go' -exec goimports -d {} +)
-if [ -n "$diff" ]; then
-  echo "$diff"
-  exit 1
-fi
-''',
-]
-
-[tasks."go-verify:clean"]
-description = "Remove go-verify build artifacts"
-dir = "scripts/go-verify"
-run = "rm -f go-verify coverage.out"
-
 # ---- scaffold (Go) ----
 
 [tasks."scaffold:build"]
@@ -282,11 +251,11 @@ run = "rm -f pipeline-metrics coverage.out"
 
 [tasks."go:test"]
 description = "Run tests for all Go apps under scripts/"
-depends = ["ai-bridge:test", "nvim-sync:test", "config-diff:test", "go-verify:test", "scaffold:test", "agent-stats:test", "pipeline-metrics:test"]
+depends = ["ai-bridge:test", "nvim-sync:test", "config-diff:test", "scaffold:test", "agent-stats:test", "pipeline-metrics:test"]
 
 [tasks."go:lint"]
 description = "Run lint for all Go apps under scripts/"
-depends = ["ai-bridge:lint", "nvim-sync:lint", "config-diff:lint", "go-verify:lint", "scaffold:lint", "agent-stats:lint", "pipeline-metrics:lint"]
+depends = ["ai-bridge:lint", "nvim-sync:lint", "config-diff:lint", "scaffold:lint", "agent-stats:lint", "pipeline-metrics:lint"]
 
 # ---- AI agents deploy: agents.xml symlinks ----
 

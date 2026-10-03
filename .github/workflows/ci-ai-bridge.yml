@@ -9,6 +9,7 @@ on:
       - "scripts/ai-bridge/**"
       - .github/workflows/ci-go-module.yml
       - mise.toml
+      - .golangci.yml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
