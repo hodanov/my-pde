@@ -590,3 +590,7 @@ run = '"{{config_root}}/environment/tools/sync-pins.sh"'
 description = "Verify generated pins are in sync with mise.toml"
 depends = ["pins:sync"]
 run = "git diff --exit-code -- environment/tools/go/go-tools.txt environment/docker/nvim.dockerfile"
+
+[tasks."nvim:lock-export"]
+description = "Copy the running container's lazy-lock.json into nvim/config/ to pin plugin revisions"
+run = 'docker cp nvim-dev:/root/.config/nvim/lazy-lock.json "{{config_root}}/nvim/config/lazy-lock.json"'

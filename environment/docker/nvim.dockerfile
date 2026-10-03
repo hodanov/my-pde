@@ -319,7 +319,7 @@ ENV NODE_PATH="/opt/npm-tools/node_modules"
 
 ####################
 # Copy Neovim configs after build for better caching
-COPY ./nvim/config/init.lua /root/.config/nvim/
+COPY ./nvim/config/init.lua ./nvim/config/lazy-lock.json /root/.config/nvim/
 COPY ./nvim/config/lua/ /root/.config/nvim/lua/
 COPY ./environment/tools/python/ruff.toml /root/.config/ruff/
 

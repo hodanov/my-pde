@@ -76,6 +76,8 @@ mise run zshrc-link                    # dotfiles/.zshrc  -> ~/.zshrc
 
 Tool versions are pinned in `mise.toml` at the repo root; the `ARG` defaults in `environment/docker/nvim.dockerfile` are generated from it (`mise run pins:sync`). Versions are automatically updated via GitHub Actions and Dependabot.
 
+Neovim plugin revisions are pinned in `nvim/config/lazy-lock.json`, which the image copies in so a rebuild installs the same commits. To update plugins, run `:Lazy update` in the container, then `mise run nvim:lock-export` and commit the diff.
+
 ## AI Bridge
 
 Neovim (Docker container) from selected code to host-side AI CLI (Claude Code, Cursor, etc.) with context. See [./scripts/ai-bridge/README.md](./scripts/ai-bridge/README.md) for setup and usage.
