@@ -52,12 +52,16 @@ jobs:
 
       - name: Verify generated code is up to date
         if: inputs.generate-check
+        env:
+          MODULE: ${{ inputs.module }}
         run: |
-          mise run ${{ inputs.module }}:generate
-          git diff --exit-code -- scripts/${{ inputs.module }}
+          mise run "$MODULE:generate"
+          git diff --exit-code -- "scripts/$MODULE"
 
       - name: Run lint
-        run: mise run ${{ inputs.module }}:lint
+        env:
+          MODULE: ${{ inputs.module }}
+        run: mise run "$MODULE:lint"
 
   test:
     runs-on: ubuntu-latest
