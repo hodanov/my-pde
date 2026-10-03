@@ -9,20 +9,15 @@ vim.g.loaded_ruby_provider = 0
 -- ----------------------------------------
 -- Key bind and other setting.
 -- ----------------------------------------
-vim.opt.encoding = "utf-8" -- Prevent garbled characters
-vim.opt.fileencoding = "utf-8" -- Setting for handling multi byte characters
-vim.scriptencoding = "utf-8" -- Setting for handling multi byte characters
 vim.opt.number = true -- Add row number
 vim.opt.title = true -- Add a filename to each tabs
 vim.opt.cursorline = true -- Add cursor line
-vim.opt.tabstop = 4 -- Insert spaces when the tab key is pressed
+vim.opt.tabstop = 4 -- Display a tab character as 4 columns wide
 vim.opt.shiftwidth = 4 -- Change the number of spaces inserted for indentation
 -- vim.opt.softtabstop = 4 -- Make spaces feel like real tabs
 vim.opt.expandtab = true -- Convert tabs to spaces
 vim.opt.smartindent = true -- Add a new line with autoindent
-vim.opt.colorcolumn = "120" -- Add a color on 80'th column
-vim.opt.hlsearch = true -- Highlight searched characters
-vim.opt.incsearch = true -- Highlight when inputting chars
+vim.opt.colorcolumn = "120" -- Add a color on 120th column
 vim.opt.inccommand = "split" -- :substitute の置換結果を入力中にライブプレビュー（下部スプリットに before/after 一覧）
 vim.opt.ignorecase = true -- 小文字のみの検索パターンは大文字小文字を無視する
 vim.opt.smartcase = true -- ただし大文字が1文字でも含まれる場合は大小を区別する（ignorecase と併用時のみ有効）
@@ -31,10 +26,7 @@ vim.opt.smartcase = true -- ただし大文字が1文字でも含まれる場合
 -- :grep <pat> → :copen → :cdo s/old/new/gc | update でプロジェクト横断の一括置換の基点になる。
 if vim.fn.executable("rg") == 1 then
 	vim.opt.grepprg = "rg --vimgrep --smart-case --hidden --glob '!.git'"
-	vim.opt.grepformat = "%f:%l:%c:%m"
 end
-vim.opt.wildmenu = true -- Show completion suggestions at command line mode
-vim.opt.conceallevel = 0 -- Show double quotations in json file and so on.
 vim.g.mapleader = " " -- Set a space key to a leader.
 vim.opt.mouse = "" -- Don't use a mouse.
 vim.opt.signcolumn = "yes:2" -- Always show signcolumn to prevent rattling.
@@ -114,7 +106,6 @@ pcall(vim.cmd.packadd, "cfilter")
 -- ----------------------------------------
 -- 外部変更ファイルの自動リロード (autoread + :checktime トリガ)
 -- ----------------------------------------
-vim.opt.autoread = true -- ディスク上で更新されたファイルをバッファへ読み直す
 local autoread_group = vim.api.nvim_create_augroup("auto_reload_on_external_change", { clear = true })
 -- CursorHoldI を含めない: 挿入モード中のリロード/競合ダイアログは入力を中断してしまう
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
@@ -274,11 +265,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 -- ----------------------------------------
 -- Remember a history of undo/redo.
 -- ----------------------------------------
-if vim.fn.has("persistent_undo") == 1 then
-	local undo_path = vim.fn.expand("~/.local/state/nvim/undo")
-	vim.cmd("set undodir=" .. undo_path)
-	vim.opt.undofile = true
-end
+vim.opt.undofile = true
 
 -- ----------------------------------------
 -- Session persistence（中断→再開の摩擦を減らす。undofile / カーソル位置復元の続き）
@@ -534,10 +521,8 @@ require("lazy_nvim")
 -- Setting transparent background.
 -- ----------------------------------------
 vim.cmd([[
-  highlight Normal guibg=none
-  highlight NonText guibg=none
-  highlight Normal ctermbg=none
-  highlight NonText ctermbg=none
+  highlight Normal guibg=none ctermbg=none
+  highlight NonText guibg=none ctermbg=none
   highlight NormalNC guibg=none
   highlight NormalSB guibg=none
 ]])
