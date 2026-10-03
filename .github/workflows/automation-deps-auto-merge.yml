@@ -12,7 +12,7 @@ jobs:
   auto-merge:
     if: |
       github.event.pull_request.draft == false && (
-        github.actor == 'dependabot[bot]' ||
+        github.event.pull_request.user.login == 'dependabot[bot]' ||
         startsWith(github.head_ref, 'chore/bump-tool-versions')
       )
     runs-on: ubuntu-latest
