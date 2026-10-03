@@ -43,7 +43,7 @@
       "untriaged": 0,
       "untracked_close": 1,
       "rejected_after_pr": 1,
-      "adopted_rate": 0.4545,
+      "adopted_rate": 0.5,
       "rejected_after_pr_rate": 0.0909,
       "oldest_untriaged_days": null,
       "oldest_untriaged_issue": 0,
@@ -125,7 +125,7 @@
     "untriaged": 1,
     "untracked_close": 1,
     "rejected_after_pr": 1,
-    "adopted_rate": 0.697,
+    "adopted_rate": 0.7419,
     "rejected_after_pr_rate": 0.0303,
     "oldest_untriaged_days": 26.6,
     "oldest_untriaged_issue": 129,
@@ -160,7 +160,7 @@
       "adopted": 12,
       "rejected": 5,
       "untriaged": 1,
-      "adopted_rate": 0.6316,
+      "adopted_rate": 0.7059,
       "merged": 12,
       "e2e_lead_days_p50": 2
     },
@@ -204,10 +204,10 @@
     {
       "kind": "adopted_rate",
       "scope": "scan:beta",
-      "value": 0.4545,
+      "value": 0.5,
       "threshold": 0.6,
       "observed": 5,
-      "sample": 11,
+      "sample": 10,
       "owner_prompt": ""
     },
     {

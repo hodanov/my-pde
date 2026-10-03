@@ -106,13 +106,15 @@ type ScanMetrics struct {
 	Scan string `json:"scan"`
 
 	// Scan quality: what the routine proposed and how it was judged.
-	Opened              int      `json:"opened"`
-	OpenedLast28d       int      `json:"opened_last_28d"`
-	Adopted             int      `json:"adopted"`
-	Rejected            int      `json:"rejected"`
-	Untriaged           int      `json:"untriaged"`
-	UntrackedClose      int      `json:"untracked_close"`
-	RejectedAfterPR     int      `json:"rejected_after_pr"`
+	Opened          int `json:"opened"`
+	OpenedLast28d   int `json:"opened_last_28d"`
+	Adopted         int `json:"adopted"`
+	Rejected        int `json:"rejected"`
+	Untriaged       int `json:"untriaged"`
+	UntrackedClose  int `json:"untracked_close"`
+	RejectedAfterPR int `json:"rejected_after_pr"`
+	// AdoptedRate is adopted / (adopted + rejected). Untriaged issues stay out
+	// of the sample so that a stalled triage cannot pass for a bad scan.
 	AdoptedRate         *float64 `json:"adopted_rate"`
 	RejectedAfterPRRate *float64 `json:"rejected_after_pr_rate"`
 
@@ -147,7 +149,7 @@ type MonthMetrics struct {
 	Adopted     int      `json:"adopted"`
 	Rejected    int      `json:"rejected"`
 	Untriaged   int      `json:"untriaged"`
-	AdoptedRate *float64 `json:"adopted_rate"`
+	AdoptedRate *float64 `json:"adopted_rate"` // same sample as ScanMetrics.AdoptedRate
 	Merged      int      `json:"merged"`
 	E2ELeadP50  *float64 `json:"e2e_lead_days_p50"`
 }
@@ -494,7 +496,7 @@ func (a *accumulator) finish(name string, o *Options) ScanMetrics {
 		Untriaged:            a.untriaged,
 		UntrackedClose:       a.untrackedClose,
 		RejectedAfterPR:      a.rejectedAfterPR,
-		AdoptedRate:          rate(a.adopted, a.opened, o.MinSample),
+		AdoptedRate:          rate(a.adopted, a.adopted+a.rejected, o.MinSample),
 		RejectedAfterPRRate:  rate(a.rejectedAfterPR, a.opened, o.MinSample),
 		OldestUntriagedIssue: a.oldestUntriagedIssue,
 		RejectLatencyP50:     quantile(a.rejectLatency, 0.5),
@@ -574,7 +576,7 @@ func monthlyCohorts(issues []model.Issue, prsByIssue map[int][]*model.PullReques
 			Adopted:     c.adopted,
 			Rejected:    c.rejected,
 			Untriaged:   c.untriaged,
-			AdoptedRate: rate(c.adopted, c.opened, o.MinSample),
+			AdoptedRate: rate(c.adopted, c.adopted+c.rejected, o.MinSample),
 			Merged:      c.merged,
 			E2ELeadP50:  quantile(c.e2e, 0.5),
 		})
@@ -605,14 +607,16 @@ func EvaluateAlerts(r *Report, opt *Options) []Alert {
 				OwnerPrompt: owner,
 			})
 		}
-		if s.Opened >= o.AlertMinSample {
-			if v := ratio(s.Adopted, s.Opened); v < t.AdoptedRate {
+		if decided := s.Adopted + s.Rejected; decided >= o.AlertMinSample {
+			if v := ratio(s.Adopted, decided); v < t.AdoptedRate {
 				add(Alert{
 					Kind: AlertAdoptedRate, Scope: s.Scan,
-					Value: round4(v), Threshold: t.AdoptedRate, Observed: s.Adopted, Sample: s.Opened,
+					Value: round4(v), Threshold: t.AdoptedRate, Observed: s.Adopted, Sample: decided,
 					OwnerPrompt: owner,
 				})
 			}
+		}
+		if s.Opened >= o.AlertMinSample {
 			if v := ratio(s.RejectedAfterPR, s.Opened); v > t.RejectedAfterPRRate {
 				add(Alert{
 					Kind: AlertRejectedAfterPRRate, Scope: s.Scan,

@@ -105,6 +105,7 @@ func Flow(r *metrics.Report) (string, error) {
 	fmt.Fprintf(&b,
 		"集計起点 %s / 率の窓 直近 %d 日（起点 %s 以降）/ 母数 %d 件未満は率を出さない"+
 			"（集計起点より前の scan Issue %d 件は件数のみで率の分母に入れない）。"+
+			"採用率の分母は採用 + 却下で、未 triage は含めない。"+
 			"状態ファイルは持たず毎回全再計算するため、ラベルを編集すると過去の数値も動く。\n\n",
 		r.Since, r.WindowDays, r.WindowStart, r.MinSample, r.ExcludedBeforeSince)
 
@@ -115,7 +116,7 @@ func Flow(r *metrics.Report) (string, error) {
 			return []string{
 				itoa(s.Opened), itoa(s.OpenedLast28d), itoa(s.Adopted), itoa(s.Rejected),
 				itoa(s.Untriaged), itoa(s.UntrackedClose),
-				rateCell(s.AdoptedRate, s.Adopted, s.Opened, 0),
+				rateCell(s.AdoptedRate, s.Adopted, s.Adopted+s.Rejected, 0),
 				rateCell(s.RejectedAfterPRRate, s.RejectedAfterPR, s.Opened, 1),
 			}
 		}))
@@ -148,7 +149,7 @@ func Flow(r *metrics.Report) (string, error) {
 		m := &r.Months[i]
 		monthRows = append(monthRows, []string{
 			m.Month, itoa(m.Opened), itoa(m.Adopted), itoa(m.Rejected), itoa(m.Untriaged),
-			rateCell(m.AdoptedRate, m.Adopted, m.Opened, 0), itoa(m.Merged), daysCell(m.E2ELeadP50),
+			rateCell(m.AdoptedRate, m.Adopted, m.Adopted+m.Rejected, 0), itoa(m.Merged), daysCell(m.E2ELeadP50),
 		})
 	}
 	writeTable(&b,
