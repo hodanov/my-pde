@@ -17,6 +17,7 @@ hadolint = "2.15.1"
 "go:github.com/nametake/golangci-lint-langserver" = "0.0.12"
 terraform-ls = "0.39.0"
 tflint = "0.64.0"
+zizmor = "1.30.1"
 
 # Docker-only versions and per-asset SHA256s (for releases without an upstream
 # checksum file): synced into the Dockerfile ARG defaults by `mise run pins:sync`
@@ -544,6 +545,10 @@ run = "hadolint environment/docker/nvim.dockerfile"
 description = "Run actionlint (with shellcheck integration) on GitHub Actions workflows"
 run = "actionlint"
 
+[tasks."lint:zizmor"]
+description = "Run zizmor security audit on GitHub Actions workflows"
+run = "zizmor --min-severity high .github/workflows"
+
 [tasks."lint:format"]
 description = "Run tombi, prettier, and markdownlint via environment/tools/node"
 depends = ["tools:node-install"]
@@ -562,6 +567,7 @@ depends = [
   "lint:stylua",
   "lint:docker",
   "lint:actions",
+  "lint:zizmor",
   "lint:format",
 ]
 

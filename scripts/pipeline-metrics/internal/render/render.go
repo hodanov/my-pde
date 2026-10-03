@@ -50,12 +50,12 @@ func alertMessage(r *metrics.Report, a *metrics.Alert) string {
 		if a.OwnerPrompt == "" {
 			return hint
 		}
-		return fmt.Sprintf("%s → `%s`", hint, a.OwnerPrompt)
+		return fmt.Sprintf("%s → %#q", hint, a.OwnerPrompt)
 	}
 	switch a.Kind {
 	case metrics.AlertLiveness:
 		return fix(fmt.Sprintf(
-			"`%s` の起票が直近 28 日で 0 件（窓内 %d 件）。Routine が停止している疑い。claude.ai の Routine 稼働状況と併せて確認する",
+			"%#q の起票が直近 28 日で 0 件（窓内 %d 件）。Routine が停止している疑い。claude.ai の Routine 稼働状況と併せて確認する",
 			a.Scope, a.Sample))
 	case metrics.AlertTriageBacklog:
 		return fmt.Sprintf(
@@ -63,11 +63,11 @@ func alertMessage(r *metrics.Report, a *metrics.Alert) string {
 			trimFloat(a.Value), a.Observed, a.Sample, trimFloat(a.Threshold))
 	case metrics.AlertAdoptedRate:
 		return fix(fmt.Sprintf(
-			"`%s` の採用率 %s（%d/%d）が閾値 %s を下回る。提案の選定基準を見直す",
+			"%#q の採用率 %s（%d/%d）が閾値 %s を下回る。提案の選定基準を見直す",
 			a.Scope, pct(a.Value, 0), a.Observed, a.Sample, pct(a.Threshold, 0)))
 	case metrics.AlertRejectedAfterPRRate:
 		return fix(fmt.Sprintf(
-			"`%s` は PR 化後の却下が %s（%d/%d）で閾値 %s を超える。最もコストの高い失敗なので、提案の具体性と triage の判断タイミングを見直す",
+			"%#q は PR 化後の却下が %s（%d/%d）で閾値 %s を超える。最もコストの高い失敗なので、提案の具体性と triage の判断タイミングを見直す",
 			a.Scope, pct(a.Value, 1), a.Observed, a.Sample, pct(a.Threshold, 1)))
 	case metrics.AlertPRCreatedRate:
 		pending := 0
@@ -75,14 +75,14 @@ func alertMessage(r *metrics.Report, a *metrics.Alert) string {
 			pending = s.PRPending
 		}
 		return fix(fmt.Sprintf(
-			"`%s` の PR 化率 %s（%d/%d）が閾値 %s を下回り、PR 化待ちが %d 件滞留している",
+			"%#q の PR 化率 %s（%d/%d）が閾値 %s を下回り、PR 化待ちが %d 件滞留している",
 			a.Scope, pct(a.Value, 0), a.Observed, a.Sample, pct(a.Threshold, 0), pending))
 	case metrics.AlertMergeRate:
 		return fix(fmt.Sprintf(
-			"`%s` の auto PR マージ率 %s（%d/%d）が閾値 %s を下回る。CI 失敗・コンフリクトの解消が追いついていない",
+			"%#q の auto PR マージ率 %s（%d/%d）が閾値 %s を下回る。CI 失敗・コンフリクトの解消が追いついていない",
 			a.Scope, pct(a.Value, 0), a.Observed, a.Sample, pct(a.Threshold, 0)))
 	default:
-		return fix(fmt.Sprintf("`%s` の %s が閾値を超えた（%s / 閾値 %s）",
+		return fix(fmt.Sprintf("%#q の %s が閾値を超えた（%s / 閾値 %s）",
 			a.Scope, a.Kind, trimFloat(a.Value), trimFloat(a.Threshold)))
 	}
 }
