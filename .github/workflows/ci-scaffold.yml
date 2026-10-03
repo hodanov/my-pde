@@ -9,6 +9,7 @@ on:
       - "scripts/scaffold/**"
       - .github/workflows/ci-go-module.yml
       - mise.toml
+      - .golangci.yml
 
 jobs:
   ci:
