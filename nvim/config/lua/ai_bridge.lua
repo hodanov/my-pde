@@ -57,15 +57,17 @@ function M.send_prompt(prompt, cwd)
 
 	local request_file = bridge_dir .. "/request.json"
 	local ok, err = pcall(function()
-		local f = assert(io.open(request_file, "w"))
-		local write_ok, write_err = pcall(f.write, f, vim.fn.json_encode(request))
-		f:close()
+		local fd, tmp = assert(vim.uv.fs_mkstemp(bridge_dir .. "/.request-XXXXXX"))
+		local write_ok, write_err = pcall(function()
+			local written, write_fd_err = vim.uv.fs_write(fd, vim.fn.json_encode(request))
+			local closed, close_err = vim.uv.fs_close(fd)
+			assert(written, write_fd_err)
+			assert(closed, close_err)
+			assert(vim.uv.fs_rename(tmp, request_file))
+		end)
 		if not write_ok then
+			vim.uv.fs_unlink(tmp)
 			error(write_err)
-		end
-		local chmod_ok, chmod_err = vim.uv.fs_chmod(request_file, tonumber("600", 8))
-		if not chmod_ok then
-			error("fs_chmod failed: " .. tostring(chmod_err))
 		end
 	end)
 
