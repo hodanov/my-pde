@@ -146,9 +146,29 @@ func TestComputeTriageCounts(t *testing.T) {
 				{Number: 4, Labels: []string{"scan:a"}, CreatedAt: "2026-07-04T00:00:00Z"},
 				{Number: 5, Labels: []string{"scan:a"}, CreatedAt: "2026-07-05T00:00:00Z"},
 			},
-			wantOpened:      5,
-			wantUntriaged:   5,
-			wantAdoptedRate: new(0.0),
+			// A stalled triage is not a verdict on the scan: nothing has been
+			// decided, so the adoption rate has no sample at all.
+			wantOpened:    5,
+			wantUntriaged: 5,
+		},
+		{
+			name: "untriaged and untracked issues stay out of the adoption rate",
+			issues: []issueSpec{
+				{Number: 1, Labels: []string{"scan:a", "adopted"}, CreatedAt: "2026-07-01T00:00:00Z"},
+				{Number: 2, Labels: []string{"scan:a", "adopted"}, CreatedAt: "2026-07-01T00:00:00Z"},
+				{Number: 3, Labels: []string{"scan:a", "adopted"}, CreatedAt: "2026-07-01T00:00:00Z"},
+				{Number: 4, Labels: []string{"scan:a", "rejected"}, CreatedAt: "2026-07-01T00:00:00Z", ClosedAt: "2026-07-02T00:00:00Z"},
+				{Number: 5, Labels: []string{"scan:a", "rejected"}, CreatedAt: "2026-07-01T00:00:00Z", ClosedAt: "2026-07-02T00:00:00Z"},
+				{Number: 6, Labels: []string{"scan:a"}, CreatedAt: "2026-07-01T00:00:00Z"},
+				{Number: 7, Labels: []string{"scan:a"}, CreatedAt: "2026-07-01T00:00:00Z"},
+				{Number: 8, Labels: []string{"scan:a"}, CreatedAt: "2026-07-01T00:00:00Z", ClosedAt: "2026-07-02T00:00:00Z"},
+			},
+			wantOpened:      8,
+			wantAdopted:     3,
+			wantRejected:    2,
+			wantUntriaged:   2,
+			wantUntracked:   1,
+			wantAdoptedRate: new(0.6),
 		},
 		{
 			name: "single issue leaves rates unreported",
@@ -264,6 +284,29 @@ func TestComputeWindow(t *testing.T) {
 	if got := Compute(&dataset, &unbounded).WindowStart; got != testSince {
 		t.Errorf("window_start = %s, want %s with the window disabled", got, testSince)
 	}
+}
+
+// TestMonthlyAdoptionIgnoresUntriaged keeps the trend view consistent with the
+// scan rows: a month whose triage has not caught up yet must not look worse.
+func TestMonthlyAdoptionIgnoresUntriaged(t *testing.T) {
+	t.Parallel()
+	issues := []issueSpec{
+		{Number: 1, Labels: []string{"scan:a", "adopted"}, CreatedAt: "2026-07-01T00:00:00Z"},
+		{Number: 2, Labels: []string{"scan:a", "adopted"}, CreatedAt: "2026-07-02T00:00:00Z"},
+		{Number: 3, Labels: []string{"scan:a", "adopted"}, CreatedAt: "2026-07-03T00:00:00Z"},
+		{Number: 4, Labels: []string{"scan:a", "adopted"}, CreatedAt: "2026-07-04T00:00:00Z"},
+		{Number: 5, Labels: []string{"scan:a", "rejected"}, CreatedAt: "2026-07-05T00:00:00Z", ClosedAt: "2026-07-06T00:00:00Z"},
+		{Number: 6, Labels: []string{"scan:a"}, CreatedAt: "2026-07-06T00:00:00Z"},
+		{Number: 7, Labels: []string{"scan:a"}, CreatedAt: "2026-07-07T00:00:00Z"},
+	}
+	dataset := newDataset(t, issues, nil)
+	opt := testOptions(t, testNow, testSince)
+	report := Compute(&dataset, &opt)
+
+	if len(report.Months) != 1 {
+		t.Fatalf("months = %+v, want July only", report.Months)
+	}
+	wantRate(t, report.Months[0].AdoptedRate, 0.8)
 }
 
 // TestComputeLatencies pins the quantile behaviour, including the even-sized
@@ -400,20 +443,34 @@ func TestEvaluateAlerts(t *testing.T) {
 		{
 			name: "low adoption",
 			scan: ScanMetrics{
-				Scan: "scan:a", Opened: 10, OpenedLast28d: 4, Adopted: 5,
+				Scan: "scan:a", Opened: 10, OpenedLast28d: 4, Adopted: 4, Rejected: 4,
 			},
 			wantKinds: []string{AlertAdoptedRate},
 		},
 		{
 			name: "adoption exactly at the threshold stays quiet",
 			scan: ScanMetrics{
-				Scan: "scan:a", Opened: 10, OpenedLast28d: 4, Adopted: 6,
+				Scan: "scan:a", Opened: 10, OpenedLast28d: 4, Adopted: 6, Rejected: 4,
 			},
 		},
 		{
 			name: "small sample never fires",
 			scan: ScanMetrics{
 				Scan: "scan:a", Opened: 7, OpenedLast28d: 0, Adopted: 0,
+			},
+		},
+		{
+			// The sample is what triage has decided, not what was opened: a
+			// stalled triage must not point the meta loop at the scan prompt.
+			name: "untriaged backlog does not drag adoption down",
+			scan: ScanMetrics{
+				Scan: "scan:a", Opened: 12, OpenedLast28d: 4, Adopted: 5, Rejected: 1, Untriaged: 6,
+			},
+		},
+		{
+			name: "too few decided issues never fire",
+			scan: ScanMetrics{
+				Scan: "scan:a", Opened: 12, OpenedLast28d: 4, Adopted: 2, Rejected: 5, Untriaged: 5,
 			},
 		},
 		{
@@ -497,8 +554,8 @@ func TestEvaluateAlerts(t *testing.T) {
 func TestEvaluateAlertsNamesTheResponsiblePrompt(t *testing.T) {
 	t.Parallel()
 	report := Report{Scans: []ScanMetrics{
-		{Scan: "scan:nvim", Opened: 10, OpenedLast28d: 4, Adopted: 3},
-		{Scan: "scan:unknown", Opened: 10, OpenedLast28d: 4, Adopted: 3},
+		{Scan: "scan:nvim", Opened: 10, OpenedLast28d: 4, Adopted: 3, Rejected: 7},
+		{Scan: "scan:unknown", Opened: 10, OpenedLast28d: 4, Adopted: 3, Rejected: 7},
 	}}
 	opt := testOptions(t, testNow, testSince)
 	alerts := EvaluateAlerts(&report, &opt)
@@ -517,7 +574,7 @@ func TestEvaluateAlertsNamesTheResponsiblePrompt(t *testing.T) {
 // suppresses table cells only, never the alerting itself.
 func TestEvaluateAlertsIgnoresMinSampleForRates(t *testing.T) {
 	t.Parallel()
-	report := Report{Scans: []ScanMetrics{{Scan: "scan:a", Opened: 10, OpenedLast28d: 4, Adopted: 2}}}
+	report := Report{Scans: []ScanMetrics{{Scan: "scan:a", Opened: 10, OpenedLast28d: 4, Adopted: 2, Rejected: 8}}}
 	opt := testOptions(t, testNow, testSince)
 	opt.MinSample = 100
 	if alerts := EvaluateAlerts(&report, &opt); len(alerts) != 1 || alerts[0].Kind != AlertAdoptedRate {

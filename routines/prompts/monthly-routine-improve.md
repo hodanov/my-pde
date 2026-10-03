@@ -14,6 +14,8 @@
 
 `gh pr list --state merged --label "meta:routines" --limit 5 --json number,title,body,mergedAt` で直近の meta PR を取り、body の「検証予告」節を読む。予告した指標を今月の digest の値と突き合わせ、**改善した / 変わらない / 悪化した**のどれかを判定する。この結果は今回の PR body の冒頭（または変更なしの報告）に必ず書く。予告が外れていた場合は、その原因の見立てを 1〜2 行で述べる。
 
+判定の前に、**予告が評価可能だったか**を確かめる。前回の変更がマージされた日より後に起票された対象スキャンの Issue のうち、`adopted` か `rejected` が付いたものが 1 件も無ければ、その予告は**評価不能**（打ち手の良し悪しではなく triage 待ち）であり、改善 / 悪化のどちらとも判定しない。この場合は同じプロンプトを数値だけを根拠に書き換えず、前回の変更をもう 1 ヶ月観察する。
+
 前回 PR が無い、または予告が書かれていない場合はその旨を記して先へ進む。
 
 ### 1. メトリクスで対象を絞る
@@ -24,7 +26,7 @@ digest Issue の body には機械可読な JSON が埋め込まれている。�
 gh issue list --state open --label digest --limit 1 --json body --jq '.[0].body' \
   | sed -n '/<!-- pipeline-metrics:json -->/,$p' \
   | sed -n '/^```json$/,/^```$/p' | sed '1d;$d' > metrics.json
-jq '{alerts, scans: [.scans[] | {scan, opened, adopted_rate, rejected_after_pr_rate, pr_created_rate, merge_rate}], months}' metrics.json
+jq '{alerts, scans: [.scans[] | {scan, opened, adopted, rejected, untriaged, adopted_rate, rejected_after_pr_rate, pr_created_rate, merge_rate}], months}' metrics.json
 ````
 
 指標の定義・閾値・制約は [`scripts/pipeline-metrics/README.md`](../../scripts/pipeline-metrics/README.md) を読むこと。対象は次の優先順で選ぶ。
@@ -68,7 +70,8 @@ PR body には次を**すべて**含める。
 - (b) **根拠にしたメトリクス**: 対象スキャン・指標名・数値（分子/分母）・集計期間。どのアラートから入ったかも書く
 - (c) **定性の裏付け**: rejected Issue / 未マージ PR / レビュー指摘の番号と要約
 - (d) **変更内容**と、それで挙動がどう変わる見込みか
-- (e) **検証予告**: 翌月の実行時に、どの指標が現在値からどこまで動いていれば成功と見なすか。1 指標だけを名指しし、現在値と目標値を数字で書く（例: `scan:scripts` の `adopted_rate` を 0.62 → 0.75 以上）
+- (e) **検証予告**: 翌月の実行時に、どの指標が現在値からどこまで動いていれば成功と見なすか。1 指標だけを名指しし、現在値と目標値を数字で書く（例: `scan:scripts` の `adopted_rate` を 0.62 → 0.75 以上）。あわせて次を書く
+  - **コホート条件**: この PR のマージ後に起票された Issue だけで数えること。マージ前の起票を含む全期間の率は、打ち手が届かない過去の失敗が分母に残るため動きが鈍い
 
 ### 4. 変更しない判断
 

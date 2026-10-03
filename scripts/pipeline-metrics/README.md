@@ -67,24 +67,26 @@ go run ./cmd/pipeline-metrics --issues issues.json --prs prs.json --format json
 スキャン別（+ 合計行）に、パイプラインの段階ごとへ分解する。どのスキャンが効いていないかの
 特定が目的なので、全体値だけを見ない。
 
-| 段階         | 指標                          | 定義                                                                      |
-| ------------ | ----------------------------- | ------------------------------------------------------------------------- |
-| スキャン品質 | `opened`                      | 窓内に起票された scan Issue 数                                            |
-|              | `opened_last_28d`             | うち直近 28 日の起票数（Routine の生存確認）                              |
-|              | `adopted_rate`                | `adopted` / `opened`（未 triage も分母に含む）                            |
-|              | `rejected_after_pr_rate`      | PR まで作ってから却下 / `opened`                                          |
-|              | `untracked_close`             | ラベル無しで Close された数                                               |
-| triage       | `oldest_untriaged_days`       | 最古の未 triage Issue の経過日数                                          |
-|              | `reject_latency_days_p50`     | 起票 → `rejected` で Close の中央値                                       |
-| PR 化        | `pr_created_rate`             | PR が存在する adopted Issue / adopted Issue（ラベルではなく join で判定） |
-|              | `pr_pending`                  | adopted かつ Open かつ PR 無し（PR 化待ち）                               |
-|              | `pr_lag_days_p50`             | 起票 → 最初の PR 作成の中央値                                             |
-| マージ       | `merge_rate`                  | merged / (merged + 未マージ Close)。Open な PR は分母に入れない           |
-|              | `merge_lead_days_p50` / `p90` | PR 作成 → マージ                                                          |
-|              | `e2e_lead_days_p50`           | 起票 → マージ                                                             |
+| 段階         | 指標                          | 定義                                                                       |
+| ------------ | ----------------------------- | -------------------------------------------------------------------------- |
+| スキャン品質 | `opened`                      | 窓内に起票された scan Issue 数                                             |
+|              | `opened_last_28d`             | うち直近 28 日の起票数（Routine の生存確認）                               |
+|              | `adopted_rate`                | `adopted` / (`adopted` + `rejected`)（未 triage・追跡外 Close は含めない） |
+|              | `rejected_after_pr_rate`      | PR まで作ってから却下 / `opened`                                           |
+|              | `untracked_close`             | ラベル無しで Close された数                                                |
+| triage       | `oldest_untriaged_days`       | 最古の未 triage Issue の経過日数                                           |
+|              | `reject_latency_days_p50`     | 起票 → `rejected` で Close の中央値                                        |
+| PR 化        | `pr_created_rate`             | PR が存在する adopted Issue / adopted Issue（ラベルではなく join で判定）  |
+|              | `pr_pending`                  | adopted かつ Open かつ PR 無し（PR 化待ち）                                |
+|              | `pr_lag_days_p50`             | 起票 → 最初の PR 作成の中央値                                              |
+| マージ       | `merge_rate`                  | merged / (merged + 未マージ Close)。Open な PR は分母に入れない            |
+|              | `merge_lead_days_p50` / `p90` | PR 作成 → マージ                                                           |
+|              | `e2e_lead_days_p50`           | 起票 → マージ                                                              |
 
 - 分位点は order statistics の線形補間（R type 7）。母数が偶数のときの p50 は中央 2 値の平均。
 - 日数は小数第 1 位、率は小数第 4 位で丸める。
+- `adopted_rate` の分母に未 triage を入れないのは、triage が止まるだけで率が下がり、アラートが
+  スキャンのプロンプトを誤って名指しするのを防ぐため。滞留そのものは `triage_backlog` が見る。
 - `oldest_untriaged_days` と `pr_pending` だけは**窓を無視して全期間**で数える。窓から外れて
   見えなくなる滞留こそがアラートの対象だから。
 
@@ -97,7 +99,7 @@ go run ./cmd/pipeline-metrics --issues issues.json --prs prs.json --format json
 | ------------------------ | ----------------------------------------------------- | -------------------------------- |
 | `liveness`               | 直近 28 日の起票が 0 件                               | 該当スキャンのプロンプト         |
 | `triage_backlog`         | 最古の未 triage が 14 日超（母数条件なし・repo 全体） | なし（人間の triage）            |
-| `adopted_rate`           | 採用率 < 0.6                                          | 該当スキャンのプロンプト         |
+| `adopted_rate`           | 採用率 < 0.6（母数は採用 + 却下）                     | 該当スキャンのプロンプト         |
 | `rejected_after_pr_rate` | PR 後却下率 > 0.10                                    | 該当スキャンのプロンプト         |
 | `pr_created_rate`        | PR 化率 < 0.8 かつ PR 化待ち 3 件以上                 | `weekly-adopted-issue-pr-bot.md` |
 | `merge_rate`             | マージ率 < 0.8                                        | `weekly-pr-care-bot.md`          |
