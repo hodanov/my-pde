@@ -60,7 +60,7 @@ Routine は Anthropic クラウド上の使い捨てセッションで、リポ�
 | `enabled`                   | 有効/無効                                                                               |
 | `cron_expression`           | 5 フィールド cron（**UTC**）。最短間隔は 1 時間                                         |
 | `schedule_note`             | 人間向けの時刻メモ（UTC ↔ JST）。動作には影響しない                                     |
-| `job_config.model`          | 使用モデル（例 `claude-opus-4-8`）                                                      |
+| `job_config.model`          | 使用モデル（例 `claude-opus-5-5`）                                                      |
 | `job_config.repository`     | チェックアウト対象リポジトリ                                                            |
 | `job_config.environment_id` | 実行環境 ID                                                                             |
 | `job_config.allowed_tools`  | 許可ツール                                                                              |
