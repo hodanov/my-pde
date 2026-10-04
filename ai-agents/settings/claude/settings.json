@@ -13,7 +13,7 @@
       "Bash(cd *)",
       "Bash(docker compose *)",
       "Bash(docker container exec nvim-dev *)",
-      "Bash(docker cp * nvim-dev:*)",
+      "Bash(docker cp * nvim-dev:/root/.config/nvim/*)",
       "Bash(docker events *)",
       "Bash(docker image ls *)",
       "Bash(du *)",
