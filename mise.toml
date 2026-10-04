@@ -6,9 +6,6 @@
 actionlint = "1.7.12"
 go = "1.27.1"
 golangci-lint = "2.14.0"
-# wezterm-verify の dotfiles/wezterm/tests/ai-panes_test.lua を走らせるランタイム。
-# mise のレジストリは luajit を conda バックエンドで解決するため、版表記は
-# conda-forge の `2.1.<upstream commit の epoch>` 形式になり、他のピンと揃わない。
 luajit = "2.1.1744318430"
 node = "24.21.0"
 shfmt = "3.14.1"
