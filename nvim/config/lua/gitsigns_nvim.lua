@@ -1,8 +1,4 @@
 require("gitsigns").setup({
-	-- 既定の false では files_changed() が `git status --porcelain` の `??` 行を捨てるため、
-	-- <leader>gq（setqflist("all")）と ]c / [c に未追跡ファイルが一件も載らず、
-	-- 新規作成されたファイルを丸ごと見落とす。<leader>gb の merge-base 切替でも
-	-- `git ls-files --others` は引かないので救済されない。アタッチさせてサイン列にも印を出す。
 	attach_to_untracked = true,
 	-- signcolumn = "yes:2"（init.lua）で診断サインと 2 枠を分け合う。サインは優先度の高い順に
 	-- 左から並ぶため、既定の 6 のままだと vim.diagnostic（10〜、severity_sort でさらに上がる）が
