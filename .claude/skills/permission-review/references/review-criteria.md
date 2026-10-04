@@ -28,6 +28,11 @@
 - 任意コード実行・任意通信・破壊的操作を丸ごと通す prefix。`Bash(curl *)` / `Bash(npx *)` / `Bash(bash *)` /
   `Bash(python3 -c *)` / `Bash(docker run *)` / `Bash(docker exec *)` / `Bash(rm *)` / `Bash(chmod *)` / `Bash(claude *)` など。
   サブコマンドまで絞れば安全なら「一般化して昇格」で拾う（例 `Bash(docker compose ps *)`）。
+- sandbox 内で動くコマンド（`sandbox.excludedCommands` に無いもの）の prefix。sandbox 内では allow 無しで通るので、
+  allow に入れても sandbox 外での再実行（`dangerouslyDisableSandbox`）を無確認にする効果しか無い。
+  `Bash(python3 *)` / `Bash(xargs *)` / `Bash(find *)` / `Bash(awk *)` などはこれで外した。
+- `excludedCommands` 側のツール（git / gh / mise / go / terraform）は allow が唯一の関門になる。読み取り系サブコマンドまで
+  絞ったものだけを昇格させ、`gh api` のようにフラグで書き込みに変わるコマンドは見送る。`ask` にある `git push` などは昇格させない。
 - 途中に `*` を挟むルール（例 `Bash(terraform -chdir=* show *)`）。`*` は間に差し込まれた任意のオプションまで吸収する。
 - scratchpad や一時ディレクトリの絶対パスを含む完全一致ルール、`echo "exit=$?"` のような一回限りの完全一致ルール。二度と一致しない。
 - `rejected` か `family_rejections` がある系統。拒否した理由を先にユーザーに確認する。
