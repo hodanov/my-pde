@@ -1,4 +1,5 @@
 require("gitsigns").setup({
+	attach_to_untracked = true,
 	-- signcolumn = "yes:2"（init.lua）で診断サインと 2 枠を分け合う。サインは優先度の高い順に
 	-- 左から並ぶため、既定の 6 のままだと vim.diagnostic（10〜、severity_sort でさらに上がる）が
 	-- 左枠を取り、診断のある行だけハンク印が右へずれて縦棒が一直線に並ばない。
