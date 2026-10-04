@@ -67,6 +67,7 @@ vim.keymap.set("n", "<leader>fR", builtin.pickers, { desc = "Resume from cached 
 local telescope = require("telescope")
 telescope.setup({
 	defaults = {
+		file_ignore_patterns = { "%.git/" },
 		sorting_strategy = "ascending", -- 上から順番に表示
 		file_sorter = require("telescope.sorters").get_fuzzy_file, -- アルファベット順ベース
 		layout_config = {
