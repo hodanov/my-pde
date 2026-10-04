@@ -1,4 +1,7 @@
 {
+  "permissions": {
+    "allow": ["Bash(bash ai-agents/scripts/verify-changed.sh*)"]
+  },
   "hooks": {
     "PreToolUse": [
       {
