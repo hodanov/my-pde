@@ -67,12 +67,6 @@ vim.keymap.set("n", "<leader>fR", builtin.pickers, { desc = "Resume from cached 
 local telescope = require("telescope")
 telescope.setup({
 	defaults = {
-		-- <Leader>ff は hidden + no_ignore、<Leader>fg / <Leader>fw は --hidden で rg を回すため、
-		-- 除外しないと .git/ の内部ファイル（loose object・hooks/*.sample・logs・config）が候補に混ざる。
-		-- init.lua の grepprg は --glob '!.git' で既に外しているので、:grep 側と判断を揃える。
-		-- defaults に置くと telescope の Picker 側が全ピッカー共通に適用するため、
-		-- find_files / live_grep / grep_string / file_browser に 1 箇所で効く。
-		-- Lua パターンなので `%.git/` は .github/ や .gitignore（直後が / でない）には一致しない。
 		file_ignore_patterns = { "%.git/" },
 		sorting_strategy = "ascending", -- 上から順番に表示
 		file_sorter = require("telescope.sorters").get_fuzzy_file, -- アルファベット順ベース
