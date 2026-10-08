@@ -1,0 +1,13 @@
+services:
+  otel-lgtm:
+    container_name: claude-otel-lgtm
+    image: grafana/otel-lgtm:0.35.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    volumes:
+      - ${HOME}/.local/state/claude-otel-lgtm:/data
+      - ./provisioning/claude-code-dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/claude-code-dashboards.yaml:ro
+      - ./dashboards:/claude-dashboards:ro
