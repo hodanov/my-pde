@@ -33,7 +33,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 
 ### Claude Code telemetry (local)
 
-- `docker compose -f environment/otel/docker-compose.yml up -d` — start the receiver. Grafana is at `http://localhost:3000`; OTLP/HTTP is `localhost:4318`.
+- `docker compose -f environment/otel/docker-compose.yml up -d` — start the receiver. Grafana is at `http://localhost:13000`; OTLP/HTTP is `localhost:4318`.
 - Claude Code exports metrics and events there through the `OTEL_*` entries in the `env` block of `ai-agents/settings/claude/settings.json`. They apply only from user settings (deployed by `mise run settings-copy`), not from the repository's `.claude/settings.json`, and take effect on the next Claude Code start.
 - Dashboards are the JSON files in `environment/otel/dashboards/`; Grafana reloads them automatically.
 

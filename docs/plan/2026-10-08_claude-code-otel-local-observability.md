@@ -58,7 +58,7 @@ Claude Code 本体の OpenTelemetry (OTel) 出力を有効化し、まずはロ�
 `environment/otel/docker-compose.yml` を新設（既存 compose とは分離）。
 
 - image: `grafana/otel-lgtm` をバージョンタグで固定
-- ports: `127.0.0.1:3000:3000`（Grafana）、`127.0.0.1:4317:4317`、`127.0.0.1:4318:4318`。LAN に公開しない（ツール詳細が入るため）
+- ports: `127.0.0.1:13000:3000`（Grafana）、`127.0.0.1:4317:4317`、`127.0.0.1:4318:4318`。LAN に公開しない（ツール詳細が入るため）。Grafana のホスト側は、Next や Rails など定番の開発サーバが使う 3000 を避けて 13000 にする（コンテナ側は 3000 のまま）
 - 永続化: `${HOME}/.local/state/claude-otel-lgtm:/data`（既存 compose の bind mount 流儀、permission-ledger の `~/.local/state/` 規約に合わせる）
 - `restart: unless-stopped`
 
@@ -126,7 +126,7 @@ PromQL / LogQL の実際のメトリクス名・ラベル名（`.` → `_`、単
 ## Validation
 
 1. スモークテスト（バックエンド不要）: `CLAUDE_CODE_ENABLE_TELEMETRY=1 OTEL_METRICS_EXPORTER=console OTEL_LOGS_EXPORTER=console OTEL_METRIC_EXPORT_INTERVAL=1000 claude -p "hi"` でメトリクスと events が標準出力に出る。`DISABLE_TELEMETRY=1` 下でも出ることを確認。
-2. 受信確認: `docker compose -f environment/otel/docker-compose.yml up -d` 後、`curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:4318/v1/metrics` が応答する。Grafana (`http://localhost:3000`) が開き、追加 provider のダッシュボードフォルダが見える。
+2. 受信確認: `docker compose -f environment/otel/docker-compose.yml up -d` 後、`curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:4318/v1/metrics` が応答する。Grafana (`http://localhost:13000`) が開き、追加 provider のダッシュボードフォルダが見える。
 3. エンドツーエンド: settings 反映・再起動後、Skill と subagent を使うセッションを実行し、Prometheus に `claude_code_session_count` 系、Loki に `skill_activated` と `subagent_completed` が出る。`claude --debug-file <path>` で `[3P telemetry]` エラーが無いことも見る。
 4. 値の突き合わせ: 同じ日のモデル別トークン合計と `scripts/agent-stats` の出力を比較する。サブエージェントの `duration_ms` を transcript のタイムスタンプと 1 件照合する。
 5. 障害時挙動: コンテナ停止中に `claude -p "hi"` が詰まらず終了する。
@@ -134,7 +134,6 @@ PromQL / LogQL の実際のメトリクス名・ラベル名（`.` → `_`、単
 
 ## Open questions
 
-- Grafana のホスト側ポート 3000 は他の開発サーバと衝突しないか（衝突するなら変更）。
 - 1 週間ほど運用した後、traces (beta) を足すか。足す場合は `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1` と `OTEL_TRACES_EXPORTER=otlp` を追加するだけ。
 - プロンプト本文 (`OTEL_LOG_USER_PROMPTS`) を取るか。プロンプトの書き方の改善には有用だが、業務内容が入るため当面は取らない。
 - permission-ledger の承認／拒否集計を `tool_decision` で置き換えられるか（本計画のスコープ外、運用後に評価）。
