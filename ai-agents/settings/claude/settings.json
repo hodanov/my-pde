@@ -2,7 +2,18 @@
   "agentPushNotifEnabled": true,
   "model": "claude-opus-5-5[1m]",
   "env": {
-    "SKILL_OBSERVE_HOME": "~/workspace/my-pde"
+    "SKILL_OBSERVE_HOME": "~/workspace/my-pde",
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318",
+    "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "cumulative",
+    "OTEL_METRIC_EXPORT_INTERVAL": "15000",
+    "OTEL_LOG_TOOL_DETAILS": "1",
+    "OTEL_METRICS_INCLUDE_REPOSITORY": "true",
+    "OTEL_METRICS_INCLUDE_ENTRYPOINT": "true",
+    "OTEL_METRICS_INCLUDE_VERSION": "true"
   },
   "permissions": {
     "defaultMode": "acceptEdits",

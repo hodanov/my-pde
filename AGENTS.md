@@ -6,6 +6,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 ## Project Structure
 
 - `environment/`: Docker image and toolchain pins.
+  - `environment/otel/`: local Grafana LGTM stack (compose, dashboard provisioning) that receives Claude Code's OpenTelemetry export.
 - `nvim/`: Neovim configuration (`init.lua` + modular Lua).
 - `scripts/`: Go apps, one module per directory (`agent-stats`, `ai-bridge`, `config-diff`, `nvim-sync`, `pipeline-metrics`, `scaffold`). Each has its own `README.md`.
   - `scripts/ai-bridge/`: Go daemon bridging Neovim to host-side AI CLIs. See `scripts/ai-bridge/AGENTS.md`.
@@ -29,6 +30,12 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
 - `docker compose -f environment/docker/docker-compose.yml up -d` — build and start.
 - `docker container exec -it nvim-dev bash --login` — enter the container.
 - Both `mise run docker:build` and the compose service use the image tag `my-pde-nvim:dev`, so an image built by the former is what `up -d` starts.
+
+### Claude Code telemetry (local)
+
+- `docker compose -f environment/otel/docker-compose.yml up -d` — start the receiver. Grafana is at `http://localhost:13000`; OTLP/HTTP is `localhost:4318`.
+- Claude Code exports metrics and events there through the `OTEL_*` entries in the `env` block of `ai-agents/settings/claude/settings.json`. They apply only from user settings (deployed by `mise run settings-copy`), not from the repository's `.claude/settings.json`, and take effect on the next Claude Code start.
+- Dashboards are the JSON files in `environment/otel/dashboards/`; Grafana reloads them automatically.
 
 ### Task runner (mise)
 
