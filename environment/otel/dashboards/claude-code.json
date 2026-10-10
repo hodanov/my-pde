@@ -2474,7 +2474,7 @@
       "id": 19,
       "type": "stat",
       "title": "アクティブ時間 (人 / Claude)",
-      "description": "active_time。user は人の入力、cli は Claude の処理。",
+      "description": "active_time。人は入力（type=user）、Claude は処理（type=cli）。",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2491,11 +2491,22 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (type) (max_over_time(claude_code_active_time_seconds_total[$__range]))",
+          "expr": "sum (max_over_time(claude_code_active_time_seconds_total{type=\"user\"}[$__range]))",
           "refId": "A",
           "instant": true,
           "range": false,
-          "legendFormat": "{{type}}"
+          "legendFormat": "人"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (max_over_time(claude_code_active_time_seconds_total{type=\"cli\"}[$__range]))",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Claude"
         }
       ],
       "fieldConfig": {
