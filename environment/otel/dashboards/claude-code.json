@@ -1079,6 +1079,15 @@
           "expr": "sum by (hook_name) (sum_over_time({service_name=\"claude-code\"} | event_name=\"hook_execution_complete\" | unwrap total_duration_ms [$__range]))",
           "refId": "C",
           "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "quantile_over_time(0.95, {service_name=\"claude-code\"} | event_name=\"hook_execution_complete\" | unwrap total_duration_ms [$__range]) by (hook_name)",
+          "refId": "D",
+          "queryType": "instant"
         }
       ],
       "fieldConfig": {
@@ -1190,6 +1199,40 @@
                 "value": "0"
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
           }
         ]
       },
@@ -1215,7 +1258,13 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "names": ["hook_name", "Value #A", "Value #B", "Value #C"]
+              "names": [
+                "hook_name",
+                "Value #A",
+                "Value #B",
+                "Value #C",
+                "Value #D"
+              ]
             }
           }
         },
@@ -1226,13 +1275,15 @@
               "hook_name": "hook",
               "Value #A": "実行回数",
               "Value #B": "平均",
-              "Value #C": "合計"
+              "Value #C": "合計",
+              "Value #D": "p95"
             },
             "indexByName": {
               "hook_name": 0,
               "Value #A": 1,
               "Value #B": 2,
-              "Value #C": 3
+              "Value #C": 3,
+              "Value #D": 4
             }
           }
         }
@@ -1241,7 +1292,7 @@
     {
       "id": 13,
       "type": "table",
-      "title": "API リクエスト数・レイテンシ (モデル別)",
+      "title": "API リクエスト数・レイテンシ・TTFT (モデル別)",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -1278,6 +1329,24 @@
           },
           "expr": "quantile_over_time(0.95, {service_name=\"claude-code\"} | event_name=\"api_request\" | unwrap duration_ms [$__range]) by (model)",
           "refId": "C",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "quantile_over_time(0.5, {service_name=\"claude-code\"} | event_name=\"api_request\" | unwrap ttft_ms [$__range]) by (model)",
+          "refId": "D",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "quantile_over_time(0.95, {service_name=\"claude-code\"} | event_name=\"api_request\" | unwrap ttft_ms [$__range]) by (model)",
+          "refId": "E",
           "queryType": "instant"
         }
       ],
@@ -1390,6 +1459,74 @@
                 "value": "0"
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TTFT p50"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TTFT p95"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
           }
         ]
       },
@@ -1415,7 +1552,14 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "names": ["model", "Value #A", "Value #B", "Value #C"]
+              "names": [
+                "model",
+                "Value #A",
+                "Value #B",
+                "Value #C",
+                "Value #D",
+                "Value #E"
+              ]
             }
           }
         },
@@ -1426,17 +1570,1190 @@
               "model": "モデル",
               "Value #A": "リクエスト数",
               "Value #B": "p50",
-              "Value #C": "p95"
+              "Value #C": "p95",
+              "Value #D": "TTFT p50",
+              "Value #E": "TTFT p95"
             },
             "indexByName": {
               "model": 0,
               "Value #A": 1,
               "Value #B": 2,
-              "Value #C": 3
+              "Value #C": 3,
+              "Value #D": 4,
+              "Value #E": 5
             }
           }
         }
       ]
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "セッション一覧",
+      "description": "プロンプトのあったセッション。session_id をクリックすると、そのセッションの時間範囲で Claude Code Session を開く。",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "min_over_time({service_name=\"claude-code\"} | prompt_id!=\"\" | label_format ts_ms=`{{ __timestamp__ | unixEpochMillis }}` | unwrap ts_ms [$__range]) by (session_id)",
+          "refId": "A",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "max_over_time({service_name=\"claude-code\"} | prompt_id!=\"\" | label_format ts_ms=`{{ __timestamp__ | unixEpochMillis }}` | unwrap ts_ms [$__range]) by (session_id)",
+          "refId": "B",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "max_over_time({service_name=\"claude-code\"} | prompt_id!=\"\" | label_format ts_ms=`{{ __timestamp__ | unixEpochMillis }}` | unwrap ts_ms [$__range]) by (session_id) - min_over_time({service_name=\"claude-code\"} | prompt_id!=\"\" | label_format ts_ms=`{{ __timestamp__ | unixEpochMillis }}` | unwrap ts_ms [$__range]) by (session_id)",
+          "refId": "C",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (session_id, vcs_repository_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"user_prompt\" [$__range]))",
+          "refId": "D",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (session_id) (sum_over_time({service_name=\"claude-code\"} | event_name=\"api_request\" | unwrap cost_usd [$__range]))",
+          "refId": "E",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (session_id, skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range]))",
+          "refId": "F",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "minWidth": 90
+          },
+          "fieldMinMax": true
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "session_id"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "セッションの詳細",
+                    "url": "/d/claude-code-session?var-session=${__value.raw}&from=${__data.fields[\"開始\"].numeric}&to=${__data.fields[\"終了\"].numeric}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "開始"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "終了"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "repo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "壁時計"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "プロンプト数"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "コスト"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "開始",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "groupBy",
+          "filter": {
+            "id": "byRefId",
+            "options": "F"
+          },
+          "options": {
+            "fields": {
+              "session_id": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "skill_name": {
+                "aggregations": ["uniqueValues"],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "session_id",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "session_id",
+                "vcs_repository_name",
+                "skill_name (uniqueValues)",
+                "Value #A",
+                "Value #B",
+                "Value #C",
+                "Value #D",
+                "Value #E"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "vcs_repository_name": "repo",
+              "skill_name (uniqueValues)": "Skill",
+              "Value #A": "開始",
+              "Value #B": "終了",
+              "Value #C": "壁時計",
+              "Value #D": "プロンプト数",
+              "Value #E": "コスト"
+            },
+            "indexByName": {}
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "開始": 0,
+              "終了": 1,
+              "repo": 2,
+              "壁時計": 3,
+              "プロンプト数": 4,
+              "コスト": 5,
+              "Skill": 6,
+              "session_id": 7
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "table",
+      "title": "Skill 品質",
+      "description": "Skill を同じ物差しで比べる。自動起動率は claude-proactive の割合で、低い Skill は description のトリガー語を見直す候補。コストと API 時間は api_request の skill_name で数える。ツール呼び出し・失敗率・権限プロンプトは、Skill が起動したプロンプト全体で数える近似（起動前の呼び出しも含む）。権限プロンプトはユーザーが判断した tool_decision（source が user_*）。",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range]))",
+          "refId": "A",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "(sum by (skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" | invocation_trigger=\"claude-proactive\" [$__range])) or sum by (skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range])) * 0) / sum by (skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range]))",
+          "refId": "B",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (skill_name) (sum_over_time({service_name=\"claude-code\"} | event_name=\"api_request\" | skill_name!=\"\" | unwrap cost_usd [$__range])) / sum by (skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range]))",
+          "refId": "C",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (skill_name) (sum_over_time({service_name=\"claude-code\"} | event_name=\"api_request\" | skill_name!=\"\" | unwrap duration_ms [$__range])) / sum by (skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range]))",
+          "refId": "D",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (skill_name) ((sum by (prompt_id, skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range])) > bool 0) * on (prompt_id) group_left sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name=\"tool_result\" [$__range]))) / sum by (skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range]))",
+          "refId": "E",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (skill_name) ((sum by (prompt_id, skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range])) > bool 0) * on (prompt_id) group_left sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name=\"tool_result\" | success=\"false\" [$__range]))) / sum by (skill_name) ((sum by (prompt_id, skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range])) > bool 0) * on (prompt_id) group_left sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name=\"tool_result\" [$__range])))",
+          "refId": "F",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (skill_name) ((sum by (prompt_id, skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [$__range])) > bool 0) * on (prompt_id) group_left sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name=\"tool_decision\" | source=~\"user_.*\" [$__range])))",
+          "refId": "G",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          },
+          "fieldMinMax": true
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "起動回数"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "自動起動率"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "コスト / 起動"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "API 時間 / 起動"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ツール / 起動"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ツール失敗率"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "権限プロンプト"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Skill"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "起動回数",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "skill_name",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "skill_name",
+                "Value #A",
+                "Value #B",
+                "Value #C",
+                "Value #D",
+                "Value #E",
+                "Value #F",
+                "Value #G"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "skill_name": "Skill",
+              "Value #A": "起動回数",
+              "Value #B": "自動起動率",
+              "Value #C": "コスト / 起動",
+              "Value #D": "API 時間 / 起動",
+              "Value #E": "ツール / 起動",
+              "Value #F": "ツール失敗率",
+              "Value #G": "権限プロンプト"
+            },
+            "indexByName": {
+              "skill_name": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4,
+              "Value #E": 5,
+              "Value #F": 6,
+              "Value #G": 7
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Skill 別 1 起動あたりコスト (直近 1 日)",
+      "description": "SKILL.md を変えた日の前後で、1 起動あたりのコストが動いたかを見る。",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 12,
+        "h": 8
+      },
+      "interval": "6h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (skill_name) (sum_over_time({service_name=\"claude-code\"} | event_name=\"api_request\" | skill_name!=\"\" | unwrap cost_usd [1d])) / sum by (skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [1d]))",
+          "refId": "A",
+          "queryType": "range",
+          "legendFormat": "{{skill_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "line",
+            "pointSize": 6,
+            "showPoints": "always",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": ["mean", "lastNotNull"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Skill 別 ツール失敗率 (直近 1 日)",
+      "description": "Skill が起動したプロンプト内のツール失敗率。手順の修正で下がったかを見る。",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 56,
+        "w": 12,
+        "h": 8
+      },
+      "interval": "6h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (skill_name) ((sum by (prompt_id, skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [1d])) > bool 0) * on (prompt_id) group_left sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name=\"tool_result\" | success=\"false\" [1d]))) / sum by (skill_name) ((sum by (prompt_id, skill_name) (count_over_time({service_name=\"claude-code\"} | event_name=\"skill_activated\" [1d])) > bool 0) * on (prompt_id) group_left sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name=\"tool_result\" [1d])))",
+          "refId": "A",
+          "queryType": "range",
+          "legendFormat": "{{skill_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "pointSize": 6,
+            "showPoints": "always",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": ["mean", "lastNotNull"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "hook 時間の割合",
+      "description": "hook の累積時間 / セッションの壁時計時間の合計。毎ターン走る hook の固定費を見る。",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(sum_over_time({service_name=\"claude-code\"} | event_name=\"hook_execution_complete\" | unwrap total_duration_ms [$__range])) / sum(max_over_time({service_name=\"claude-code\"} | label_format ts_ms=`{{ __timestamp__ | unixEpochMillis }}` | unwrap ts_ms [$__range]) by (session_id) - min_over_time({service_name=\"claude-code\"} | label_format ts_ms=`{{ __timestamp__ | unixEpochMillis }}` | unwrap ts_ms [$__range]) by (session_id))",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "0",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "none"
+      }
+    },
+    {
+      "id": 19,
+      "type": "stat",
+      "title": "アクティブ時間 (人 / Claude)",
+      "description": "active_time。user は人の入力、cli は Claude の処理。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 64,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (type) (max_over_time(claude_code_active_time_seconds_total[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none"
+      }
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "commit / PR",
+      "description": "Claude Code が作った commit と PR の数。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 64,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(sum (max_over_time(claude_code_commit_count_total[$__range])), \"kind\", \"commit\", \"\", \"\") or label_replace(sum (max_over_time(claude_code_pull_request_count_total[$__range])), \"kind\", \"PR\", \"\", \"\")",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none"
+      }
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "PR 1 本あたりコスト",
+      "description": "期間内のコスト合計 / PR 数。PR を作らない作業のコストも含む。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 64,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (max_over_time(claude_code_cost_usage_USD_total[$__range])) / sum (max_over_time(claude_code_pull_request_count_total[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "USD / PR"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "noValue": "0",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "none"
+      }
+    },
+    {
+      "id": 22,
+      "type": "table",
+      "title": "権限プロンプト (ツール別)",
+      "description": "ユーザーが判断した tool_decision（source が user_*）。多いツールは allowlist 追加の候補。",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 68,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (tool_name, decision) (count_over_time({service_name=\"claude-code\"} | event_name=\"tool_decision\" | source=~\"user_.*\" [$__range]))",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          },
+          "fieldMinMax": true
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "回数"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "回数",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": ["tool_name", "decision", "Value #A"]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "tool_name": "ツール",
+              "decision": "判断",
+              "Value #A": "回数"
+            },
+            "indexByName": {
+              "tool_name": 0,
+              "decision": 1,
+              "Value #A": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "cache 書き込み / 読み込みトークン",
+      "description": "cacheCreation が跳ねた区間は、cache が切れて読み直している。/compact や長い放置の後に出やすい。",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 68,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "legendFormat": "{{type}}",
+          "expr": "sum by (type) (increase(claude_code_token_usage_tokens_total{type=~\"cacheCreation|cacheRead\"}[$__rate_interval]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     }
   ]
 }
