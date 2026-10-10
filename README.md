@@ -8,13 +8,13 @@ My Personal Development Environment (PDE) built around Neovim on Docker, with AI
 
 This repository manages the entire PDE in a single monorepo:
 
-| Directory            | Description                                                                     |
-| -------------------- | ------------------------------------------------------------------------------- |
-| `nvim/`              | Neovim configuration (init.lua, plugins, LSP)                                   |
-| `environment/`       | Docker environment (Dockerfile, docker-compose, tool versions)                  |
-| `scripts/ai-bridge/` | AI Bridge daemon (Go) — connects Neovim to host-side AI CLIs                    |
-| `ai-agents/`         | AI agent definitions, skills, and settings for Claude Code / Codex CLI / Cursor |
-| `docs/`              | Plans, architecture decision records, and work logs                             |
+| Directory            | Description                                                            |
+| -------------------- | ---------------------------------------------------------------------- |
+| `nvim/`              | Neovim configuration (init.lua, plugins, LSP)                          |
+| `environment/`       | Docker environment (Dockerfile, docker-compose, tool versions)         |
+| `scripts/ai-bridge/` | AI Bridge daemon (Go) — connects Neovim to host-side AI CLIs           |
+| `ai-agents/`         | AI agent definitions, skills, and settings for Claude Code / Codex CLI |
+| `docs/`              | Plans, architecture decision records, and work logs                    |
 
 ## Getting Started
 
@@ -82,11 +82,11 @@ Neovim (Docker container) from selected code to host-side AI CLI (Claude Code, C
 
 ## AI Agents
 
-Agent definitions, skills, and settings for Claude Code, Codex CLI, and Cursor are managed under `ai-agents/`. Deployment is done via mise tasks (run at the repo root):
+Agent definitions, skills, and settings for Claude Code and Codex CLI are managed under `ai-agents/`. Deployment is done via mise tasks (run at the repo root):
 
 ```sh
 mise run claude-link      # Symlink agents.xml -> ~/.claude/CLAUDE.md
-mise run skills-copy      # Copy skills to ~/.claude/, ~/.codex/, ~/.cursor/
+mise run skills-copy      # Copy skills to ~/.claude/, ~/.codex/
 mise run agents-copy      # Copy agent definitions
 mise run settings-copy    # Copy settings and hooks
 ```

@@ -6,7 +6,7 @@ usage() {
 Usage:
   convert_agent_to_codex.sh [OPTIONS] FILE [FILE ...]
 
-Convert Claude/Cursor agent markdown files to Codex CLI TOML format.
+Convert Claude agent markdown files to Codex CLI TOML format.
 
 Options:
   --reasoning-effort <low|medium|high>  Model reasoning effort (default: medium)
@@ -209,17 +209,17 @@ for input_file in "${files[@]}"; do
 
 	# Build comment block
 	comments="# ${name}: ${short_desc}"$'\n'
-	comments+="# Claude/Cursor equivalent: agents/${source_basename}"
+	comments+="# Claude equivalent: agents/${source_basename}"
 
 	if [[ -n "$memory" ]]; then
-		comments+=$'\n'"# Note: Claude/Cursor version has memory=${memory} for cross-session learning."
+		comments+=$'\n'"# Note: Claude version has memory=${memory} for cross-session learning."
 		comments+=$'\n'"# Codex CLI does not support agent-level memory, so memory instructions are omitted."
 	fi
 	if [[ -n "$max_turns" ]]; then
-		comments+=$'\n'"# Note: Claude/Cursor version has maxTurns=${max_turns}. Codex CLI does not support this."
+		comments+=$'\n'"# Note: Claude version has maxTurns=${max_turns}. Codex CLI does not support this."
 	fi
 	if [[ -n "$background" ]]; then
-		comments+=$'\n'"# Note: Claude/Cursor version has background=${background}. Codex CLI does not support this."
+		comments+=$'\n'"# Note: Claude version has background=${background}. Codex CLI does not support this."
 	fi
 
 	# Escape triple quotes in body

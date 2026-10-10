@@ -1,22 +1,21 @@
 ---
 name: hook-scaffold
 description: >-
-  新しいフックの雛形（スクリプト + 各 CLI の配線）を本リポジトリの規約どおりに生成する。
-  イベント選定（PreToolUse / PostToolUse / Stop / SessionStart 等）とブロッキング可否、
-  claude / cursor / copilot のどこまで配線するかを対話的に決め、
+  新しいフックの雛形（スクリプト + 配線）を本リポジトリの規約どおりに生成する。
+  イベント選定（PreToolUse / PostToolUse / Stop / SessionStart 等）とブロッキング可否を対話的に決め、
   ai-agents/hooks/ か ai-agents/settings/<cli>/hooks/ への配置と、hooks.json / settings.json への配線まで行う。
   新しいフックを追加したいときに `/hook-scaffold <フック名> [用途の一言]` で呼び出す。
 disable-model-invocation: true
 argument-hint: "<フック名> [用途の一言]"
 metadata:
-  version: 4
+  version: 5
 ---
 
 # /hook-scaffold スキル
 
 ## Goal
 
-新規フックの追加を、スクリプト雛形の生成から 3 CLI（claude / cursor / copilot）分の配線・検証まで、
+新規フックの追加を、スクリプト雛形の生成から配線・検証まで、
 本リポジトリの規約どおりに一貫した手順で完了させる。
 
 ## Workflow
@@ -71,14 +70,9 @@ report-only（報告のみで止めない）で足りるなら、`exit 0` + stde
 
 サイドカー（設定ファイル等）を読むなら `$HOME` の絶対パスではなく `SCRIPT_DIR` 基準にする。plugin として動くときに `$HOME/.claude/hooks/` は存在しない。
 
-### Step 4: 3 CLI 展開の要否判断
+### Step 4: 配線先の確認
 
-**既定は claude のみ**。以下の基準で横展開を判断する。
-
-- **展開する**: `PostToolUse`（Write/Edit）相当のファイル編集フック。cursor の `afterFileEdit`、copilot の `postToolUse` に同じ意味で載る（既存 formatter 6 本がこの形）。
-- **展開しない**: `Stop` / `SessionStart` / `WorktreeCreate` / macOS 通知など Claude 固有機構に依存するもの。既存の `lint-changed` / `guard-dangerous-bash` / `toolchain-doctor` / `notify-macos` は claude 専用。
-- **展開しない（他 CLI 側の機能不足）**: `UserPromptSubmit` のコンテキスト注入。cursor の `beforeSubmitPrompt` は allow/deny のみで注入できず、copilot の `userPromptSubmitted` は `additionalContext` を無視する（プロンプト本文を差し替える `modifiedPrompt` しかない）。`git-state` は claude 専用。
-- cursor CLI（cursor-agent）は定義しても一部イベントしか実際に飛ばさないという報告がある。迷ったら claude だけに配線し、必要になってから広げる。
+配線先は claude のみ。cursor / copilot の設定は廃止済み（ADR-0009）で、codex への hook 配線は持たない。
 
 ### Step 5: スクリプト生成
 
@@ -109,36 +103,21 @@ if ! COMMAND "$FILE_PATH" 2>&1; then
 fi
 ```
 
-Step 4 で cursor / copilot にも展開する場合は、同じスクリプトを両ディレクトリにも置き、
-**ファイルパス抽出の 1 行だけ** `get_file_path.py` 経由に差し替える（これが CLI 間の唯一の差分）:
-
-```bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INPUT=$(cat)
-
-FILE_PATH=$(printf '%s' "$INPUT" | python3 "$SCRIPT_DIR/get_file_path.py")
-```
-
 ### Step 6: 配線
 
-選んだ CLI ごとに配線する。JSON は既存エントリの末尾に追記する形にし、並び順の慣習（formatter は既存の並びに続ける）に従う。
+JSON は既存エントリの末尾に追記する形にし、並び順の慣習（formatter は既存の並びに続ける）に従う。
 
 - **claude（`HOOK_ROOT` が `ai-agents/hooks`）**: `ai-agents/hooks/hooks.json` の `hooks.<Event>` に
   `{"type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/HOOK_NAME.sh\""}` を追記する。
   `PostToolUse` なら既存の `matcher: "Write|Edit|MultiEdit"` グループの `hooks` 配列に足す（新しいグループを作らない）。
 - **claude（`HOOK_ROOT` が `ai-agents/settings/claude/hooks`）**: `ai-agents/settings/claude/settings.json` の
   `hooks.<Event>` に `{"type": "command", "command": "~/.claude/hooks/HOOK_NAME.sh"}` を追記する。
-- **cursor**: `ai-agents/settings/cursor/hooks.json` の `hooks.afterFileEdit` に
-  `{"command": "~/.cursor/hooks/HOOK_NAME.sh"}` を追記する（`type` は不要）。
-- **copilot**: `ai-agents/settings/copilot/hooks/hooks.json` の `hooks.postToolUse` に
-  `{"type": "command", "bash": "~/.copilot/hooks/HOOK_NAME.sh", "timeoutSec": 10}` を追記する
-  （キーは `command` ではなく **`bash`**、`timeoutSec` は必須）。
 
 編集後、触った JSON すべてを `jq . <file>` にかけてパースできることを必ず確認する。
 
 ### Step 7: 配布経路の確認
 
-`mise.toml` の `claude-settings-copy` / `cursor-settings-copy` / `copilot-hooks-copy` は
+`mise.toml` の `claude-settings-copy` は
 `ai-agents/scripts/copy-entries.sh` でディレクトリ単位に配るため、
 **既存ディレクトリにファイルを 1 本足すだけなら mise / `copy-entries.sh` の変更は不要**。
 新しいディレクトリ階層を導入する場合のみタスク追加を検討する。この前提自体を毎回確認する。
@@ -155,7 +134,7 @@ report-only か冪等かを設計する。
 2. `shfmt -d <script>` と `shellcheck <script>`（`mise run lint:shell` で一括でも可）
 3. `jq .` で配線先 JSON がパースできること
 4. サンプル入力での単体実行: `echo '{"tool_input":{"file_path":"/tmp/x.sh"}}' | ./HOOK_NAME.sh`
-5. デプロイは自動実行せず、`mise run settings-copy` で 3 CLI へ配布される旨を案内する
+5. デプロイは自動実行せず、`mise run settings-copy` で配布される旨を案内する
 6. 発火確認は `claude --debug` 等で行う旨を案内する
 
 ## Notes
@@ -163,7 +142,7 @@ report-only か冪等かを設計する。
 - **既存スクリプトの上書き防止が最重要**。Step 2 の非存在確認を必ず先に行い、衝突時は作成せず中断する。
 - **イベント一覧や JSON スキーマを SKILL.md に転記しない**。Claude Code のフック仕様は変化が速いため、
   本文には「このリポジトリ固有の配線規約」だけを書き、詳細は <https://code.claude.com/docs/en/hooks> を参照させる。
-- **既定は claude 専用**。3 CLI への横展開はファイル編集系フックに限る保守的な運用にする（Step 4）。
+- **配線先は claude のみ**（Step 4）。
 - Step 6 の JSON 編集を誤ると設定全体が読めなくなるため、`jq` での妥当性確認を飛ばさない。
 - 誤爆でフックが生成されるのを防ぐため `disable-model-invocation: true` を付けている。明示呼び出し専用。
 - 本スキルは「新規フックの立ち上げ」専任。既存フック定義の静的検査は `agents-lint` 系の役割で、そちらには踏み込まない。

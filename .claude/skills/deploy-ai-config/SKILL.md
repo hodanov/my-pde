@@ -1,8 +1,8 @@
 ---
 name: deploy-ai-config
-description: ai-agents/ と dotfiles/ の編集内容を各 AI CLI（~/.claude, ~/.cursor, ~/.codex, ~/.copilot）と ~/.config へ反映するデプロイ手順。「設定を反映」「デプロイ」「~/.claude に配って」「スキル/エージェント/設定を更新したから配布」等を求められたときに使用する。
+description: ai-agents/ と dotfiles/ の編集内容を各 AI CLI（~/.claude, ~/.codex）と ~/.config へ反映するデプロイ手順。「設定を反映」「デプロイ」「~/.claude に配って」「スキル/エージェント/設定を更新したから配布」等を求められたときに使用する。
 metadata:
-  version: 3
+  version: 4
 ---
 
 # Deploy AI config
@@ -13,15 +13,15 @@ metadata:
 
 ## 何をどのタスクで配るか
 
-| 編集した場所                                         | 反映タスク                                                 | 配布先                                       |
-| ---------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------- |
-| `ai-agents/agents.xml`                               | `mise run claude-link`（Cursor/Codex/Copilot は `*-link`） | `~/.claude/CLAUDE.md`（symlink）             |
-| `ai-agents/skills/**`                                | `mise run skills-copy`                                     | 各 CLI の `skills/`（全 CLI 一括）           |
-| `ai-agents/personal/skills/**`                       | `mise run skills-copy`                                     | 各 CLI の `skills/`（汎用と同じ配布先）      |
-| `ai-agents/agents/**`                                | `mise run agents-copy`                                     | 各 CLI の `agents/`（Claude/Cursor/Copilot） |
-| `ai-agents/settings/**`（hooks/rules/settings.json） | `mise run settings-copy`                                   | 各 CLI のルート（Claude/Cursor/Copilot）     |
-| `ai-agents/hooks/**`                                 | `mise run settings-copy`                                   | `~/.claude/hooks/`（plugin とも二重配布）    |
-| `dotfiles/wezterm/**`                                | `mise run dotfiles-link`                                   | `~/.config/wezterm`（symlink）               |
+| 編集した場所                                         | 反映タスク                                      | 配布先                                    |
+| ---------------------------------------------------- | ----------------------------------------------- | ----------------------------------------- |
+| `ai-agents/agents.xml`                               | `mise run claude-link`（Codex は `codex-link`） | `~/.claude/CLAUDE.md`（symlink）          |
+| `ai-agents/skills/**`                                | `mise run skills-copy`                          | 各 CLI の `skills/`（全 CLI 一括）        |
+| `ai-agents/personal/skills/**`                       | `mise run skills-copy`                          | 各 CLI の `skills/`（汎用と同じ配布先）   |
+| `ai-agents/agents/**`                                | `mise run agents-copy`                          | 各 CLI の `agents/`（Claude）             |
+| `ai-agents/settings/**`（hooks/rules/settings.json） | `mise run settings-copy`                        | 各 CLI のルート（Claude）                 |
+| `ai-agents/hooks/**`                                 | `mise run settings-copy`                        | `~/.claude/hooks/`（plugin とも二重配布） |
+| `dotfiles/wezterm/**`                                | `mise run dotfiles-link`                        | `~/.config/wezterm`（symlink）            |
 
 `*-copy` は実体コピー（編集ごとに再実行が必要、既存エントリは上書き）。`*-link` / `dotfiles-link` は
 symlink（一度貼れば追従）。
