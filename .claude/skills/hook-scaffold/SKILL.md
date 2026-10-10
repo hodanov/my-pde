@@ -8,7 +8,7 @@ description: >-
 disable-model-invocation: true
 argument-hint: "<フック名> [用途の一言]"
 metadata:
-  version: 5
+  version: 6
 ---
 
 # /hook-scaffold スキル
@@ -72,7 +72,13 @@ report-only（報告のみで止めない）で足りるなら、`exit 0` + stde
 
 ### Step 4: 配線先の確認
 
-配線先は claude のみ。cursor / copilot の設定は廃止済み（ADR-0009）で、codex への hook 配線は持たない。
+既定は claude のみ。codex へは次の基準で展開する。cursor / copilot の設定は廃止済み（ADR-0009）。
+
+- **展開する**: `PreToolUse`（matcher `Bash`）の遮断フック。入力が `tool_input.command`、遮断が exit 2 + stderr で claude と同じ契約（既存は `guard-dangerous-bash`）。
+- **展開しない**: `Stop` / `SessionStart` / `WorktreeCreate` / macOS 通知など Claude 固有機構に依存するもの。
+- 上記以外は、Codex 側のイベントと入力形式を公式ドキュメント（<https://developers.openai.com/codex/hooks>）で確認してから決める。
+
+codex 用は `ai-agents/settings/codex/hooks/` に claude 版とは別の自前コピーを置く。判定部が同じでも共有しない（claude 側の仕様変更に引きずられないため）。
 
 ### Step 5: スクリプト生成
 
@@ -112,12 +118,15 @@ JSON は既存エントリの末尾に追記する形にし、並び順の慣習
   `PostToolUse` なら既存の `matcher: "Write|Edit|MultiEdit"` グループの `hooks` 配列に足す（新しいグループを作らない）。
 - **claude（`HOOK_ROOT` が `ai-agents/settings/claude/hooks`）**: `ai-agents/settings/claude/settings.json` の
   `hooks.<Event>` に `{"type": "command", "command": "~/.claude/hooks/HOOK_NAME.sh"}` を追記する。
+- **codex**: `ai-agents/settings/codex/hooks.json` の `hooks.PreToolUse`（`matcher: "^Bash$"`）に
+  `{"type": "command", "command": "bash \"$HOME/.codex/hooks/HOOK_NAME.sh\"", "timeout": 10}` を追記する
+  （`timeout` は秒）。
 
 編集後、触った JSON すべてを `jq . <file>` にかけてパースできることを必ず確認する。
 
 ### Step 7: 配布経路の確認
 
-`mise.toml` の `claude-settings-copy` は
+`mise.toml` の `claude-settings-copy` / `codex-settings-copy` は
 `ai-agents/scripts/copy-entries.sh` でディレクトリ単位に配るため、
 **既存ディレクトリにファイルを 1 本足すだけなら mise / `copy-entries.sh` の変更は不要**。
 新しいディレクトリ階層を導入する場合のみタスク追加を検討する。この前提自体を毎回確認する。
@@ -134,7 +143,7 @@ report-only か冪等かを設計する。
 2. `shfmt -d <script>` と `shellcheck <script>`（`mise run lint:shell` で一括でも可）
 3. `jq .` で配線先 JSON がパースできること
 4. サンプル入力での単体実行: `echo '{"tool_input":{"file_path":"/tmp/x.sh"}}' | ./HOOK_NAME.sh`
-5. デプロイは自動実行せず、`mise run settings-copy` で配布される旨を案内する
+5. デプロイは自動実行せず、`mise run settings-copy` で配布される旨を案内する（codex に配線した場合は、配布後に Codex の `/hooks` で信頼レビューが要る旨も添える）
 6. 発火確認は `claude --debug` 等で行う旨を案内する
 
 ## Notes
@@ -142,7 +151,7 @@ report-only か冪等かを設計する。
 - **既存スクリプトの上書き防止が最重要**。Step 2 の非存在確認を必ず先に行い、衝突時は作成せず中断する。
 - **イベント一覧や JSON スキーマを SKILL.md に転記しない**。Claude Code のフック仕様は変化が速いため、
   本文には「このリポジトリ固有の配線規約」だけを書き、詳細は <https://code.claude.com/docs/en/hooks> を参照させる。
-- **配線先は claude のみ**（Step 4）。
+- **既定は claude 専用**。codex への展開は Step 4 の基準に限る。
 - Step 6 の JSON 編集を誤ると設定全体が読めなくなるため、`jq` での妥当性確認を飛ばさない。
 - 誤爆でフックが生成されるのを防ぐため `disable-model-invocation: true` を付けている。明示呼び出し専用。
 - 本スキルは「新規フックの立ち上げ」専任。既存フック定義の静的検査は `agents-lint` 系の役割で、そちらには踏み込まない。

@@ -2,7 +2,7 @@
 name: deploy-ai-config
 description: ai-agents/ と dotfiles/ の編集内容を各 AI CLI（~/.claude, ~/.codex）と ~/.config へ反映するデプロイ手順。「設定を反映」「デプロイ」「~/.claude に配って」「スキル/エージェント/設定を更新したから配布」等を求められたときに使用する。
 metadata:
-  version: 4
+  version: 5
 ---
 
 # Deploy AI config
@@ -19,7 +19,7 @@ metadata:
 | `ai-agents/skills/**`                                | `mise run skills-copy`                          | 各 CLI の `skills/`（全 CLI 一括）        |
 | `ai-agents/personal/skills/**`                       | `mise run skills-copy`                          | 各 CLI の `skills/`（汎用と同じ配布先）   |
 | `ai-agents/agents/**`                                | `mise run agents-copy`                          | 各 CLI の `agents/`（Claude）             |
-| `ai-agents/settings/**`（hooks/rules/settings.json） | `mise run settings-copy`                        | 各 CLI のルート（Claude）                 |
+| `ai-agents/settings/**`（hooks/rules/settings.json） | `mise run settings-copy`                        | 各 CLI のルート（Claude/Codex）           |
 | `ai-agents/hooks/**`                                 | `mise run settings-copy`                        | `~/.claude/hooks/`（plugin とも二重配布） |
 | `dotfiles/wezterm/**`                                | `mise run dotfiles-link`                        | `~/.config/wezterm`（symlink）            |
 
