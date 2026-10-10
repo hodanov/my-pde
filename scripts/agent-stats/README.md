@@ -131,7 +131,7 @@ mise run permission-audit -- --since 0 --json   # 全期間を JSON で
 - **read-only**: transcript を open して読むだけ。書き込み・変更は一切しない。
 - **寛容パース**: transcript のスキーマは非公式で将来変わり得る。未知フィールドは無視、壊れ行は
   skip し、パーサ（`internal/parser`）に隔離してレポート層へ波及させない。
-- **MVP は Claude Code のみ**: 他 CLI（Cursor / Codex / Copilot）は transcript 形式が異なる
+- **MVP は Claude Code のみ**: 他 CLI（Codex）は transcript 形式が異なる
   ため未対応。出力にその旨を明示する（silent に「全部見た」風にしない）。
 - **プライバシー**: 既定サマリは集計値のみで、プロンプト本文は出さない。
 

@@ -1,5 +1,5 @@
 // Package diff compares the AI CLI configuration sources under ai-agents/ with
-// their deployed copies (~/.claude, ~/.cursor, ~/.codex, ~/.copilot) read-only,
+// their deployed copies (~/.claude, ~/.codex) read-only,
 // classifying each entry as ok, drift or missing.
 //
 // It takes the same (mode, src, dest) contract as ai-agents/scripts/copy-entries.sh

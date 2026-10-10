@@ -8,7 +8,7 @@ description: >-
   implement 以降（テスト戦略 → 検証 → コミット）の規律として適用する。
   新規プロダクト開発と既存プロダクト改修で手順が分岐する。
 metadata:
-  version: 8
+  version: 9
   observe: false
 ---
 
@@ -25,7 +25,7 @@ metadata:
 ## 適用範囲
 
 - explore / plan がハーネス側の仕組み（Claude Code の Plan Mode 等）で既に済んでいる場合、その2フェーズは重複させず、**implement 以降（テスト戦略 → verify → commit）から適用する**。本スキルの中核価値は検証とコミットの規律にある。
-- Plan Mode を持たない CLI（Cursor / Codex / Copilot）では explore から順に全フェーズを適用する。
+- Plan Mode を持たない CLI（Codex）では explore から順に全フェーズを適用する。
 - **フローは「タスク単位」ではなく「変更対象単位」で選ぶ**。1 つのタスクに新規モジュール追加・既存改修・設定/ドキュメントが同居する場合、対象ごとに new product / existing product / テストの無いタスクを使い分けてよい。
 - テスト基盤自体が存在しないプロダクトコードでは、テストフレームワークの新規導入はスコープ判断としてユーザーに委ねる。導入しない場合でも **test_first の精神は移植する**（実装前に「失敗する検証スクリプト」を書き、期待どおりの理由で落ちることを確認してから実装に入る）。
 - 依存/lockfile 更新は本スキルの分岐に当てはまらない。`dependency-update` スキルの領分なので、そちらの手順に寄せる。

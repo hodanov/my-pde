@@ -296,42 +296,6 @@ else
 fi
 '''
 
-[tasks.cursor-link]
-description = "Symlink agents.xml -> ~/.cursor/AGENTS.md"
-run = '''
-ln -sf "{{config_root}}/ai-agents/agents.xml" "$HOME/.cursor/AGENTS.md"
-echo "Linked $HOME/.cursor/AGENTS.md -> {{config_root}}/ai-agents/agents.xml"
-'''
-
-[tasks.cursor-unlink]
-description = "Remove the ~/.cursor/AGENTS.md symlink"
-run = '''
-if [ -L "$HOME/.cursor/AGENTS.md" ]; then
-  rm -f "$HOME/.cursor/AGENTS.md"
-  echo "Removed symlink $HOME/.cursor/AGENTS.md"
-else
-  echo "$HOME/.cursor/AGENTS.md is not a symlink or does not exist."
-fi
-'''
-
-[tasks.copilot-link]
-description = "Symlink agents.xml -> ~/.copilot/copilot-instructions.md"
-run = '''
-ln -sf "{{config_root}}/ai-agents/agents.xml" "$HOME/.copilot/copilot-instructions.md"
-echo "Linked $HOME/.copilot/copilot-instructions.md -> {{config_root}}/ai-agents/agents.xml"
-'''
-
-[tasks.copilot-unlink]
-description = "Remove the ~/.copilot/copilot-instructions.md symlink"
-run = '''
-if [ -L "$HOME/.copilot/copilot-instructions.md" ]; then
-  rm -f "$HOME/.copilot/copilot-instructions.md"
-  echo "Removed symlink $HOME/.copilot/copilot-instructions.md"
-else
-  echo "$HOME/.copilot/copilot-instructions.md is not a symlink or does not exist."
-fi
-'''
-
 # ---- AI agents deploy: skills / agents / settings copy ----
 
 [tasks.codex-skills-copy]
@@ -348,39 +312,17 @@ run = '''
 "{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/personal/skills" "$HOME/.claude/skills"
 '''
 
-[tasks.cursor-skills-copy]
-description = "Copy shared and personal skills to ~/.cursor/skills"
-run = '''
-"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.cursor/skills"
-"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/personal/skills" "$HOME/.cursor/skills"
-'''
-
-[tasks.copilot-skills-copy]
-description = "Copy shared and personal skills to ~/.copilot/skills"
-run = '''
-"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/skills" "$HOME/.copilot/skills"
-"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force skills "{{config_root}}/ai-agents/personal/skills" "$HOME/.copilot/skills"
-'''
-
 [tasks.skills-copy]
 description = "Copy skills to all AI CLIs"
-depends = ["codex-skills-copy", "claude-skills-copy", "cursor-skills-copy", "copilot-skills-copy"]
+depends = ["codex-skills-copy", "claude-skills-copy"]
 
 [tasks.claude-agents-copy]
 description = "Copy agent definitions to ~/.claude/agents"
 run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force agents "{{config_root}}/ai-agents/agents" "$HOME/.claude/agents"'
 
-[tasks.cursor-agents-copy]
-description = "Copy agent definitions to ~/.cursor/agents"
-run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force agents "{{config_root}}/ai-agents/agents" "$HOME/.cursor/agents"'
-
-[tasks.copilot-agents-copy]
-description = "Copy agent definitions to ~/.copilot/agents"
-run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force agents "{{config_root}}/ai-agents/agents" "$HOME/.copilot/agents"'
-
 [tasks.agents-copy]
 description = "Copy agent definitions to all AI CLIs"
-depends = ["claude-agents-copy", "cursor-agents-copy", "copilot-agents-copy"]
+depends = ["claude-agents-copy"]
 
 [tasks.claude-settings-copy]
 description = "Copy settings, machine-local hooks, and plugin hooks to ~/.claude"
@@ -389,17 +331,9 @@ run = '''
 "{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/hooks" "$HOME/.claude/hooks"
 '''
 
-[tasks.cursor-settings-copy]
-description = "Copy settings and hooks to ~/.cursor"
-run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/settings/cursor" "$HOME/.cursor"'
-
-[tasks.copilot-hooks-copy]
-description = "Copy hooks to ~/.copilot/hooks"
-run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/settings/copilot/hooks" "$HOME/.copilot/hooks"'
-
 [tasks.settings-copy]
 description = "Copy settings and hooks to all AI CLIs"
-depends = ["claude-settings-copy", "cursor-settings-copy", "copilot-hooks-copy"]
+depends = ["claude-settings-copy"]
 
 # ---- Dotfiles ----
 

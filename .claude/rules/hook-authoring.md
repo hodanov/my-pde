@@ -25,8 +25,6 @@ Claude hooks live in two roots. Pick by **what the hook depends on**, not by whi
   plugin updates, so never hardcode an installed location.
 - A script sitting in `ai-agents/hooks/` but absent from `hooks.json` is **deliberately dormant**.
   Do not wire one back up without asking.
-- cursor and copilot keep their own copies under `ai-agents/settings/{cursor,copilot}/hooks/`. They differ
-  from the claude version only in how the file path is pulled out of the event JSON (`get_file_path.py`).
 
 ## Distribution
 

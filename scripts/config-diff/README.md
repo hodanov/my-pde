@@ -1,7 +1,7 @@
 # config-diff
 
-リポジトリの `ai-agents/` 内「設定ソース」と、デプロイ先（`~/.claude` / `~/.cursor` /
-`~/.codex` / `~/.copilot`）の実体を **read-only** で比較し、`ok` / `drift`（内容が食い違う）/
+リポジトリの `ai-agents/` 内「設定ソース」と、デプロイ先（`~/.claude` / `~/.codex`）の
+実体を **read-only** で比較し、`ok` / `drift`（内容が食い違う）/
 `missing`（未デプロイ）を集約表示する差分ツール。**一切コピーしない。** `drift` / `missing` が
 あれば非ゼロ終了する。
 
