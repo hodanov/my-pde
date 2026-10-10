@@ -16,7 +16,7 @@
 ## リポジトリ構成（提案の土台。ここを実際に読んで現状を把握する）
 
 - skills: 汎用は `ai-agents/skills/<name>/SKILL.md`、趣味・私生活用は `ai-agents/personal/skills/`、my-pde のパスを書き換えるものは `.claude/skills/`。書式規約と置き場所の判断軸は `.claude/rules/skill-authoring.md` に従う（3 ルートのいずれかを触ると自動で載る）。このルーチンが提案するのは汎用スキルなので既定の置き場所は `ai-agents/skills/`。既存スキルと重複させない。
-- hooks: claude 用は環境非依存なら `ai-agents/hooks/*.sh`（配線は同ディレクトリの `hooks.json`、plugin 経由で配る）、ローカルマシンに依存するなら `ai-agents/settings/claude/hooks/*.sh`（配線は `settings/claude/settings.json`）。置き場所の判断軸は `.claude/rules/hook-authoring.md`。既存 hook と重複させない（実体は各 hooks/ ディレクトリを読んで確認する）。
+- hooks: claude 用は環境非依存なら `ai-agents/hooks/*.sh`（配線は同ディレクトリの `hooks.json`、plugin 経由で配る）、ローカルマシンに依存するなら `ai-agents/settings/claude/hooks/*.sh`（配線は `settings/claude/settings.json`）。codex は `ai-agents/settings/codex/hooks/*.sh`（配線は `settings/codex/hooks.json`）。置き場所の判断軸は `.claude/rules/hook-authoring.md`。既存 hook と重複させない（実体は各 hooks/ ディレクトリを読んで確認する）。
 - デプロイ経路: ルートの `mise.toml` のタスク（`skills-copy` / `agents-copy` / `settings-copy`、実体は `ai-agents/scripts/copy-entries.sh`）が skills/agents/settings を `~/.{codex,claude}` へ配布する。新規 hook は配線と配布経路への影響も考慮する。
 
 ## 今日のタスク

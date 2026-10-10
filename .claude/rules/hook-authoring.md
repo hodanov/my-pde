@@ -25,6 +25,13 @@ Claude hooks live in two roots. Pick by **what the hook depends on**, not by whi
   plugin updates, so never hardcode an installed location.
 - A script sitting in `ai-agents/hooks/` but absent from `hooks.json` is **deliberately dormant**.
   Do not wire one back up without asking.
+- codex keeps its own copy under `ai-agents/settings/codex/hooks/`, wired by `ai-agents/settings/codex/hooks.json`.
+  `mise run codex-settings-copy` deploys the whole `settings/codex/` tree to `~/.codex`, so that
+  `hooks.json` is the sole owner of `~/.codex/hooks.json`. The `PreToolUse(Bash)` contract currently
+  matches claude's (`tool_input.command`, exit 2 blocks), but the copy is deliberate: do not point the
+  codex wiring at `~/.claude/hooks/`.
+- Codex runs a non-managed hook only after it is reviewed and trusted in `/hooks`, and the trust is tied to
+  the hook's hash. Every edit to a deployed script or to `hooks.json` needs a new review.
 
 ## Distribution
 

@@ -331,9 +331,13 @@ run = '''
 "{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/hooks" "$HOME/.claude/hooks"
 '''
 
+[tasks.codex-settings-copy]
+description = "Copy settings and hooks to ~/.codex"
+run = '"{{config_root}}/ai-agents/scripts/copy-entries.sh" --force settings "{{config_root}}/ai-agents/settings/codex" "$HOME/.codex"'
+
 [tasks.settings-copy]
 description = "Copy settings and hooks to all AI CLIs"
-depends = ["claude-settings-copy"]
+depends = ["claude-settings-copy", "codex-settings-copy"]
 
 # ---- Dotfiles ----
 

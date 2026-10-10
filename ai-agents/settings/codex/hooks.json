@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.codex/hooks/guard-dangerous-bash.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
