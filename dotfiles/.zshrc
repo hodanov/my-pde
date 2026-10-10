@@ -87,6 +87,13 @@ export PATH="$PATH:$(go env GOPATH)/bin"
 export PATH="$PATH:/Applications/Docker.app/Contents/Resources/bin/"
 
 ####################
+# cursor cli
+# PATH はこの位置に置く。下の codex 補完キャッシュが $commands で
+# バイナリを引くため、補完初期化より前に通っている必要がある。
+####################
+export PATH="$HOME/.local/bin:$PATH"
+
+####################
 # Load git and docker completion
 ####################
 zstyle ':completion:*:*:git:*' script ~/.zsh/completion/git-completion.bash
@@ -96,6 +103,17 @@ fpath=(~/.zsh/completion $fpath)
 fpath=(/Users/hodanov/.docker/completions $fpath)
 # End of Docker CLI completions
 
+# codex の補完は起動ごとに生成せず、fpath 上のファイルへ落とす。バイナリが
+# 補完ファイルより新しいときだけ再生成する。dump を消すのは、下の compinit に
+# 新しい _codex を読み直させるため。
+() {
+  local cache=~/.zsh/completion/_codex
+  if (( $+commands[codex] )) && [[ ! -s $cache || $commands[codex] -nt $cache ]]; then
+    mkdir -p ${cache:h}
+    codex completion zsh >$cache && rm -f ~/.zcompdump
+  fi
+}
+
 # 補完初期化は1回だけ。セキュリティ監査つきの dump 再生成は「24時間より
 # 古いとき」だけ行い、それ以外はキャッシュ済み dump を -C で読んで監査を省略する。
 autoload -Uz compinit
@@ -104,11 +122,6 @@ if [[ -n ${HOME}/.zcompdump(#qN.mh+24) ]]; then
 else
   compinit -C
 fi
-
-####################
-# cursor cli
-####################
-export PATH="$HOME/.local/bin:$PATH"
 
 ####################
 # curl
@@ -127,8 +140,6 @@ alias al="claude"
 export VISUAL=nvim
 export EDITOR=nvim
 export BLOG_IDEA_DRAFT_EXPORT_DIR="$HOME/workspace/hodalog-hugo/docs/idea"
-# codex
-eval "$(codex completion zsh)"
 
 ####################
 # mise
