@@ -3,6 +3,8 @@ services:
     container_name: claude-otel-lgtm
     image: grafana/otel-lgtm:0.35.0
     restart: unless-stopped
+    environment:
+      LOKI_EXTRA_ARGS: -ingester.wal-disk-full-threshold=0.98
     ports:
       - "127.0.0.1:13000:3000"
       - "127.0.0.1:4317:4317"

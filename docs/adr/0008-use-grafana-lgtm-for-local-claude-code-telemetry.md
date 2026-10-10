@@ -44,6 +44,7 @@ Skill・Agent・モデル・ツール別の利用状況とサブエージェン�
 - Bash コマンドとファイルパスが、`~/.local/state/claude-otel-lgtm` に平文で残る。送り先を SaaS に変える場合は、`OTEL_LOG_TOOL_DETAILS` を落とすかフィルタする設計に見直す。
 - `settings-copy` は `~/.claude/settings.json` を上書き配布するので、OTel の変数もそこで配られる。環境変数は起動時にしか読まれず、反映には Claude Code の再起動が要る。
 - コンテナが止まっていると、エクスポートは失敗するだけでデータは欠ける。欠損を許容する。
+- Loki 3.7 は WAL のあるディスクの使用率が `-ingester.wal-disk-full-threshold`（既定 0.90）を超えると、すべての push を `Ingester is shutting down` で拒否する。`/data` は bind mount なので、判定に使われるのは Mac のホストボリュームの使用率になる。ホストは 90% 前後で推移するため、compose の `LOKI_EXTRA_ARGS` で閾値を 0.98 に上げる。0 にして無効化はせず、本当に満杯になる手前の保護は残す。`otel-lgtm` は Loki のログを捨てるので、拒否されていても `docker logs` には何も出ない。events だけが欠けるときは、Loki の `loki_ingester_wal_disk_usage_percent` を見る。
 - `otel-lgtm` は開発・検証用途向けで、本番運用には向かない。個人のローカル分析に限って採用する。
 
 見直す条件は次の 2 つ。
