@@ -5,7 +5,7 @@
 # them explicitly via --build-arg.
 ####################
 # Base image with common dependencies and Japanese fonts
-FROM ubuntu:26.04 AS base
+FROM ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=Asia/Tokyo
@@ -132,33 +132,71 @@ RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
 # Stage 4: Build Rust-based tools
 FROM base AS rust-builder
 
+ARG RUSTUP_VERSION=1.29.1
 ARG RUST_TOOLCHAIN=stable
 ARG STYLUA_VERSION=2.5.2
+ARG TREE_SITTER_CLI_VERSION=0.27.1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  clang libclang-dev \
-  && curl --proto '=https' --tlsv1.2 --retry 5 --retry-all-errors --retry-delay 2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "$RUST_TOOLCHAIN" \
-  && apt-get clean -y \
-  && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends clang libclang-dev; \
+  ARCH="$(dpkg --print-architecture)"; \
+  case "$ARCH" in \
+    amd64) RUSTUP_TARGET="x86_64-unknown-linux-gnu" ;; \
+    arm64) RUSTUP_TARGET="aarch64-unknown-linux-gnu" ;; \
+    *) echo "Unsupported arch for rustup: $ARCH" >&2; exit 1 ;; \
+  esac; \
+  RUSTUP_URL="https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${RUSTUP_TARGET}/rustup-init"; \
+  TMPDIR="/tmp/rustup"; \
+  mkdir -p "$TMPDIR"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$RUSTUP_URL" -o "$TMPDIR/rustup-init"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "${RUSTUP_URL}.sha256" -o "$TMPDIR/rustup-init.sha256"; \
+  REF_SHA="$(awk '{print $1}' "$TMPDIR/rustup-init.sha256")"; \
+  ACT_SHA="$(sha256sum "$TMPDIR/rustup-init" | awk '{print $1}')"; \
+  [ "$ACT_SHA" = "$REF_SHA" ] || (echo "rustup-init checksum mismatch: expected=$REF_SHA actual=$ACT_SHA" >&2; exit 1); \
+  chmod +x "$TMPDIR/rustup-init"; \
+  "$TMPDIR/rustup-init" -y --default-toolchain "$RUST_TOOLCHAIN"; \
+  rm -rf "$TMPDIR"; \
+  apt-get clean -y; \
+  rm -rf /var/lib/apt/lists/*
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     cargo install stylua --version "$STYLUA_VERSION" --locked \
-    && cargo install tree-sitter-cli
+    && cargo install tree-sitter-cli --version "$TREE_SITTER_CLI_VERSION" --locked
 
 ####################
 # Stage 5: Build Python venv with uv
 FROM base AS python-builder
 
+ARG UV_VERSION=0.13.0
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
-RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv \
-  && curl --retry 5 --retry-all-errors --retry-delay 2 -LsSf https://astral.sh/uv/install.sh | sh \
-  && export PATH="$HOME/.local/bin:$PATH" \
-  && uv --version >/dev/null \
-  && apt-get clean -y \
-  && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends python3 python3-venv; \
+  ARCH="$(dpkg --print-architecture)"; \
+  case "$ARCH" in \
+    amd64) UV_TARGET="x86_64-unknown-linux-gnu" ;; \
+    arm64) UV_TARGET="aarch64-unknown-linux-gnu" ;; \
+    *) echo "Unsupported arch for uv: $ARCH" >&2; exit 1 ;; \
+  esac; \
+  BASE_URL="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}"; \
+  TARBALL="uv-${UV_TARGET}.tar.gz"; \
+  TMPDIR="/tmp/uv"; \
+  mkdir -p "$TMPDIR"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$TARBALL" -o "$TMPDIR/$TARBALL"; \
+  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$TARBALL.sha256" -o "$TMPDIR/$TARBALL.sha256"; \
+  REF_SHA="$(awk '{print $1}' "$TMPDIR/$TARBALL.sha256")"; \
+  ACT_SHA="$(sha256sum "$TMPDIR/$TARBALL" | awk '{print $1}')"; \
+  [ "$ACT_SHA" = "$REF_SHA" ] || (echo "uv tarball checksum mismatch: expected=$REF_SHA actual=$ACT_SHA" >&2; exit 1); \
+  tar -xzf "$TMPDIR/$TARBALL" -C "$TMPDIR"; \
+  install -D -m 0755 -t "$HOME/.local/bin" "$TMPDIR/uv-${UV_TARGET}/uv" "$TMPDIR/uv-${UV_TARGET}/uvx"; \
+  rm -rf "$TMPDIR"; \
+  "$HOME/.local/bin/uv" --version >/dev/null; \
+  apt-get clean -y; \
+  rm -rf /var/lib/apt/lists/*
 
 COPY ./environment/tools/python/pyproject.toml /opt/python/
 WORKDIR /opt/python
