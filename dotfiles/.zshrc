@@ -87,7 +87,7 @@ export PATH="$PATH:$(go env GOPATH)/bin"
 export PATH="$PATH:/Applications/Docker.app/Contents/Resources/bin/"
 
 ####################
-# cursor cli
+# Claude Code
 # PATH はこの位置に置く。下の codex 補完キャッシュが $commands で
 # バイナリを引くため、補完初期化より前に通っている必要がある。
 ####################
