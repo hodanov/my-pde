@@ -69,6 +69,26 @@
         "expr": "{service_name=\"claude-code\"} | session_id=\"$session\" | event_name=\"permission_mode_changed\" | line_format `{{ .from_mode }} -> {{ .to_mode }}`"
       },
       {
+        "name": "サブエージェント起動",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "enable": true,
+        "iconColor": "blue",
+        "expr": "{service_name=\"claude-code\"} | session_id=\"$session\" | event_name=\"tool_decision\" | tool_name=\"Agent\" | line_format `起動: {{ .tool_parameters }}`"
+      },
+      {
+        "name": "サブエージェント完了",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "enable": true,
+        "iconColor": "blue",
+        "expr": "{service_name=\"claude-code\"} | session_id=\"$session\" | event_name=\"subagent_completed\" | line_format `完了: {{ .agent_type }} ({{ .duration_ms }}ms)`"
+      },
+      {
         "name": "Skill",
         "datasource": {
           "type": "loki",
@@ -633,7 +653,7 @@
       "id": 30,
       "type": "table",
       "title": "プロンプト別 ブレークダウン",
-      "description": "1 行 = 1 回のユーザー入力（prompt_id）。累積時間は並列実行を重複して数えるため、壁時計を超えることがある。壁時計と累積の差は、思考・人の入力・承認待ちなど。",
+      "description": "1 行 = 1 回のユーザー入力（prompt_id）。Agent 数・Agent 時間は、その入力から起動したサブエージェントの数と所要時間の合計。累積時間は並列実行を重複して数えるため、壁時計を超えることがある。壁時計と累積の差は、思考・人の入力・承認待ちなど。",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -733,6 +753,24 @@
           },
           "expr": "sum by (prompt_id, skill_name) (count_over_time({service_name=\"claude-code\"} | session_id=\"$session\" | event_name=\"skill_activated\" | prompt_id!=\"\" [$__range]))",
           "refId": "J",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | session_id=\"$session\" | event_name=\"subagent_completed\" | prompt_id!=\"\" [$__range]))",
+          "refId": "K",
+          "queryType": "instant"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (prompt_id) (sum_over_time({service_name=\"claude-code\"} | session_id=\"$session\" | event_name=\"subagent_completed\" | prompt_id!=\"\" | unwrap duration_ms [$__range]))",
+          "refId": "L",
           "queryType": "instant"
         }
       ],
@@ -952,6 +990,74 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Agent 数"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Agent 時間"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "コスト"
             },
             "properties": [
@@ -1089,7 +1195,9 @@
                 "Value #E",
                 "Value #F",
                 "Value #G",
-                "Value #H"
+                "Value #H",
+                "Value #K",
+                "Value #L"
               ]
             }
           }
@@ -1107,7 +1215,9 @@
               "Value #E": "hook 累積",
               "Value #F": "API 回数",
               "Value #G": "ツール失敗",
-              "Value #H": "コスト"
+              "Value #H": "コスト",
+              "Value #K": "Agent 数",
+              "Value #L": "Agent 時間"
             },
             "indexByName": {}
           }
@@ -1125,8 +1235,306 @@
               "hook 累積": 6,
               "API 回数": 7,
               "ツール失敗": 8,
-              "コスト": 9,
-              "prompt_id": 10
+              "Agent 数": 9,
+              "Agent 時間": 10,
+              "コスト": 11,
+              "prompt_id": 12
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "type": "table",
+      "title": "サブエージェント",
+      "description": "1 行 = 1 回の起動（subagent_completed）。開始は完了時刻から所要時間を引いて出す。prompt_id は起動した入力で、上のブレークダウン表の同じ行がその入力のコマンドと Skill。trace をクリックすると、その入力のウォーターフォールを開く（traces が有効なときだけ）。",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (event_timestamp, agent_type, duration_ms, total_tool_uses, total_tokens, is_async, prompt_id, trace_id) (count_over_time({service_name=\"claude-code\"} | session_id=\"$session\" | event_name=\"subagent_completed\" [$__range]))",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          },
+          "fieldMinMax": true
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "開始"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "完了"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "所要"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ツール使用"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "トークン"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trace"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "trace を開く",
+                    "url": "",
+                    "internal": {
+                      "datasourceUid": "tempo",
+                      "datasourceName": "Tempo",
+                      "query": {
+                        "query": "${__value.raw}",
+                        "queryType": "traceql"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "開始",
+            "desc": false
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "event_timestamp",
+                "agent_type",
+                "duration_ms",
+                "total_tool_uses",
+                "total_tokens",
+                "is_async",
+                "prompt_id",
+                "trace_id"
+              ]
+            }
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "event_timestamp",
+                "destinationType": "time"
+              },
+              {
+                "targetField": "duration_ms",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "total_tool_uses",
+                "destinationType": "number"
+              },
+              {
+                "targetField": "total_tokens",
+                "destinationType": "number"
+              }
+            ]
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "alias": "開始",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "event_timestamp"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "duration_ms"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "event_timestamp": "完了",
+              "agent_type": "種類",
+              "duration_ms": "所要",
+              "total_tool_uses": "ツール使用",
+              "total_tokens": "トークン",
+              "is_async": "非同期",
+              "prompt_id": "prompt_id",
+              "trace_id": "trace"
+            },
+            "indexByName": {
+              "開始": 0,
+              "event_timestamp": 1,
+              "agent_type": 2,
+              "duration_ms": 3,
+              "total_tool_uses": 4,
+              "total_tokens": 5,
+              "is_async": 6,
+              "prompt_id": 7,
+              "trace_id": 8
             }
           }
         }
@@ -1142,7 +1550,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 33,
         "w": 8,
         "h": 8
       },
@@ -1342,7 +1750,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 26,
+        "y": 33,
         "w": 8,
         "h": 8
       },
@@ -1497,7 +1905,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 26,
+        "y": 33,
         "w": 8,
         "h": 8
       },
@@ -1698,7 +2106,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 34,
+        "y": 41,
         "w": 6,
         "h": 4
       },
@@ -1742,7 +2150,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 38,
+        "y": 45,
         "w": 6,
         "h": 4
       },
@@ -1805,7 +2213,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 34,
+        "y": 41,
         "w": 18,
         "h": 8
       },
@@ -1852,7 +2260,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 42,
+        "y": 49,
         "w": 24,
         "h": 16
       },
@@ -1862,7 +2270,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{service_name=\"claude-code\"} | session_id=\"$session\" | event_name!~\"hook_registered|plugin_loaded|hook_execution_start|managed_settings_resolved|retention_sweep\" | line_format `{{ trunc 8 .prompt_id | printf \"%-8s\" }}  {{ printf \"%-24s\" .event_name }} {{ if eq .event_name \"api_request\" }}{{ .model }} {{ .query_source }}{{ if .skill_name }} [{{ .skill_name }}]{{ end }}{{ else if eq .event_name \"tool_decision\" }}{{ .tool_name }} {{ .decision }} ({{ .source }}){{ else if eq .event_name \"skill_activated\" }}{{ .skill_name }} ({{ .invocation_trigger }}){{ else if eq .event_name \"permission_mode_changed\" }}{{ .from_mode }} -> {{ .to_mode }} ({{ .trigger }}){{ else }}{{ or .tool_name .hook_name .command_name .server_name .agent_type }}{{ end }}{{ if or .duration_ms .total_duration_ms }}  {{ or .duration_ms .total_duration_ms }}ms{{ end }}{{ if eq .success \"false\" }}  FAILED{{ end }}`",
+          "expr": "{service_name=\"claude-code\"} | session_id=\"$session\" | event_name!~\"hook_registered|plugin_loaded|hook_execution_start|managed_settings_resolved|retention_sweep\" | line_format `{{ trunc 8 .prompt_id | printf \"%-8s\" }}  {{ printf \"%-24s\" .event_name }} {{ if eq .event_name \"api_request\" }}{{ .model }} {{ .query_source }}{{ if .skill_name }} [{{ .skill_name }}]{{ end }}{{ else if eq .event_name \"tool_decision\" }}{{ .tool_name }} {{ .decision }} ({{ .source }}){{ if eq .tool_name \"Agent\" }} {{ .tool_parameters }}{{ end }}{{ else if eq .event_name \"subagent_completed\" }}{{ .agent_type }} tools={{ .total_tool_uses }} tokens={{ .total_tokens }}{{ if eq .is_async \"true\" }} async{{ end }}{{ else if eq .event_name \"skill_activated\" }}{{ .skill_name }} ({{ .invocation_trigger }}){{ else if eq .event_name \"permission_mode_changed\" }}{{ .from_mode }} -> {{ .to_mode }} ({{ .trigger }}){{ else }}{{ or .tool_name .hook_name .command_name .server_name .agent_type }}{{ end }}{{ if or .duration_ms .total_duration_ms }}  {{ or .duration_ms .total_duration_ms }}ms{{ end }}{{ if eq .success \"false\" }}  FAILED{{ end }}`",
           "refId": "A",
           "queryType": "range",
           "maxLines": 5000

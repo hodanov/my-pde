@@ -94,6 +94,7 @@ ADR-0008 の見直し条件「サブエージェントの所要時間をウォ�
 - 改善前後の比較は、直近 1 日の窓を 6 時間ごとに評価する時系列にした。step を 1d にすると Grafana の Loki クエリ分割と噛み合わず、ブラウザで空になる。
 - cache 断絶は、Prometheus の `cacheCreation` / `cacheRead` トークンの増分を時系列の棒で出した。
 - traces では、`session.id` が span 属性に付き `prompt_id` は付かないことを確認した。セッション詳細に、承認待ち時間（`blocked_on_user` の合計）、サブエージェント内の API 時間（`agent_id` のある `llm_request`、`query_source_safe` 別）、trace 一覧（Trace ID から Explore のウォーターフォールへ）を置いた。
+- サブエージェント（レビューで追加）: `subagent_completed` は完了時に 1 件出て、`prompt_id`・`duration_ms`・`total_tool_uses`・`total_tokens`・`is_async` を持つ。traces を有効にするとイベントにも `trace_id` が付く。セッション詳細に 1 起動 1 行の一覧（開始 = 完了時刻 − 所要時間、trace へのリンク）を置き、ブレークダウン表にプロンプト別の Agent 数・Agent 時間、時間軸に起動（Agent の `tool_decision`）と完了の注釈を足した。起動元の Skill はイベントに無いので、`prompt_id` でブレークダウン表の行と突き合わせる。
 
 ## 対象ファイル
 
