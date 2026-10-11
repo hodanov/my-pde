@@ -293,7 +293,7 @@
         "~/Library/Caches/golangci-lint",
         "~/go/pkg/mod",
         "~/.npm",
-        " ~/.cache/pre-commit"
+        "~/.cache/pre-commit"
       ]
     },
     "network": {
