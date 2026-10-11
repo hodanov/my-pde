@@ -31,7 +31,8 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: "gomod"
-    directory: "./scripts/ai-bridge"
+    directories:
+      - "/scripts/*"
     schedule:
       interval: "weekly"
     cooldown:
