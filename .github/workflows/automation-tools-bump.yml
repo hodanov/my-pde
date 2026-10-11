@@ -50,6 +50,10 @@ jobs:
           # Terraform latest GA (Checkpoint API matches releases.hashicorp.com download source)
           TERRAFORM_VERSION=$("${CURL[@]}" https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r '.current_version')
 
+          RUSTUP_VERSION=$("${CURL[@]}" https://static.rust-lang.org/rustup/release-stable.toml | sed -n "s/^version = '\(.*\)'$/\1/p")
+
+          TREE_SITTER_CLI_VERSION=$("${CURL[@]}" https://index.crates.io/tr/ee/tree-sitter-cli | jq -rs '[.[] | select(.yanked == false and (.vers | test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .vers] | max_by(split(".") | map(tonumber))')
+
           latest_release() {
             "${CURL[@]}" -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/$1/releases/latest"
           }
@@ -67,12 +71,15 @@ jobs:
           MARKSMAN_SHA256_AMD64=$(asset_sha256 "$MARKSMAN_RELEASE" marksman-linux-x64)
           MARKSMAN_SHA256_ARM64=$(asset_sha256 "$MARKSMAN_RELEASE" marksman-linux-arm64)
 
+          UV_VERSION=$(latest_release astral-sh/uv | jq -r '.tag_name')
+
           # Validate resolved values before writing outputs: fail fast instead of
           # generating a broken bump PR (and a wasted docker build) when an upstream
           # endpoint errors or returns an empty/null/non-version value.
           for pair in "node=$NODE_VERSION" "go=$GO_VERSION" "neovim=$NEOVIM_VERSION" \
                       "npm=$NPM_VERSION" "terraform=$TERRAFORM_VERSION" \
-                      "lua-language-server=$LUA_LS_VERSION"; do
+                      "lua-language-server=$LUA_LS_VERSION" "rustup=$RUSTUP_VERSION" \
+                      "tree-sitter-cli=$TREE_SITTER_CLI_VERSION" "uv=$UV_VERSION"; do
             name=${pair%%=*}
             val=${pair#*=}
             if [[ -z "$val" || "$val" == "null" || ! "$val" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
@@ -108,6 +115,9 @@ jobs:
             echo "marksman=$MARKSMAN_VERSION"
             echo "marksman_sha256_amd64=$MARKSMAN_SHA256_AMD64"
             echo "marksman_sha256_arm64=$MARKSMAN_SHA256_ARM64"
+            echo "rustup=$RUSTUP_VERSION"
+            echo "tree_sitter_cli=$TREE_SITTER_CLI_VERSION"
+            echo "uv=$UV_VERSION"
           } >> "$GITHUB_OUTPUT"
 
       - name: Update mise.toml pins
@@ -129,7 +139,10 @@ jobs:
             MARKSMAN_SHA256_ARM64=${{ steps.resolve.outputs.marksman_sha256_arm64 }} \
             NEOVIM_VERSION=${{ steps.resolve.outputs.neovim }} \
             NPM_VERSION=${{ steps.resolve.outputs.npm }} \
-            TERRAFORM_VERSION=${{ steps.resolve.outputs.terraform }}
+            RUSTUP_VERSION=${{ steps.resolve.outputs.rustup }} \
+            TERRAFORM_VERSION=${{ steps.resolve.outputs.terraform }} \
+            TREE_SITTER_CLI_VERSION=${{ steps.resolve.outputs.tree_sitter_cli }} \
+            UV_VERSION=${{ steps.resolve.outputs.uv }}
           # Everything else in [tools] goes to latest (go/node excluded above)
           mise upgrade --bump \
             shfmt shellcheck stylua hadolint golangci-lint \
@@ -137,6 +150,8 @@ jobs:
             'go:golang.org/x/tools/gopls' \
             'go:github.com/go-delve/delve/cmd/dlv' \
             'go:github.com/nametake/golangci-lint-langserver' \
+            'go:golang.org/x/vuln/cmd/govulncheck' \
+            gitleaks \
             terraform-ls tflint
 
       - name: Regenerate pinned artifacts
@@ -166,6 +181,9 @@ jobs:
             - Terraform: ${{ steps.resolve.outputs.terraform }}
             - lua-language-server: ${{ steps.resolve.outputs.lua_ls }}
             - marksman: ${{ steps.resolve.outputs.marksman }}
+            - rustup: ${{ steps.resolve.outputs.rustup }}
+            - tree-sitter-cli: ${{ steps.resolve.outputs.tree_sitter_cli }}
+            - uv: ${{ steps.resolve.outputs.uv }}
             - mise-managed tools: latest (see mise.toml diff)
           BODY: |-
             This PR bumps tool versions pinned in `mise.toml` and regenerates the
@@ -179,6 +197,9 @@ jobs:
             - Terraform: `${{ steps.resolve.outputs.terraform }}`
             - lua-language-server: `${{ steps.resolve.outputs.lua_ls }}` (sha256 from release asset digests)
             - marksman: `${{ steps.resolve.outputs.marksman }}` (sha256 from release asset digests)
+            - rustup: `${{ steps.resolve.outputs.rustup }}`
+            - tree-sitter-cli: `${{ steps.resolve.outputs.tree_sitter_cli }}`
+            - uv: `${{ steps.resolve.outputs.uv }}`
             - Other mise-managed tools: bumped to latest (see `mise.toml` diff)
 
             Automated by scheduled workflow.

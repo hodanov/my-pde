@@ -52,6 +52,9 @@ node_version=$(pin 'node')
 neovim_version=$(pin 'NEOVIM_VERSION')
 npm_version=$(pin 'NPM_VERSION')
 rust_toolchain=$(pin 'RUST_TOOLCHAIN')
+rustup_version=$(pin 'RUSTUP_VERSION')
+tree_sitter_cli_version=$(pin 'TREE_SITTER_CLI_VERSION')
+uv_version=$(pin 'UV_VERSION')
 stylua_version=$(pin 'stylua')
 terraform_version=$(pin 'TERRAFORM_VERSION')
 hadolint_version=$(pin 'hadolint')
@@ -68,6 +71,9 @@ sed -i.bak -E \
 	-e "s|^ARG NEOVIM_VERSION(=.*)?$|ARG NEOVIM_VERSION=${neovim_version}|" \
 	-e "s|^ARG NPM_VERSION(=.*)?$|ARG NPM_VERSION=${npm_version}|" \
 	-e "s|^ARG RUST_TOOLCHAIN(=.*)?$|ARG RUST_TOOLCHAIN=${rust_toolchain}|" \
+	-e "s|^ARG RUSTUP_VERSION(=.*)?$|ARG RUSTUP_VERSION=${rustup_version}|" \
+	-e "s|^ARG TREE_SITTER_CLI_VERSION(=.*)?$|ARG TREE_SITTER_CLI_VERSION=${tree_sitter_cli_version}|" \
+	-e "s|^ARG UV_VERSION(=.*)?$|ARG UV_VERSION=${uv_version}|" \
 	-e "s|^ARG STYLUA_VERSION(=.*)?$|ARG STYLUA_VERSION=${stylua_version}|" \
 	-e "s|^ARG TERRAFORM_VERSION(=.*)?$|ARG TERRAFORM_VERSION=${terraform_version}|" \
 	-e "s|^ARG HADOLINT_VERSION(=.*)?$|ARG HADOLINT_VERSION=${hadolint_version}|" \

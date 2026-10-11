@@ -31,7 +31,8 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: "gomod"
-    directory: "./scripts/ai-bridge"
+    directories:
+      - "/scripts/*"
     schedule:
       interval: "weekly"
     cooldown:
@@ -50,9 +51,3 @@ updates:
       workflow-dependencies:
         patterns:
           - "*"
-  - package-ecosystem: "pre-commit"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 14
