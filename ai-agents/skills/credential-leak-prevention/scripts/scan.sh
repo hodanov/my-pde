@@ -46,8 +46,14 @@ else
 fi
 
 section "git hook 有効化状況"
-if [ -f .git/hooks/pre-commit ]; then
-	ok ".git/hooks/pre-commit が存在する（pre-commit install 済み）"
+hooks_path=$(git config --get core.hooksPath || true)
+if [ -n "$hooks_path" ]; then
+	ng "core.hooksPath = ${hooks_path} が設定済み（pre-commit install は拒否される。既存の hook 管理との統合方針をユーザーに確認する）"
+fi
+
+pre_commit_hook="$(git rev-parse --git-path hooks)/pre-commit"
+if [ -f "$pre_commit_hook" ]; then
+	ok "git hook: ${pre_commit_hook} が存在する（pre-commit install 済み）"
 else
-	ng ".git/hooks/pre-commit が存在しない（pre-commit install が必要）"
+	ng "git hook: ${pre_commit_hook} が存在しない（pre-commit install が必要）"
 fi

@@ -3,7 +3,7 @@ name: credential-leak-prevention
 description: gitleaks + pre-commit を使ってローカルコミット時のクレデンシャル混入を機械的にブロックする。「クレデンシャル漏洩防止」「シークレット混入対策」「gitleaks」「pre-commit シークレット」「credential leak prevention」に言及した場合に使用する。
 disable-model-invocation: true
 metadata:
-  version: 1
+  version: 2
 ---
 
 # Credential Leak Prevention
@@ -54,7 +54,8 @@ which gitleaks && gitleaks version
 - `pre-commit` / `gitleaks` のインストール状況とバージョン
 - `.pre-commit-config.yaml` の有無と gitleaks hook の設定状況
 - `.gitleaks.toml` の有無と `useDefault = true` の設定状況
-- `.git/hooks/pre-commit` の有無（git hook が有効か）
+- git hook が有効か（`core.hooksPath` と worktree を考慮した hooks ディレクトリに `pre-commit` があるか）
+- `core.hooksPath` の設定有無（husky 等の既存 hook 管理と競合するか）
 
 スキャン結果をテーブル形式でユーザーに提示する:
 
@@ -82,8 +83,10 @@ which gitleaks && gitleaks version
    - ファイルなし → 新規作成
    - ファイルあり・gitleaks なし → gitleaks ブロックを末尾に追記
    - gitleaks 設定済み → スキップ
-2. `.gitleaks.toml` を作成（既に存在する場合はスキップ）
-3. `pre-commit install` を実行
+2. `.gitleaks.toml` を作成（既に存在する場合はスキップ。`go.sum` があるリポジトリでのみ allowlist に追加）
+
+続けて `pre-commit install` を実行する。`.git/hooks` への書き込みはサンドボックスに拒否されるため、最初からサンドボックス外で実行する。
+Phase 1 で `core.hooksPath` が設定済みだった場合は `pre-commit install` が拒否されるため、実行せずにユーザーへ統合方針を確認する。
 
 ### 注意事項
 
@@ -99,7 +102,7 @@ which gitleaks && gitleaks version
 
 スクリプトはダミーの GitHub PAT を含むファイルを一時作成し、`pre-commit run gitleaks` でブロックされることを自動確認する。ファイルは検証後に自動削除される。
 
-**期待結果**: `Failed` が表示され、exit code 1 で終了する。
+**期待結果**: gitleaks hook の出力に `Failed` が表示され、スクリプトは「✓ シークレットが正しく検出・ブロックされました」を出して exit code 0 で終了する。検出されなかった場合は exit code 1。
 
 検証結果をテーブル形式で報告する:
 

@@ -46,23 +46,17 @@ if [ -f .gitleaks.toml ]; then
 	ok ".gitleaks.toml が存在します（スキップ）"
 else
 	info ".gitleaks.toml を作成します"
-	cat >.gitleaks.toml <<'TOML'
-[extend]
-useDefault = true
-
-[allowlist]
-paths = [
-  '''\.gitleaks\.toml$''',
-  '''go\.sum$''',
-]
-TOML
+	{
+		printf '[extend]\nuseDefault = true\n\n[allowlist]\npaths = [\n'
+		printf "  '''%s''',\n" '\.gitleaks\.toml$'
+		if [ -f go.sum ]; then
+			printf "  '''%s''',\n" 'go\.sum$'
+		fi
+		printf ']\n'
+	} >.gitleaks.toml
 	ok ".gitleaks.toml を作成しました"
 fi
 
-# pre-commit install
-info "pre-commit install を実行します"
-pre-commit install
-ok "git hook を有効化しました"
-
-printf '\nセットアップ完了。以下で動作確認を実行してください:\n'
-printf '  bash ai-agents/skills/credential-leak-prevention/scripts/validate.sh\n'
+# pre-commit install は .git/hooks に書き込み、サンドボックスでは拒否されるため、ここでは実行しない。
+printf '\n設定ファイルの準備が完了しました。次にサンドボックス外で git hook を有効化してください:\n'
+printf '  pre-commit install\n'
