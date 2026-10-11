@@ -2250,6 +2250,166 @@
       }
     },
     {
+      "id": 63,
+      "type": "table",
+      "title": "サブエージェントの親子",
+      "description": "1 行 = 1 つのサブエージェント。親が空ならメインの会話から、ID が入っていれば同じ表のその agent_id のサブエージェントから起動された。API 時間は、そのサブエージェント自身の llm_request span の合計（子の分は含まない）。traces が有効なときだけ出る。",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 49,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{ span.\"session.id\" = \"$session\" && name = \"claude_code.llm_request\" && span.agent_id != nil } | sum_over_time(span:duration) by (span.agent_id, span.parent_agent_id, span.query_source_safe)",
+          "refId": "A",
+          "limit": 200,
+          "metricsQueryType": "instant"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          },
+          "fieldMinMax": true,
+          "mappings": [
+            {
+              "type": "regex",
+              "options": {
+                "pattern": "^\"(.*)\"$",
+                "result": {
+                  "text": "$1",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "親"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^\"(.*)\"$",
+                      "result": {
+                        "text": "$1",
+                        "index": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "text": "main",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "API 時間"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "親",
+            "desc": false
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {
+            "mode": "columns"
+          }
+        },
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "time": true
+            },
+            "renameByName": {
+              "span.query_source_safe": "種類",
+              "span.agent_id": "agent_id",
+              "span.parent_agent_id": "親",
+              "value": "API 時間"
+            },
+            "indexByName": {
+              "span.query_source_safe": 0,
+              "span.agent_id": 1,
+              "span.parent_agent_id": 2,
+              "value": 3
+            }
+          }
+        }
+      ]
+    },
+    {
       "id": 50,
       "type": "logs",
       "title": "イベントタイムライン",
@@ -2260,7 +2420,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 49,
+        "y": 56,
         "w": 24,
         "h": 16
       },
