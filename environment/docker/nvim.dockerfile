@@ -150,8 +150,8 @@ RUN set -eux; \
   RUSTUP_URL="https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${RUSTUP_TARGET}/rustup-init"; \
   TMPDIR="/tmp/rustup"; \
   mkdir -p "$TMPDIR"; \
-  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$RUSTUP_URL" -o "$TMPDIR/rustup-init"; \
-  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "${RUSTUP_URL}.sha256" -o "$TMPDIR/rustup-init.sha256"; \
+  curl --proto '=https' --proto-redir '=https' --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$RUSTUP_URL" -o "$TMPDIR/rustup-init"; \
+  curl --proto '=https' --proto-redir '=https' --retry 5 --retry-all-errors --retry-delay 2 -fsSL "${RUSTUP_URL}.sha256" -o "$TMPDIR/rustup-init.sha256"; \
   REF_SHA="$(awk '{print $1}' "$TMPDIR/rustup-init.sha256")"; \
   ACT_SHA="$(sha256sum "$TMPDIR/rustup-init" | awk '{print $1}')"; \
   [ "$ACT_SHA" = "$REF_SHA" ] || (echo "rustup-init checksum mismatch: expected=$REF_SHA actual=$ACT_SHA" >&2; exit 1); \
@@ -186,8 +186,8 @@ RUN set -eux; \
   TARBALL="uv-${UV_TARGET}.tar.gz"; \
   TMPDIR="/tmp/uv"; \
   mkdir -p "$TMPDIR"; \
-  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$TARBALL" -o "$TMPDIR/$TARBALL"; \
-  curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$TARBALL.sha256" -o "$TMPDIR/$TARBALL.sha256"; \
+  curl --proto '=https' --proto-redir '=https' --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$TARBALL" -o "$TMPDIR/$TARBALL"; \
+  curl --proto '=https' --proto-redir '=https' --retry 5 --retry-all-errors --retry-delay 2 -fsSL "$BASE_URL/$TARBALL.sha256" -o "$TMPDIR/$TARBALL.sha256"; \
   REF_SHA="$(awk '{print $1}' "$TMPDIR/$TARBALL.sha256")"; \
   ACT_SHA="$(sha256sum "$TMPDIR/$TARBALL" | awk '{print $1}')"; \
   [ "$ACT_SHA" = "$REF_SHA" ] || (echo "uv tarball checksum mismatch: expected=$REF_SHA actual=$ACT_SHA" >&2; exit 1); \
