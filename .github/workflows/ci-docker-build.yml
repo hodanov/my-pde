@@ -69,7 +69,29 @@ jobs:
           # Import/export BuildKit layer cache so dependency PRs stop rebuilding
           # every stage from scratch. mode=max also exports intermediate builder
           # stages, which is what makes the nvim/rust/go stages reusable across runs.
+          #
+          # --load is required for the smoke test below: the docker-container
+          # driver that setup-buildx-action creates keeps the result in its own
+          # cache and never writes it to the local image store, so without an
+          # explicit output the built image is not runnable afterwards.
           DOCKER_BUILD_EXTRA_ARGS: >-
             --cache-from type=gha,scope=nvim
             --cache-to type=gha,scope=nvim,mode=max
+            --load
         run: mise run docker:build
+
+      - name: Smoke-test the built image
+        if: steps.changes.outputs.image == 'true'
+        run: |
+          set -euo pipefail
+          # The image's HEALTHCHECK is the single source of truth for "this image
+          # starts"; spelling the command out here instead would let the two drift.
+          # It is read as exec form, so a switch to CMD-SHELL fails the step loudly
+          # instead of silently smoke-testing the image's default command.
+          image=my-pde-nvim:dev
+          test -n "$(docker images -q "$image")"
+          [ "$(docker inspect -f '{{index .Config.Healthcheck.Test 0}}' "$image")" = CMD ]
+          healthcheck_args=$(docker inspect -f '{{range $i, $v := .Config.Healthcheck.Test}}{{if $i}}{{println $v}}{{end}}{{end}}' "$image")
+          test -n "$healthcheck_args"
+          mapfile -t healthcheck <<<"$healthcheck_args"
+          docker run --rm "$image" "${healthcheck[@]}"
