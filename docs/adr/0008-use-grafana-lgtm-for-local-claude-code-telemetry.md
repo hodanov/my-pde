@@ -26,10 +26,10 @@ Claude Code の使い方（どのモデル・Skill・Agent を使ったか、サ
 
 ## Decision
 
-`grafana/otel-lgtm`（Grafana + Prometheus + Loki + Tempo + OTel Collector）を、`environment/otel/docker-compose.yml` でローカルに常駐させ、Claude Code から OTLP/HTTP (`localhost:4318`) へ metrics と events を送る。
+`grafana/otel-lgtm`（Grafana + Prometheus + Loki + Tempo + OTel Collector）を、`environment/otel/docker-compose.yml` でローカルに常駐させ、Claude Code から OTLP/HTTP (`localhost:4318`) へ metrics・events・traces を送る。
 
 - ポートは `127.0.0.1` にだけ公開する。ツール詳細を含むため LAN に出さない。
-- 送信する変数は `ai-agents/settings/claude/settings.json` の `env` に常時 ON で置く。traces (beta) は有効化しない。
+- 送信する変数は `ai-agents/settings/claude/settings.json` の `env` に常時 ON で置く。traces (beta) も `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1` と `OTEL_TRACES_EXPORTER=otlp` で送る（2026-10-11 追加。当初は metrics と events だけで始めた）。
 - `OTEL_LOG_TOOL_DETAILS=1` を有効にする。無効だと `skill.name`、`agent.name`、`agent_type` が `"custom"` に丸められ、Skill と Agent の実名で分析できないため。プロンプト本文 (`OTEL_LOG_USER_PROMPTS`) は取らない。
 - metrics の temporality は `cumulative` に固定する。Claude Code の既定は `delta` だが、`otel-lgtm` の Collector 設定には deltatocumulative が無く、Prometheus の OTLP 受信は cumulative を前提にする。
 
@@ -45,11 +45,11 @@ Skill・Agent・モデル・ツール別の利用状況とサブエージェン�
 - `settings-copy` は `~/.claude/settings.json` を上書き配布するので、OTel の変数もそこで配られる。環境変数は起動時にしか読まれず、反映には Claude Code の再起動が要る。
 - コンテナが止まっていると、エクスポートは失敗するだけでデータは欠ける。欠損を許容する。
 - Loki 3.7 は WAL のあるディスクの使用率が `-ingester.wal-disk-full-threshold`（既定 0.90）を超えると、すべての push を `Ingester is shutting down` で拒否する。`/data` は bind mount なので、判定に使われるのは Mac のホストボリュームの使用率になる。ホストは 90% 前後で推移するため、compose の `LOKI_EXTRA_ARGS` で閾値を 0.98 に上げる。0 にして無効化はせず、本当に満杯になる手前の保護は残す。`otel-lgtm` は Loki のログを捨てるので、拒否されていても `docker logs` には何も出ない。events だけが欠けるときは、Loki の `loki_ingester_wal_disk_usage_percent` を見る。
+- traces は 1 回のユーザー入力が 1 trace（root は `claude_code.interaction`）で、サブエージェントの span は Agent ツールの span の下に入る。`session.id` は span 属性に付くが `prompt_id` は付かないので、events とは時刻で突き合わせる。hook の span（`claude_code.hook`）は organization の allowlist が要る detailed beta 限定のため出ない。hook の所要時間は events（`hook_execution_complete`）で見る。
 - `otel-lgtm` は開発・検証用途向けで、本番運用には向かない。個人のローカル分析に限って採用する。
 
-見直す条件は次の 2 つ。
+見直す条件は次のとおり。
 
 - 複数マシンやチームで集計したくなった場合。送り先を Collector 経由の共有バックエンドへ変える。
-- サブエージェントの所要時間をウォーターフォールで見たくなった場合。`CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1` と `OTEL_TRACES_EXPORTER=otlp` を足す。LGTM は Tempo を含むので、バックエンドの変更は要らない。
 
-関連: `docs/plan/2026-10-08_claude-code-otel-local-observability.md`、`docs/plan/2026-08-22_agent-stats-observability-expansion.md`
+関連: `docs/plan/2026-10-08_claude-code-otel-local-observability.md`、`docs/plan/2026-10-11_claude-code-otel-session-drilldown.md`、`docs/plan/2026-08-22_agent-stats-observability-expansion.md`
