@@ -51,9 +51,3 @@ updates:
       workflow-dependencies:
         patterns:
           - "*"
-  - package-ecosystem: "pre-commit"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 14

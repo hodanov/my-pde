@@ -151,6 +151,7 @@ jobs:
             'go:github.com/go-delve/delve/cmd/dlv' \
             'go:github.com/nametake/golangci-lint-langserver' \
             'go:golang.org/x/vuln/cmd/govulncheck' \
+            gitleaks \
             terraform-ls tflint
 
       - name: Regenerate pinned artifacts
