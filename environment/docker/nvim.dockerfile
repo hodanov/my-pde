@@ -41,7 +41,7 @@ ENV LC_CTYPE=ja_JP.UTF-8
 # Stage 1: Build Neovim from source
 FROM base AS nvim-builder
 
-ARG NEOVIM_VERSION=0.12.5
+ARG NEOVIM_VERSION=0.12.6
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ninja-build gettext cmake \
@@ -93,7 +93,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
 # Stage 3: Build Go toolchain and tools
 FROM base AS go-builder
 
-ARG GO_VERSION=1.27.1
+ARG GO_VERSION=1.27.2
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH="$(dpkg --print-architecture)" \
@@ -134,7 +134,7 @@ FROM base AS rust-builder
 
 ARG RUSTUP_VERSION=1.29.1
 ARG RUST_TOOLCHAIN=stable
-ARG STYLUA_VERSION=2.5.2
+ARG STYLUA_VERSION=2.6.0
 ARG TREE_SITTER_CLI_VERSION=0.27.1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
