@@ -6,6 +6,7 @@ description: >-
   docs/slides/YYYY-MM-DD_slug.md に保存 → 文字量の lint → PNG で目視確認 → 描画する。
   「プレゼン資料を作りたい」「スライド」「発表資料」「Marp」「Google スライド用の pptx」
   などに言及されたときに使用する。
+argument-hint: "[題材と聞き手 例: Claude Code の OTel 分析をチーム向けに 10 分・投影用]"
 metadata:
   version: 3
 ---
