@@ -1,91 +1,108 @@
 ---
 marp: true
-theme: gaia
+theme: clean
 paginate: true
 size: 16:9
-header: "<HEADER TEXT>"
-footer: "<PROJECT / DATE>"
-style: |
-  :root {
-    --accent: #7c5cff;
-    --ink: #1f2430;
-  }
-  section {
-    font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
-    font-size: 26px;
-    color: var(--ink);
-  }
-  h1, h2 { color: var(--accent); }
-  section.lead h1 { font-size: 52px; line-height: 1.25; }
-  section.lead { text-align: left; }
-  strong { color: var(--accent); }
-  table { font-size: 20px; }
-  code { background: #f0ecff; color: #5a3ce0; }
-  /* Style pre/pre code separately so inline-code colors don't bleed into
-     ASCII diagrams / code blocks and kill contrast. */
-  pre { background: #161b26; border-radius: 10px; padding: 14px 18px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
-  pre code { background: transparent; color: #e8ecf8; font-size: 19px; line-height: 1.4; }
-  .small { font-size: 20px; color: #556; }
-  blockquote { border-left: 6px solid var(--accent); padding-left: 16px; color: #444; }
+footer: "<プロジェクト名 / 日付>"
 ---
 
-<!-- _class: lead -->
+<!-- _class: title -->
+<!-- _paginate: false -->
 
-# <TITLE><br><SUBTITLE>
+# <タイトル（2 行まで）>
 
-### <ONE-LINE TAGLINE>
+<サブタイトル: 聞き手が何を持ち帰れるか>
 
-<br>
+<日付> / <発表者>
 
-**<CONTEXT LINE>**
-
-<span class="small"><DATE></span>
+<!--
+表紙で話すこと（発表の目的、聞き手に期待すること）。
+-->
 
 ---
 
-## <一言で言うと / TL;DR>
+<!-- _class: agenda -->
 
-> **<核となる主張を 1〜2 文で>**
+## 目次
 
-- <ポイント 1>
-- <ポイント 2>
-- <ポイント 3>
-
----
-
-## <セクション見出し>
-
-<本文。1 スライド 1 メッセージ。>
-
-- <短い箇条書き>
-- <短い箇条書き>
+1. <章 1 のタイトル>
+2. <章 2 のタイトル>
+3. <章 3 のタイトル>
 
 ---
 
-## <図を置くスライド>
+<!-- _class: divider -->
 
-```text
-<ASCII 図やフロー。pre のダーク背景でくっきり表示される>
-```
+01
 
-**<図の要点を 1 行で>**
+## <章 1 のタイトル>
 
 ---
 
-## <表を置くスライド>
+## <このスライドの結論を言い切る 1 行>
 
-| 列 A | 列 B | 列 C |
-| ---- | ---- | ---- |
-| ...  | ...  | ...  |
+- <要点（1 行）>
+- <要点（1 行）>
+- <要点（1 行）>
+
+<!--
+説明・補足・出典・数値の条件はスライドに置かず、このノートに書く。
+PPTX のノートと HTML の発表者ビューに入る。
+-->
 
 ---
 
-<!-- _class: lead -->
+<!-- _class: cards -->
 
-# まとめ
+## <並列の要点 3 つから言える結論>
 
-**<結論を 1〜2 文で>**
+- <カード 1 の見出し>
+  <カード 1 の説明（1 行）>
+- <カード 2 の見出し>
+  <カード 2 の説明（1 行）>
+- <カード 3 の見出し>
+  <カード 3 の説明（1 行）>
 
-<br>
+---
 
-<span class="small">ご清聴ありがとうございました 🙌</span>
+![bg right:45% contain](assets/<スラッグ>/<画像>.png)
+
+## <図が示す結論>
+
+- <図のどこを見るか（1 行）>
+- <そこから分かること（1 行）>
+
+---
+
+## <表で比べて分かった結論>
+
+| <比べる項目> | <候補 1> | <候補 2> |
+| ------------ | -------- | -------- |
+| <観点 1>     | <値>     | <値>     |
+| **<観点 2>** | <値>     | <値>     |
+| <観点 3>     | <値>     | <値>     |
+
+<!--
+先頭のセルを太字にした行には、薄い背景が敷かれる（強調したい行は 1 つだけ）。
+-->
+
+---
+
+<!-- _class: statement -->
+
+## <ラベル（任意）>
+
+<一番伝えたい 1 文を>
+<2 行以内で>
+
+---
+
+## まとめ
+
+1. <章 1 の結論>
+2. <章 2 の結論>
+3. <章 3 の結論>
+
+<!--
+まとめは目次と同じ順で、各章の結論を 1 行ずつ並べる。
+-->
