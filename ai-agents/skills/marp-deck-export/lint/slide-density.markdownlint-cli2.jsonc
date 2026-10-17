@@ -1,0 +1,28 @@
+{
+  "config": {
+    "default": false,
+    "slide-density": {
+      "projection": {
+        "maxListItems": 3,
+        "maxListDepth": 1,
+        "maxLineWidth": 56,
+        "maxHeadingWidth": 56,
+        "maxBold": 1,
+        "maxTableColumns": 3,
+        "maxTableRows": 4,
+        "maxCodeLines": 6,
+      },
+      "handout": {
+        "maxListItems": 5,
+        "maxListDepth": 2,
+        "maxLineWidth": 100,
+        "maxHeadingWidth": 66,
+        "maxBold": 2,
+        "maxTableColumns": 4,
+        "maxTableRows": 6,
+        "maxCodeLines": 12,
+      },
+    },
+  },
+  "customRules": ["./slide-density.cjs"],
+}

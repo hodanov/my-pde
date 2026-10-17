@@ -1,0 +1,305 @@
+/*
+ * @theme clean
+ * @size 16:9 1280px 720px
+ */
+
+@import "default";
+
+section {
+  --bg: #ffffff;
+  --ink: #1f2430;
+  --muted: #6b7280;
+  --accent: #5b4cdb;
+  --tint: #efedfc;
+  --surface: #f4f5f7;
+  --rule: #dfe2e8;
+
+  color-scheme: light;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 64px 80px 72px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+  font-size: 30px;
+  line-height: 1.6;
+}
+
+section h1,
+section h2,
+section h3 {
+  color: var(--ink);
+  border: none;
+  padding: 0;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+section h1 {
+  font-size: 56px;
+  margin: 0 0 24px;
+}
+
+section h2 {
+  font-size: 40px;
+  margin: 0 0 32px;
+}
+
+section h3 {
+  font-size: 30px;
+  color: var(--muted);
+  margin: 32px 0 8px;
+}
+
+section:not(.title, .divider, .statement) > h2 + * {
+  margin-top: auto;
+}
+
+section:not(.title, .divider, .statement)
+  > :nth-last-child(1 of :not(header, footer)):not(h2) {
+  margin-bottom: auto;
+}
+
+section p,
+section ul,
+section ol {
+  margin: 0 0 16px;
+}
+
+section ul,
+section ol {
+  padding-left: 1.2em;
+}
+
+section li + li {
+  margin-top: 12px;
+}
+
+section li::marker {
+  color: var(--muted);
+}
+
+section strong {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+section a {
+  color: var(--accent);
+}
+
+section small {
+  font-size: 22px;
+  color: var(--muted);
+}
+
+section code {
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+  font-size: 0.85em;
+}
+
+section pre {
+  background: var(--surface);
+  border: none;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin: 0 0 16px;
+}
+
+section pre code {
+  background: transparent;
+  color: var(--ink);
+  padding: 0;
+  font-size: 22px;
+  line-height: 1.5;
+}
+
+section blockquote {
+  background: var(--tint);
+  border: none;
+  border-radius: 8px;
+  padding: 20px 28px;
+  margin: 0 0 16px;
+  color: var(--ink);
+}
+
+section blockquote::before,
+section blockquote::after {
+  content: none;
+}
+
+section blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+section table {
+  display: table;
+  width: auto;
+  border-collapse: collapse;
+  font-size: 26px;
+  margin: 0 0 16px;
+}
+
+section table tr,
+section table tr:nth-child(2n) {
+  background: transparent;
+  border: none;
+}
+
+section table th,
+section table td {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  padding: 10px 24px 10px 12px;
+  text-align: left;
+}
+
+section table th {
+  color: var(--muted);
+  font-weight: 700;
+  border-bottom: 2px solid var(--ink);
+}
+
+section table tbody tr:has(> td:first-child strong) {
+  background: var(--tint);
+}
+
+section img[alt~="center"] {
+  display: block;
+  margin: 0 auto;
+}
+
+section img[alt~="shot"] {
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+}
+
+section header,
+section footer {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+section::after {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+section.title {
+  justify-content: center;
+}
+
+section.title::before {
+  content: "";
+  width: 96px;
+  height: 8px;
+  background: var(--accent);
+  margin-bottom: 40px;
+}
+
+section.title p {
+  color: var(--muted);
+}
+
+section.agenda ol {
+  padding-left: 1.6em;
+  font-size: 34px;
+}
+
+section.agenda ol > li::marker {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+section.agenda li + li {
+  margin-top: 20px;
+}
+
+section.divider {
+  justify-content: center;
+  background: var(--accent);
+  color: #ffffff;
+}
+
+section.divider h2 {
+  color: #ffffff;
+  font-size: 56px;
+  margin: 0;
+}
+
+section.divider p {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+section.divider header,
+section.divider footer,
+section.divider::after {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+section.statement {
+  justify-content: center;
+  text-align: center;
+}
+
+section.statement h2 {
+  font-size: 30px;
+  color: var(--muted);
+}
+
+section.statement p {
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 0;
+}
+
+section.cards ul {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 24px;
+  list-style: none;
+  padding: 0;
+}
+
+section.cards li {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 0;
+  font-size: 26px;
+}
+
+section.cards li::first-line {
+  color: var(--accent);
+  font-size: 30px;
+  font-weight: 700;
+}
+
+section.handout {
+  font-size: 24px;
+  padding: 48px 64px 56px;
+}
+
+section.handout h2 {
+  font-size: 34px;
+  margin-bottom: 24px;
+}
+
+section.handout table {
+  font-size: 21px;
+}
+
+section.handout pre code {
+  font-size: 18px;
+}
