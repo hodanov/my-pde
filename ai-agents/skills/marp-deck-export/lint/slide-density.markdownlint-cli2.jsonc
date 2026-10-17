@@ -6,7 +6,7 @@
         "maxListItems": 3,
         "maxListDepth": 1,
         "maxLineWidth": 56,
-        "maxHeadingWidth": 56,
+        "maxHeadingWidth": 54,
         "maxBold": 1,
         "maxTableColumns": 3,
         "maxTableRows": 4,

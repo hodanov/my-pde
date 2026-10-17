@@ -5,4 +5,4 @@ over-budget.md:48 error slide-density Slide text density [slide 6: 2 bold spans 
 over-budget.md:54 error slide-density Slide text density [slide 7: table has 4 columns (max 3)]
 over-budget.md:62 error slide-density Slide text density [slide 8: table has 5 body rows (max 4)]
 over-budget.md:74 error slide-density Slide text density [slide 9: code block has 7 lines (max 6)]
-over-budget.md:86 error slide-density Slide text density [slide 10: heading width 60 (max 56)]
+over-budget.md:86 error slide-density Slide text density [slide 10: heading width 60 (max 54)]
