@@ -11,6 +11,8 @@
         "maxTableColumns": 3,
         "maxTableRows": 4,
         "maxCodeLines": 6,
+        "minImageTextPx": 20,
+        "minImageScale": 0.6,
       },
       "handout": {
         "maxListItems": 5,
@@ -21,6 +23,8 @@
         "maxTableColumns": 4,
         "maxTableRows": 6,
         "maxCodeLines": 12,
+        "minImageTextPx": 16,
+        "minImageScale": 0.45,
       },
     },
   },

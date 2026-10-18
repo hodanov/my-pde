@@ -166,8 +166,13 @@ section table th {
   border-bottom: 2px solid var(--ink);
 }
 
-section table tbody tr:has(> td:first-child strong) {
+section table tbody tr:has(> td strong) > td {
   background: var(--tint);
+}
+
+section table:has(tbody td strong) tbody tr:not(:has(> td strong)),
+section table:has(tbody td strong) tbody tr:not(:has(> td strong)) code {
+  color: var(--muted);
 }
 
 section img[alt~="center"] {
@@ -284,6 +289,29 @@ section.cards li::first-line {
   color: var(--accent);
   font-size: 30px;
   font-weight: 700;
+}
+
+section.number ul {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 48px;
+  list-style: none;
+  padding: 0;
+}
+
+section.number li {
+  margin: 0;
+  color: var(--muted);
+  font-size: 26px;
+  line-height: 1.4;
+}
+
+section.number li::first-line {
+  color: var(--ink);
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 section.handout {

@@ -84,3 +84,35 @@ theme: clean
 ---
 
 ## この見出しは全角で二十八文字を超えるので見出しの上限を超える
+
+---
+
+## 縮めた画像は、中の文字が読めなくなる
+
+![center w:1000](assets/small-text.svg)
+
+---
+
+## 横長のスクショを、幅いっぱいまで縮める
+
+![center w:1000](assets/wide-shot.png)
+
+---
+
+## 右半分の背景に置くと、さらに縮む
+
+![bg right:45% contain](assets/wide-shot.png)
+
+---
+
+## 大きさを指定しなくても、本文の幅まで縮む
+
+![center](assets/wide-shot.png)
+
+---
+
+## 拡大した画像と、無い画像は何も報告されない
+
+![center w:1200](assets/small-text.svg)
+
+![center w:1000](assets/missing.png)
