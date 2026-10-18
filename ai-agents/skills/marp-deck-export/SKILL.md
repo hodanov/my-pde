@@ -9,7 +9,7 @@ description: >-
   などに言及されたときに使用する。
 argument-hint: "[題材と聞き手 例: Claude Code の OTel 分析をチーム向けに 10 分・投影用]"
 metadata:
-  version: 4
+  version: 5
 ---
 
 # Marp Deck Export
@@ -29,7 +29,7 @@ PDF / PPTX / HTML に書き出す。**正（source of truth）は `.md`**、描�
    目安は **1 スライド 20〜40 秒** → 5〜10 分で**本文 10〜14 枚**（表紙・目次・扉・まとめは別）。
    聞き手のペルソナを 1〜3 行で書く。聞き手が知っている語・知らない語も書く（cold read にそのまま渡す）。
 3. **骨子を先に作る**: 短い kebab-case スラッグを選び、章立てと各スライドの見出し（結論を言い切る文）だけを箇条書きで出す。
-   見出しだけで話の筋が通るか、章ごとの枚数に偏りがないか、各見出しが `references/writing-rules.md` の 6 項目を満たすかを見てから本文を書く。
+   見出しだけで話の筋が通るか、章ごとの枚数に偏りがないか、各見出しが `references/writing-rules.md` の 8 項目を満たすかを見てから本文を書く。
 4. **下書き**: `assets/marp-template.md`（clean テーマ / 16:9）をコピーして書く。
    文字量の上限は `lint/slide-density.markdownlint-cli2.jsonc`、文の書き方は `references/writing-rules.md`、
    それ以外の判断は `references/design-rules.md` に従う。
@@ -88,7 +88,7 @@ skills/marp-deck-export/scripts/render_deck.sh <deck.md> [formats]
 - `assets/marp-template.md` — 構成の見本（コピーして使う雛形）
 - `assets/themes/clean.css` — テーマ（色・余白・レイアウト用クラス）
 - `references/design-rules.md` — 用途・文字を減らす順序・構成・色・クラス・目視チェックリスト
-- `references/writing-rules.md` — 1 回で意味が取れる文の 6 項目・削ってよい語・書き換え例
+- `references/writing-rules.md` — 1 回で意味が取れる文の 8 項目（語と、文・スライドのつながり）・削ってよい語・書き換え例
 - `references/cold-read.md` — 初見の読み手テストのプロンプトと結果の読み方
 - `lint/slide-density.cjs` — スライドごとの文字量を数える markdownlint のカスタムルール
 - `lint/slide-density.markdownlint-cli2.jsonc` — 文字量の上限（投影用 `projection` / 配布用 `handout`）
