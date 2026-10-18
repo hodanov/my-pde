@@ -13,6 +13,7 @@ local function open_prompt_editor(initial_prompt, cwd)
 
 	local lines = vim.split(initial_prompt, "\n")
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+	vim.bo[buf].modified = false
 
 	local width = math.floor(vim.o.columns * 0.8)
 	local height = math.floor(vim.o.lines * 0.6)
@@ -39,6 +40,9 @@ local function open_prompt_editor(initial_prompt, cwd)
 	end
 
 	local function cancel()
+		if vim.bo[buf].modified and vim.fn.confirm("Discard prompt?", "&Yes\n&No", 2) ~= 1 then
+			return
+		end
 		vim.api.nvim_win_close(win, true)
 		vim.api.nvim_buf_delete(buf, { force = true })
 	end
