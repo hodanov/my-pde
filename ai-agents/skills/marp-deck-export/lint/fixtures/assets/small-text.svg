@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 200" width="1000" height="200" font-family="Hiragino Sans, Noto Sans JP, sans-serif">
+  <style>.label { font-size: 24px; }</style>
+  <rect x="0" y="0" width="1000" height="200" rx="16" fill="#f4f5f7"/>
+  <text x="40" y="80" class="label" font-size="1.5em">この行の文字は大きい</text>
+  <text x="40" y="140" font-size="18" fill="#6b7280">この行の文字は 18px</text>
+</svg>

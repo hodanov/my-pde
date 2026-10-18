@@ -22,5 +22,6 @@ else
 fi
 
 label="$deck"
-(cd "$lint_dir" && "${cli[@]}" --config slide-density.markdownlint-cli2.jsonc - 2>&1) <"$deck" |
+deck_dir="$(cd "$(dirname "$deck")" && pwd)"
+(cd "$lint_dir" && MARP_DECK_DIR="$deck_dir" "${cli[@]}" --config slide-density.markdownlint-cli2.jsonc - 2>&1) <"$deck" |
 	LABEL="$label" awk '{ if (index($0, "stdin:") == 1) $0 = ENVIRON["LABEL"] ":" substr($0, 7); print }'

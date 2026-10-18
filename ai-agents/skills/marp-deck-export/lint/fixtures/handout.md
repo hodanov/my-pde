@@ -20,3 +20,11 @@ class: handout
 | 1   | 2   | 3   | 4   |
 | 1   | 2   | 3   | 4   |
 | 1   | 2   | 3   | 4   |
+
+---
+
+## 配布用は、画像の文字と縮小率の下限も緩い
+
+![center w:1000](assets/small-text.svg)
+
+![center w:1100](assets/wide-shot.png)

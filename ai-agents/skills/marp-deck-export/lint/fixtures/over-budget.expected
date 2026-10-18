@@ -6,3 +6,7 @@ over-budget.md:54 error slide-density Slide text density [slide 7: table has 4 c
 over-budget.md:62 error slide-density Slide text density [slide 8: table has 5 body rows (max 4)]
 over-budget.md:74 error slide-density Slide text density [slide 9: code block has 7 lines (max 6)]
 over-budget.md:86 error slide-density Slide text density [slide 10: heading width 60 (max 54)]
+over-budget.md:92 error slide-density Slide text density [slide 11: image text 18px after scaling (min 20): assets/small-text.svg]
+over-budget.md:98 error slide-density Slide text density [slide 12: image scaled to 0.42 (min 0.6): assets/wide-shot.png]
+over-budget.md:104 error slide-density Slide text density [slide 13: image scaled to 0.24 (min 0.6): assets/wide-shot.png]
+over-budget.md:110 error slide-density Slide text density [slide 14: image scaled to 0.47 (min 0.6): assets/wide-shot.png]

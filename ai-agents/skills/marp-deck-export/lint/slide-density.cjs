@@ -1,5 +1,8 @@
 "use strict";
 
+const fs = require("node:fs");
+const path = require("node:path");
+
 function* walk(tokens) {
   for (const token of tokens) {
     yield token;
@@ -185,6 +188,138 @@ function checkCode(slide, limits, report) {
   }
 }
 
+function childText(token, type) {
+  const child = [...walk(token.children)].find((found) => found.type === type);
+  return child ? child.text : "";
+}
+
+function measureSvg(file) {
+  const text = fs.readFileSync(file, "utf8");
+  const svgTag = /<svg\b[^>]*>/.exec(text)?.[0] ?? "";
+  const attribute = (name) => {
+    const match = new RegExp(
+      `\\s${name}\\s*=\\s*["']([\\d.]+)(?:px)?["']`,
+    ).exec(svgTag);
+    return match ? Number(match[1]) : undefined;
+  };
+  const viewBox =
+    /\sviewBox\s*=\s*["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/.exec(
+      svgTag,
+    );
+  const fontSizes = [
+    ...text.matchAll(/font-size\s*[:=]\s*["']?\s*([\d.]+)(?:px)?(?=["';\s}])/g),
+  ].map((match) => Number(match[1]));
+  const unitsWidth = viewBox ? Number(viewBox[1]) : attribute("width");
+  const natural = {
+    width: attribute("width") ?? unitsWidth,
+    height: attribute("height") ?? (viewBox ? Number(viewBox[2]) : undefined),
+  };
+  if (!natural.width || !natural.height || !unitsWidth) {
+    return undefined;
+  }
+  return {
+    natural,
+    textSizeAt: fontSizes.length
+      ? (renderedWidth) => (Math.min(...fontSizes) * renderedWidth) / unitsWidth
+      : undefined,
+  };
+}
+
+function measurePng(file) {
+  const header = fs.readFileSync(file).subarray(0, 24);
+  if (header.toString("latin1", 1, 4) !== "PNG") {
+    return undefined;
+  }
+  const natural = {
+    width: header.readUInt32BE(16),
+    height: header.readUInt32BE(20),
+  };
+  return {
+    natural,
+    scaleAt: (renderedWidth) => renderedWidth / natural.width,
+  };
+}
+
+function renderedImageWidth(keywords, natural) {
+  const slide = { width: 1280, height: 720, contentWidth: 1120 };
+  const length = (names) => {
+    for (const keyword of keywords) {
+      const match = /^(\w+):([\d.]+)(?:px)?$/.exec(keyword);
+      if (match && names.includes(match[1])) {
+        return Number(match[2]);
+      }
+    }
+    return undefined;
+  };
+  const width = length(["w", "width"]);
+  const height = length(["h", "height"]);
+  if (width !== undefined) {
+    return width;
+  }
+  if (height !== undefined) {
+    return (height * natural.width) / natural.height;
+  }
+  if (keywords.includes("bg")) {
+    const split = keywords
+      .map((keyword) => /^(?:left|right)(?::([\d.]+)%)?$/.exec(keyword))
+      .find(Boolean);
+    const boxWidth = split
+      ? (slide.width * Number(split[1] ?? 50)) / 100
+      : slide.width;
+    const fit =
+      keywords.includes("contain") || keywords.includes("fit")
+        ? Math.min
+        : Math.max;
+    return (
+      natural.width *
+      fit(boxWidth / natural.width, slide.height / natural.height)
+    );
+  }
+  return Math.min(natural.width, slide.contentWidth);
+}
+
+function checkImages(slide, limits, report) {
+  if (!slide.deckDir) {
+    return;
+  }
+  const measures = new Map([
+    [".svg", measureSvg],
+    [".png", measurePng],
+  ]);
+  for (const image of walk(slide.tokens)) {
+    if (image.type !== "image") {
+      continue;
+    }
+    const source = childText(image, "resourceDestinationString");
+    const file = path.resolve(slide.deckDir, source);
+    const measure = measures.get(path.extname(file).toLowerCase());
+    const measured = measure && fs.existsSync(file) ? measure(file) : undefined;
+    if (!measured) {
+      continue;
+    }
+    const keywords = childText(image, "labelText").split(/\s+/);
+    const width = renderedImageWidth(keywords, measured.natural);
+    if (measured.textSizeAt) {
+      const textSize = Number(measured.textSizeAt(width).toFixed(1));
+      if (textSize < limits.minImageTextPx) {
+        report(
+          image.startLine,
+          `image text ${textSize}px after scaling (min ${limits.minImageTextPx}): ${source}`,
+        );
+      }
+    }
+    if (measured.scaleAt) {
+      const scale = measured.scaleAt(width);
+      if (scale < limits.minImageScale) {
+        report(
+          image.startLine,
+          `image scaled to ${scale.toFixed(2)} (min ${limits.minImageScale}): ${source}`,
+        );
+      }
+    }
+  }
+}
+
 module.exports = {
   names: ["slide-density"],
   description: "Slide text density",
@@ -207,9 +342,11 @@ module.exports = {
       checkBold,
       checkTables,
       checkCode,
+      checkImages,
     ];
+    const deckDir = process.env.MARP_DECK_DIR;
     splitSlides(params.parsers.micromark.tokens).forEach((tokens, index) => {
-      const slide = { number: index + 1, tokens };
+      const slide = { number: index + 1, tokens, deckDir };
       const report = (lineNumber, detail) =>
         onError({ lineNumber, detail: `slide ${slide.number}: ${detail}` });
       for (const check of checks) {

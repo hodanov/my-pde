@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 300" width="1100" height="300" font-family="Hiragino Sans, Noto Sans JP, sans-serif" font-size="24">
+  <g text-anchor="end" fill="#1f2430">
+    <text x="370" y="46" font-weight="700" fill="#5b4cdb">credential-leak-prevention</text>
+    <text x="370" y="104">commit-and-draft-pr</text>
+    <text x="370" y="162">dev-workflow</text>
+    <text x="370" y="220">deploy-ai-config</text>
+    <text x="370" y="278">supply-chain-hardening</text>
+  </g>
+
+  <rect x="390" y="20" width="520" height="36" rx="4" fill="#5b4cdb"/>
+  <g fill="#6b7280" fill-opacity="0.4">
+    <rect x="390" y="78" width="97" height="36" rx="4"/>
+    <rect x="390" y="136" width="95" height="36" rx="4"/>
+  </g>
+
+  <g fill="#6b7280">
+    <text x="926" y="46" font-weight="700" fill="#5b4cdb">16.7%</text>
+    <text x="503" y="104">3.11%</text>
+    <text x="501" y="162">3.04%</text>
+    <text x="398" y="220">0%</text>
+    <text x="398" y="278">0%</text>
+  </g>
+</svg>

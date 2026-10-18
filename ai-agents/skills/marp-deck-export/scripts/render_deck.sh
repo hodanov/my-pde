@@ -65,6 +65,9 @@ for fmt in "${FMT_ARR[@]}"; do
 		"${MARP[@]}" "$DECK" "${MARP_OPTS[@]}" --images png -o "$png_dir/$(basename "${DECK%.md}").png"
 		echo ">> png slides: $png_dir"
 		if command -v magick >/dev/null 2>&1; then
+			mkdir -p "$png_dir/blur"
+			magick mogrify -path "$png_dir/blur" -blur 0x8 "$png_dir"/*.png
+			echo ">> blurred slides (glance test): $png_dir/blur"
 			# montage exits non-zero when no font is configured, even though the sheets are written.
 			magick montage "$png_dir"/*.png -tile 3x3 -geometry 640x360+4+4 -background '#888888' "$png_dir/sheet-%d.png" 2>/dev/null || true
 			for sheet in "$png_dir"/sheet-*.png; do
