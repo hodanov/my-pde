@@ -80,7 +80,7 @@ PPTX のノートと HTML の発表者ビューに入る。
 
 ---
 
-![bg right:45% contain](assets/<スラッグ>/<画像>.png)
+![bg right:45% contain](assets/<画像>.png)
 
 ## <図が示す結論>
 

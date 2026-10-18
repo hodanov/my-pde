@@ -3,13 +3,13 @@ name: marp-deck-export
 description: >-
   5〜10 分のプレゼン資料を Marp（Markdown）で作成し、PDF / PPTX / HTML に書き出す。
   会話やリポジトリの実状況からスライドを起こし、clean テーマの雛形で下書き →
-  docs/slides/YYYY-MM-DD_slug.md に保存 → 文字量と画像の lint → 初見の読み手テスト（cold read）→
+  docs/slides/slug/YYYY-MM-DD_slug.md に保存 → 文字量と画像の lint → 初見の読み手テスト（cold read）→
   PNG で崩れを確認 → 初見の人の目が行く所のテスト（glance test）→ 描画する。
   「プレゼン資料を作りたい」「スライド」「発表資料」「Marp」「Google スライド用の pptx」
   などに言及されたときに使用する。
 argument-hint: "[題材・伝えたいこと・聞き手 例: Claude Code の OTel 分析で、Skill ごとの失敗率から直す所が見つかると伝えたい。チーム向けに 10 分・投影用]"
 metadata:
-  version: 7
+  version: 8
 ---
 
 # Marp Deck Export
@@ -39,7 +39,9 @@ PDF / PPTX / HTML に書き出す。**正（source of truth）は `.md`**、描�
 4. **下書き**: `assets/marp-template.md`（clean テーマ / 16:9）をコピーして書く。
    文字量の上限は `lint/slide-density.markdownlint-cli2.jsonc`、文の書き方は `references/writing-rules.md`、
    図・グラフ・スクショ・強調は `references/visual-rules.md`、それ以外の判断は `references/design-rules.md` に従う。
-5. **保存**: `docs/slides/YYYY-MM-DD_<slug>.md` に置く（ディレクトリが無ければ作る）。
+5. **保存**: `docs/slides/<slug>/YYYY-MM-DD_<slug>.md` に置く（ディレクトリが無ければ作る）。
+   画像は同じディレクトリの `assets/` に置き、デッキからは `assets/<画像>` で参照する。
+   同じ題材の別版（配布用・作り直し）は、既存の `docs/slides/<slug>/` に日付や `-handout` を付けた名前で並べる。
 6. **lint**: `scripts/lint_deck.sh <deck.md>` が通るまで直す。文字量の直し方は design-rules.md の「文字を減らす順序」に従う。
    画像の中の文字が小さすぎるという指摘は、visual-rules.md の「スクショ」「図とグラフ」に従って切り抜くか描き直す。
    このステップでは PNG を見ない。

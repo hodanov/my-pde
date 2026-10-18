@@ -6,7 +6,7 @@
 
 ループは回っているが、**効果が数値として残っていない**。
 
-- `docs/slides/2026-07-08_claude-routine-loop-engineering.md` の「採用率 約 93%」「auto PR 25 件中 23 件マージ」は、人が一度手で数えた値。
+- `docs/slides/routine-loop-engineering/2026-07-08_claude-routine-loop-engineering.md` の「採用率 約 93%」「auto PR 25 件中 23 件マージ」は、人が一度手で数えた値。
 - `.github/workflows/pipeline-digest.yml` が出すのは「今の滞留（ストック）」だけで、採用率・リードタイム・マージ率といった**フロー指標**が無い。
 - メタループ（`routines/prompts/monthly-routine-improve.md`）は rejected コメントを定性的に読むだけで、「どのスキャンが効いていないか」を数値で特定できない。
 
