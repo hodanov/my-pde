@@ -22,6 +22,10 @@ zizmor = "1.30.1"
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.9.0"
 gitleaks = "8.30.1"
 
+[settings]
+lockfile = true
+lockfile_platforms = ["linux-x64", "macos-arm64"]
+
 # Docker-only versions and per-asset SHA256s (for releases without an upstream
 # checksum file): synced into the Dockerfile ARG defaults by `mise run pins:sync`
 # and injected as --build-arg by `mise run docker:build`.

@@ -187,8 +187,8 @@ jobs:
             - mise-managed tools: latest (see mise.toml diff)
           BODY: |-
             This PR bumps tool versions pinned in `mise.toml` and regenerates the
-            derived artifacts (`environment/tools/go/go-tools.txt` and the ARG
-            defaults in `environment/docker/nvim.dockerfile`).
+            derived artifacts (`mise.lock`, `environment/tools/go/go-tools.txt`,
+            and the ARG defaults in `environment/docker/nvim.dockerfile`).
 
             - Node: `${{ steps.resolve.outputs.node }}` (latest LTS)
             - Go: `${{ steps.resolve.outputs.go }}` (latest stable)

@@ -51,6 +51,8 @@ mise install    # run at the repo root
 
 If you link this repository's `.zshrc` (see [Dotfiles](#dotfiles)), skip the `echo` line — `dotfiles/.zshrc` already ends with `eval "$(mise activate zsh)"`, and appending it there would duplicate the line in the repository.
 
+`mise.lock` records each tool's download URL and checksum for the platforms in `lockfile_platforms` (`linux-x64` and `macos-arm64`), and `mise install` verifies every download against it. CI installs with `--locked` (`jdx/mise-action` adds it when `mise.lock` exists), so a version missing from the lockfile fails the job. Change versions with `mise use --pin` or `mise upgrade --bump`, which update the lockfile for every listed platform. A checksum mismatch means the upstream asset changed: confirm that the change is intended before accepting it with `mise lock <tool>`. To run the tools on another platform, add it to `lockfile_platforms` and run `mise lock`.
+
 ### Dotfiles
 
 Shell and terminal configs under `dotfiles/` are deployed as symlinks, so edits on either side stay in sync:
