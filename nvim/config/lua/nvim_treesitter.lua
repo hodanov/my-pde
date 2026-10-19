@@ -29,6 +29,7 @@ if #vim.api.nvim_list_uis() == 0 then
 end
 
 vim.api.nvim_create_autocmd("FileType", {
+	group = vim.api.nvim_create_augroup("treesitter_start", { clear = true }),
 	-- 注意: bash スクリプトの filetype は "sh"。parser 名 "bash" とは異なるため
 	-- pattern には filetype 名の "sh" を書く (コアが sh->bash のマッピングを持つ)。
 	pattern = {

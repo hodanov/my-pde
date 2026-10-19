@@ -39,7 +39,7 @@ jobs:
               startsWith((github.head_ref || ''), 'chore/bump-tool-versions')
             }}
         run: |
-          image_inputs='^(environment/docker/|environment/tools/|mise\.toml$|\.dockerignore$|\.github/workflows/ci-docker-build\.yml$)'
+          image_inputs='^(environment/docker/|environment/tools/|nvim/|mise\.toml$|\.dockerignore$|\.github/workflows/ci-docker-build\.yml$)'
           if [ "$FORCE_BUILD" = "true" ] || git diff --name-only HEAD^1 HEAD | grep -qE "$image_inputs"; then
             echo "image=true" >> "$GITHUB_OUTPUT"
           else
