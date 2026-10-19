@@ -10,7 +10,7 @@ ts.setup({
 -- nvim-treesitter 新 main では `incremental_selection` モジュールが廃止されているため、
 -- ここでプラグイン側のキー (gnn / grn / grm / grc 等) を再現する設定は入れない。
 
-ts.install({
+local parser_install = ts.install({
 	"go",
 	"python",
 	"markdown",
@@ -24,6 +24,9 @@ ts.install({
 	"dockerfile",
 	"gitcommit",
 })
+if #vim.api.nvim_list_uis() == 0 then
+	parser_install:wait(5 * 60 * 1000)
+end
 
 vim.api.nvim_create_autocmd("FileType", {
 	-- 注意: bash スクリプトの filetype は "sh"。parser 名 "bash" とは異なるため
