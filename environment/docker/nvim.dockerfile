@@ -55,7 +55,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Stage 2: Build Node runtime and npm tools
 FROM base AS node-builder
 
-ARG NODE_VERSION=24.21.0
+ARG NODE_VERSION=24.22.0
 ARG NPM_VERSION=12.2.0
 ENV NODE_HOME="/opt/node"
 ENV PATH="${NODE_HOME}/bin:${PATH}"
@@ -170,7 +170,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # Stage 5: Build Python venv with uv
 FROM base AS python-builder
 
-ARG UV_VERSION=0.13.0
+ARG UV_VERSION=0.13.1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
 RUN set -eux; \
@@ -235,7 +235,7 @@ RUN set -eux; \
 # Stage 7: Fetch Terraform CLI binary only
 FROM base AS terraform-builder
 
-ARG TERRAFORM_VERSION=1.16.5
+ARG TERRAFORM_VERSION=1.16.6
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
@@ -261,12 +261,12 @@ RUN set -eux; \
 # Stage 8: Fetch lua-language-server (LSP for editing this Neovim config itself)
 FROM base AS lua-ls-builder
 
-ARG LUA_LS_VERSION=3.19.1
+ARG LUA_LS_VERSION=3.19.2
 # LuaLS publishes no aggregate checksum file with its releases (there is no
 # equivalent of hadolint's checksums.sha256 or terraform's SHA256SUMS), so the
 # per-asset sha256 is pinned in mise.toml [env] and synced here by pins:sync.
-ARG LUA_LS_SHA256_AMD64=e9235d2d72ef55bc41cf8c99cda2ed64777682024b4bb81f5dea425060c5cbb8
-ARG LUA_LS_SHA256_ARM64=abd2572e8fc929dc838a81ffb8473c5bce0bf39bfe8edb4b120b3b623176ce83
+ARG LUA_LS_SHA256_AMD64=93ad326b10f6c00911dd8c450fa098332dbd8f9f45d1052f5636a2d54479b947
+ARG LUA_LS_SHA256_ARM64=17b8e401a874440adeb649e5024c364f2bb9d15156c74a40e56d1ae9a1b2e4f2
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
