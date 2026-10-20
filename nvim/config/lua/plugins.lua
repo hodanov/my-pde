@@ -89,6 +89,14 @@ return {
 		lazy = true,
 		event = { "BufRead", "BufNewFile", "CmdlineEnter" },
 		version = "1.*",
+		build = function(plugin)
+			require("lazy").load({ plugins = { plugin.name } })
+			local fuzzy = require("blink.cmp.fuzzy")
+			local ready = vim.wait(60 * 1000, function()
+				return fuzzy.implementation_type == "rust"
+			end)
+			assert(ready, "blink.cmp prebuilt fuzzy binary is not ready")
+		end,
 		config = function()
 			require("blink_cmp")
 		end,

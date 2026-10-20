@@ -12,6 +12,13 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 		vim.fn.getchar()
 		os.exit(1)
 	end
+	local lockfile = vim.fn.stdpath("config") .. "/lazy-lock.json"
+	if vim.fn.filereadable(lockfile) == 1 then
+		local locked = vim.json.decode(table.concat(vim.fn.readfile(lockfile), "\n"))["lazy.nvim"]
+		if locked then
+			vim.fn.system({ "git", "-C", lazypath, "checkout", "--quiet", locked.commit })
+		end
+	end
 end
 vim.opt.rtp:prepend(lazypath)
 
