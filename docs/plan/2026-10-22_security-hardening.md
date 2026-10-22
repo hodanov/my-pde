@@ -143,7 +143,7 @@ P0、P2-1、P2-3 はリポの外の操作で、PR にしない。
 ## File changes
 
 - PR-A: `.github/workflows/automation-deps-auto-merge.yml`、`.github/dependabot.yml`、`.github/workflows/ci-actions-lint.yml`、`.github/workflows/ci-dockerfile-lint.yml`
-- PR-B: `mise.toml`、`.github/workflows/automation-tools-bump.yml`、新規 `.github/actions/setup-mise/action.yml`、`jdx/mise-action` を使う全ワークフロー、新規 `.github/zizmor.yml`、新規の週次 govulncheck ワークフロー、`.github/dependabot.yml`
+- PR-B: `mise.toml`、`.github/workflows/automation-tools-bump.yml`、新規 `.github/actions/setup-mise/action.yml`、`jdx/mise-action` を使う全ワークフロー、新規 `.github/zizmor.yml`、新規 `.github/workflows/automation-go-vuln-scan.yml` と `mise.toml` の `go:vuln` タスク、`.github/dependabot.yml`、`AGENTS.md`、`README.md`
 - PR-C: `ai-agents/settings/claude/settings.json`、`dotfiles/.zshrc`、`.gitignore`
 - PR-D: `routines/prompts/weekly-adopted-issue-pr-bot.md`、`routines/prompts/weekly-pr-care-bot.md`、`routines/prompts/monthly-routine-improve.md`、`routines/*.json`
 - PR-E: `environment/docker/docker-compose.yml`、`environment/docker/nvim.dockerfile`、`environment/tools/python/`、`environment/tools/node/package-lock.json`、`environment/otel/docker-compose.yml`、`scripts/ai-bridge/internal/`、`ai-agents/skills/marp-deck-export/scripts/`

@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   bump:
     runs-on: ubuntu-latest
@@ -19,11 +23,9 @@ jobs:
           persist-credentials: false
 
       - name: Setup mise
-        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ./.github/actions/setup-mise
 
-      - name: Resolve latest versions (policy-pinned tools)
+      - name: Resolve latest eligible versions (policy-pinned tools)
         id: resolve
         shell: bash
         env:
@@ -33,45 +35,51 @@ jobs:
           # -f fails on HTTP errors (caught by set -e + pipefail), -S surfaces the
           # error, --retry/--max-time absorb transient failures. Without -f, curl
           # returns exit 0 on 4xx/5xx and pipes the error body into jq → junk values.
-          CURL=(curl -fsS --retry 3 --retry-delay 2 --max-time 30)
+          CURL=(curl -fsS --retry 3 --retry-delay 2 --retry-all-errors --max-time 30)
+
+          MIN_AGE=$(mise settings get minimum_release_age)
+          if [[ ! "$MIN_AGE" =~ ^[0-9]+d$ ]]; then
+            echo "::error::minimum_release_age in mise.toml must be whole days (e.g. 14d): '$MIN_AGE'" >&2
+            exit 1
+          fi
+          CUTOFF=$(date -u -d "${MIN_AGE%d} days ago" +%Y-%m-%dT%H:%M:%SZ)
+          SEMVER='^v?[0-9]+\.[0-9]+\.[0-9]+$'
 
           # Node LTS latest (mise upgrade --bump would jump to non-LTS majors)
-          NODE_VERSION=$("${CURL[@]}" https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | max_by(.version | ltrimstr("v") | split(".") | map(tonumber)) | .version | ltrimstr("v")')
+          NODE_VERSION=$("${CURL[@]}" https://nodejs.org/dist/index.json | jq -r --arg cutoff "${CUTOFF%%T*}" '[.[] | select(.lts != false and .date <= $cutoff)] | max_by(.version | ltrimstr("v") | split(".") | map(tonumber)) | .version | ltrimstr("v")')
 
           ## Go latest stable
           GO_VERSION=$("${CURL[@]}" 'https://go.dev/dl/?mode=json' | jq -r '[.[] | select(.stable==true)][0].version | ltrimstr("go")')
 
-          # Neovim latest release version (authenticated to avoid the 60 req/h unauthenticated rate limit)
-          NEOVIM_VERSION=$("${CURL[@]}" -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/neovim/neovim/releases/latest | jq -r '.tag_name | ltrimstr("v")')
+          release_before_cutoff() {
+            "${CURL[@]}" -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/$1/releases?per_page=50" |
+              jq -c --arg cutoff "$CUTOFF" --arg tag "$2" '[.[] | select(.draft == false and .prerelease == false and (.tag_name | test($tag)) and .published_at <= $cutoff)] | first'
+          }
 
-          # npm cli latest
-          NPM_VERSION=$("${CURL[@]}" https://registry.npmjs.org/npm/latest | jq -r '.version')
+          NEOVIM_VERSION=$(release_before_cutoff neovim/neovim "$SEMVER" | jq -r '.tag_name | ltrimstr("v")')
 
-          # Terraform latest GA (Checkpoint API matches releases.hashicorp.com download source)
-          TERRAFORM_VERSION=$("${CURL[@]}" https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r '.current_version')
+          NPM_VERSION=$("${CURL[@]}" https://registry.npmjs.org/npm | jq -r --arg cutoff "$CUTOFF" --arg semver "$SEMVER" '.time | to_entries | map(select((.key | test($semver)) and .value <= $cutoff)) | max_by(.key | split(".") | map(tonumber)) | .key')
+
+          TERRAFORM_VERSION=$("${CURL[@]}" 'https://api.releases.hashicorp.com/v1/releases/terraform?limit=20' | jq -r --arg cutoff "$CUTOFF" '[.[] | select(.is_prerelease == false and .timestamp_created <= $cutoff)] | first | .version')
 
           RUSTUP_VERSION=$("${CURL[@]}" https://static.rust-lang.org/rustup/release-stable.toml | sed -n "s/^version = '\(.*\)'$/\1/p")
 
-          TREE_SITTER_CLI_VERSION=$("${CURL[@]}" https://index.crates.io/tr/ee/tree-sitter-cli | jq -rs '[.[] | select(.yanked == false and (.vers | test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .vers] | max_by(split(".") | map(tonumber))')
-
-          latest_release() {
-            "${CURL[@]}" -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/$1/releases/latest"
-          }
+          TREE_SITTER_CLI_VERSION=$("${CURL[@]}" -A "hodanov/my-pde tools-bump" 'https://crates.io/api/v1/crates/tree-sitter-cli/versions?per_page=50' | jq -r --arg cutoff "$CUTOFF" --arg semver "$SEMVER" '[.versions[] | select(.yanked == false and (.num | test($semver)) and .created_at <= $cutoff) | .num] | max_by(split(".") | map(tonumber))')
           asset_sha256() {
             jq -r --arg name "$2" '.assets[] | select(.name == $name) | .digest // "" | ltrimstr("sha256:")' <<<"$1"
           }
 
-          LUA_LS_RELEASE=$(latest_release LuaLS/lua-language-server)
+          LUA_LS_RELEASE=$(release_before_cutoff LuaLS/lua-language-server "$SEMVER")
           LUA_LS_VERSION=$(jq -r '.tag_name' <<<"$LUA_LS_RELEASE")
           LUA_LS_SHA256_AMD64=$(asset_sha256 "$LUA_LS_RELEASE" "lua-language-server-${LUA_LS_VERSION}-linux-x64.tar.gz")
           LUA_LS_SHA256_ARM64=$(asset_sha256 "$LUA_LS_RELEASE" "lua-language-server-${LUA_LS_VERSION}-linux-arm64.tar.gz")
 
-          MARKSMAN_RELEASE=$(latest_release artempyanykh/marksman)
+          MARKSMAN_RELEASE=$(release_before_cutoff artempyanykh/marksman '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
           MARKSMAN_VERSION=$(jq -r '.tag_name' <<<"$MARKSMAN_RELEASE")
           MARKSMAN_SHA256_AMD64=$(asset_sha256 "$MARKSMAN_RELEASE" marksman-linux-x64)
           MARKSMAN_SHA256_ARM64=$(asset_sha256 "$MARKSMAN_RELEASE" marksman-linux-arm64)
 
-          UV_VERSION=$(latest_release astral-sh/uv | jq -r '.tag_name')
+          UV_VERSION=$(release_before_cutoff astral-sh/uv "$SEMVER" | jq -r '.tag_name')
 
           # Validate resolved values before writing outputs: fail fast instead of
           # generating a broken bump PR (and a wasted docker build) when an upstream
@@ -103,6 +111,25 @@ jobs:
             fi
           done
 
+          newer_of_pin() {
+            printf '%s\n%s\n' "$(mise config get "$1")" "$2" | sort -V | tail -n 1
+          }
+          keep_pinned_release() {
+            local version_var="${1}_VERSION"
+            if [[ "$(newer_of_pin "env.$version_var" "${!version_var}")" != "${!version_var}" ]]; then
+              for var in "${1}_VERSION" "${1}_SHA256_AMD64" "${1}_SHA256_ARM64"; do
+                printf -v "$var" '%s' "$(mise config get "env.$var")"
+              done
+            fi
+          }
+          NODE_VERSION=$(newer_of_pin tools.node "$NODE_VERSION")
+          GO_VERSION=$(newer_of_pin tools.go "$GO_VERSION")
+          for var in NEOVIM_VERSION NPM_VERSION TERRAFORM_VERSION RUSTUP_VERSION TREE_SITTER_CLI_VERSION UV_VERSION; do
+            printf -v "$var" '%s' "$(newer_of_pin "env.$var" "${!var}")"
+          done
+          keep_pinned_release LUA_LS
+          keep_pinned_release MARKSMAN
+
           {
             echo "node=$NODE_VERSION"
             echo "go=$GO_VERSION"
@@ -123,28 +150,41 @@ jobs:
       - name: Update mise.toml pins
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GO_VERSION: ${{ steps.resolve.outputs.go }}
+          NODE_VERSION: ${{ steps.resolve.outputs.node }}
+          LUA_LS_VERSION: ${{ steps.resolve.outputs.lua_ls }}
+          LUA_LS_SHA256_AMD64: ${{ steps.resolve.outputs.lua_ls_sha256_amd64 }}
+          LUA_LS_SHA256_ARM64: ${{ steps.resolve.outputs.lua_ls_sha256_arm64 }}
+          MARKSMAN_VERSION: ${{ steps.resolve.outputs.marksman }}
+          MARKSMAN_SHA256_AMD64: ${{ steps.resolve.outputs.marksman_sha256_amd64 }}
+          MARKSMAN_SHA256_ARM64: ${{ steps.resolve.outputs.marksman_sha256_arm64 }}
+          NEOVIM_VERSION: ${{ steps.resolve.outputs.neovim }}
+          NPM_VERSION: ${{ steps.resolve.outputs.npm }}
+          RUSTUP_VERSION: ${{ steps.resolve.outputs.rustup }}
+          TERRAFORM_VERSION: ${{ steps.resolve.outputs.terraform }}
+          TREE_SITTER_CLI_VERSION: ${{ steps.resolve.outputs.tree_sitter_cli }}
+          UV_VERSION: ${{ steps.resolve.outputs.uv }}
         shell: bash
         run: |
           set -euo pipefail
           # Policy-pinned toolchains ([tools]) and Docker-only versions ([env])
-          mise use --pin \
-            go@${{ steps.resolve.outputs.go }} \
-            node@${{ steps.resolve.outputs.node }}
+          mise use --pin "go@$GO_VERSION" "node@$NODE_VERSION"
           mise set \
-            LUA_LS_VERSION=${{ steps.resolve.outputs.lua_ls }} \
-            LUA_LS_SHA256_AMD64=${{ steps.resolve.outputs.lua_ls_sha256_amd64 }} \
-            LUA_LS_SHA256_ARM64=${{ steps.resolve.outputs.lua_ls_sha256_arm64 }} \
-            MARKSMAN_VERSION=${{ steps.resolve.outputs.marksman }} \
-            MARKSMAN_SHA256_AMD64=${{ steps.resolve.outputs.marksman_sha256_amd64 }} \
-            MARKSMAN_SHA256_ARM64=${{ steps.resolve.outputs.marksman_sha256_arm64 }} \
-            NEOVIM_VERSION=${{ steps.resolve.outputs.neovim }} \
-            NPM_VERSION=${{ steps.resolve.outputs.npm }} \
-            RUSTUP_VERSION=${{ steps.resolve.outputs.rustup }} \
-            TERRAFORM_VERSION=${{ steps.resolve.outputs.terraform }} \
-            TREE_SITTER_CLI_VERSION=${{ steps.resolve.outputs.tree_sitter_cli }} \
-            UV_VERSION=${{ steps.resolve.outputs.uv }}
-          # Everything else in [tools] goes to latest (go/node excluded above)
+            "LUA_LS_VERSION=$LUA_LS_VERSION" \
+            "LUA_LS_SHA256_AMD64=$LUA_LS_SHA256_AMD64" \
+            "LUA_LS_SHA256_ARM64=$LUA_LS_SHA256_ARM64" \
+            "MARKSMAN_VERSION=$MARKSMAN_VERSION" \
+            "MARKSMAN_SHA256_AMD64=$MARKSMAN_SHA256_AMD64" \
+            "MARKSMAN_SHA256_ARM64=$MARKSMAN_SHA256_ARM64" \
+            "NEOVIM_VERSION=$NEOVIM_VERSION" \
+            "NPM_VERSION=$NPM_VERSION" \
+            "RUSTUP_VERSION=$RUSTUP_VERSION" \
+            "TERRAFORM_VERSION=$TERRAFORM_VERSION" \
+            "TREE_SITTER_CLI_VERSION=$TREE_SITTER_CLI_VERSION" \
+            "UV_VERSION=$UV_VERSION"
+          # Everything else in [tools] goes to the latest release older than minimum_release_age (go/node excluded above)
           mise upgrade --bump \
+            actionlint zizmor \
             shfmt shellcheck stylua hadolint golangci-lint \
             'go:golang.org/x/tools/cmd/goimports' \
             'go:golang.org/x/tools/gopls' \
@@ -184,13 +224,16 @@ jobs:
             - rustup: ${{ steps.resolve.outputs.rustup }}
             - tree-sitter-cli: ${{ steps.resolve.outputs.tree_sitter_cli }}
             - uv: ${{ steps.resolve.outputs.uv }}
-            - mise-managed tools: latest (see mise.toml diff)
+            - mise-managed tools: latest eligible (see mise.toml diff)
           BODY: |-
             This PR bumps tool versions pinned in `mise.toml` and regenerates the
             derived artifacts (`mise.lock`, `environment/tools/go/go-tools.txt`,
             and the ARG defaults in `environment/docker/nvim.dockerfile`).
 
-            - Node: `${{ steps.resolve.outputs.node }}` (latest LTS)
+            Releases newer than `minimum_release_age` in `mise.toml` are skipped,
+            except Go and rustup, whose sources publish no release date.
+
+            - Node: `${{ steps.resolve.outputs.node }}` (latest eligible LTS)
             - Go: `${{ steps.resolve.outputs.go }}` (latest stable)
             - Neovim: `${{ steps.resolve.outputs.neovim }}`
             - npm CLI: `${{ steps.resolve.outputs.npm }}`
@@ -200,7 +243,7 @@ jobs:
             - rustup: `${{ steps.resolve.outputs.rustup }}`
             - tree-sitter-cli: `${{ steps.resolve.outputs.tree_sitter_cli }}`
             - uv: `${{ steps.resolve.outputs.uv }}`
-            - Other mise-managed tools: bumped to latest (see `mise.toml` diff)
+            - Other mise-managed tools: bumped to the latest eligible release (see `mise.toml` diff)
 
             Automated by scheduled workflow.
         shell: bash

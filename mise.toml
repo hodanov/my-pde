@@ -24,6 +24,7 @@ gitleaks = "8.30.1"
 
 [settings]
 lockfile = true
+minimum_release_age = "14d"
 lockfile_platforms = ["linux-x64", "macos-arm64"]
 
 # Docker-only versions and per-asset SHA256s (for releases without an upstream
@@ -267,6 +268,18 @@ depends = ["ai-bridge:test", "nvim-sync:test", "config-diff:test", "scaffold:tes
 description = "Run lint for all Go apps under scripts/"
 depends = ["ai-bridge:lint", "nvim-sync:lint", "config-diff:lint", "scaffold:lint", "agent-stats:lint", "pipeline-metrics:lint"]
 
+[tasks."go:vuln"]
+description = "Run govulncheck for all Go apps under scripts/"
+run = '''
+status=0
+for mod in scripts/*/go.mod; do
+  dir=$(dirname "$mod")
+  echo "== $dir"
+  (cd "$dir" && govulncheck ./...) || status=1
+done
+exit "$status"
+'''
+
 # ---- AI agents deploy: agents.xml symlinks ----
 
 [tasks.codex-link]
@@ -460,7 +473,7 @@ run = "actionlint"
 
 [tasks."lint:zizmor"]
 description = "Run zizmor security audit on GitHub Actions workflows"
-run = "zizmor --min-severity high .github/workflows"
+run = "zizmor .github"
 
 [tasks."lint:format"]
 description = "Run tombi, prettier, and markdownlint via environment/tools/node"
