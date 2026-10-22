@@ -10,6 +10,9 @@ updates:
       pip-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "npm"
     directory: "./environment/tools/node"
     schedule:
@@ -20,6 +23,9 @@ updates:
       npm-tools:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "docker"
     directory: "./environment/docker"
     schedule:
@@ -30,6 +36,9 @@ updates:
       docker-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "gomod"
     directories:
       - "/scripts/*"
@@ -41,6 +50,9 @@ updates:
       go-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
