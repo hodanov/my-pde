@@ -268,6 +268,18 @@ depends = ["ai-bridge:test", "nvim-sync:test", "config-diff:test", "scaffold:tes
 description = "Run lint for all Go apps under scripts/"
 depends = ["ai-bridge:lint", "nvim-sync:lint", "config-diff:lint", "scaffold:lint", "agent-stats:lint", "pipeline-metrics:lint"]
 
+[tasks."go:vuln"]
+description = "Run govulncheck for all Go apps under scripts/"
+run = '''
+status=0
+for mod in scripts/*/go.mod; do
+  dir=$(dirname "$mod")
+  echo "== $dir"
+  (cd "$dir" && govulncheck ./...) || status=1
+done
+exit "$status"
+'''
+
 # ---- AI agents deploy: agents.xml symlinks ----
 
 [tasks.codex-link]

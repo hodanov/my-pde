@@ -47,6 +47,7 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 - `mise run <app>:build` — build the binary (e.g. `mise run ai-bridge:build`).
 - `mise run <app>:test` — run Go tests; `mise run go:test` runs all apps.
 - `mise run <app>:lint` — golangci-lint + goimports check; `mise run go:lint` runs all apps.
+- `mise run go:vuln` — govulncheck for every app (also run weekly by `automation-go-vuln-scan.yml`).
 - `mise run ai-bridge:install` — sign and register with launchd (local only).
 - `mise run ai-bridge:generate` — regenerate mocks.
 
