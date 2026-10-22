@@ -24,6 +24,7 @@ gitleaks = "8.30.1"
 
 [settings]
 lockfile = true
+minimum_release_age = "14d"
 lockfile_platforms = ["linux-x64", "macos-arm64"]
 
 # Docker-only versions and per-asset SHA256s (for releases without an upstream
