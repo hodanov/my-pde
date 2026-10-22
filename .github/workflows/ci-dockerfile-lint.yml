@@ -3,12 +3,15 @@ permissions:
   contents: read
 
 on:
-  push:
+  pull_request:
     paths:
       - environment/docker/nvim.dockerfile
       - .github/workflows/ci-dockerfile-lint.yml
-      - .hadolint.yml
       - mise.toml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -20,9 +23,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup mise
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ./.github/actions/setup-mise
 
       - name: Run hadolint
         run: mise run lint:docker

@@ -47,6 +47,7 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 - `mise run <app>:build` — build the binary (e.g. `mise run ai-bridge:build`).
 - `mise run <app>:test` — run Go tests; `mise run go:test` runs all apps.
 - `mise run <app>:lint` — golangci-lint + goimports check; `mise run go:lint` runs all apps.
+- `mise run go:vuln` — govulncheck for every app (also run weekly by `automation-go-vuln-scan.yml`).
 - `mise run ai-bridge:install` — sign and register with launchd (local only).
 - `mise run ai-bridge:generate` — regenerate mocks.
 
@@ -66,6 +67,7 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 ### Tool version updates
 
 - `mise.toml` is the single source of truth for tool versions. Weekly CI (`automation-tools-bump.yml`) bumps the pins and regenerates the derived artifacts.
+- New releases wait out the cooldown in `[settings] minimum_release_age` (14 days, matching Dependabot's `cooldown`): `mise upgrade --bump` and the tools-bump workflow pick the newest release older than it and never downgrade a pin. Go and rustup are exempt because their sources publish no release date. CI's own mise binary follows the same cooldown through `.github/actions/setup-mise`.
 - `mise run pins:sync` — regenerate `environment/tools/go/go-tools.txt` and the Dockerfile ARG defaults from `mise.toml` (CI verifies sync via `pins:check`).
 
 ## Parallel Work (git worktrees)

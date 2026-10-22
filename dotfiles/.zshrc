@@ -124,11 +124,6 @@ else
 fi
 
 ####################
-# curl
-####################
-export PATH="/usr/local/opt/curl/bin:$PATH"
-
-####################
 # ghq & peco
 ####################
 # alias repo='cd $(ghq list --full-path --exact | peco)'

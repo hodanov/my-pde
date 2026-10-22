@@ -1,0 +1,11 @@
+name: Setup mise
+description: Install a mise release older than the cooldown and the tools locked in mise.lock
+
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+      with:
+        minimum_release_age: 14d
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
