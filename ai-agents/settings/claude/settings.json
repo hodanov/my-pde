@@ -136,10 +136,18 @@
       "Read(**/*.p12)",
       "Read(**/*.pfx)",
       "Read(**/id_rsa*)",
+      "Read(**/id_ed25519*)",
+      "Read(**/id_ecdsa*)",
       "Read(**/.netrc)",
       "Read(**/.npmrc)",
-      "Read(**/credentials*)"
-    ]
+      "Read(**/credentials*)",
+      "Read(**/.git-credentials)",
+      "Read(**/.envrc)",
+      "Read(**/*.tfstate*)",
+      "Read(~/.codex/auth.json)",
+      "Read(~/.config/gh/hosts.yml)"
+    ],
+    "disableBypassPermissionsMode": "disable"
   },
   "hooks": {
     "PreCompact": [
@@ -288,6 +296,14 @@
       "gh *"
     ],
     "filesystem": {
+      "denyRead": [
+        "~/.ssh/id_*",
+        "~/.aws/credentials",
+        "~/.codex/auth.json",
+        "~/.config/gh/hosts.yml",
+        "~/.git-credentials",
+        "~/.netrc"
+      ],
       "allowWrite": [
         "~/Library/Caches/go-build",
         "~/Library/Caches/golangci-lint",
@@ -305,7 +321,8 @@
         "sum.golang.org",
         "registry.npmjs.org"
       ]
-    }
+    },
+    "allowUnsandboxedCommands": false
   },
   "askUserQuestionTimeout": "10m",
   "statusLine": {
