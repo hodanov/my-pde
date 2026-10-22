@@ -461,7 +461,7 @@ run = "actionlint"
 
 [tasks."lint:zizmor"]
 description = "Run zizmor security audit on GitHub Actions workflows"
-run = "zizmor --min-severity high .github/workflows"
+run = "zizmor .github"
 
 [tasks."lint:format"]
 description = "Run tombi, prettier, and markdownlint via environment/tools/node"
