@@ -10,7 +10,7 @@
     "@fsouza/prettierd": "^0.29.0",
     "bash-language-server": "^5.8.1",
     "eslint": "^10.12.0",
-    "markdownlint-cli2": "^0.23.3",
+    "markdownlint-cli2": "^0.24.0",
     "prettier-plugin-go-template": "^0.0.15",
     "textlint": "^15.2.1",
     "textlint-rule-preset-ja-technical-writing": "^12.0.2",
@@ -23,9 +23,6 @@
     "yarn": "^1.22.22"
   },
   "overrides": {
-    "markdownlint-cli2": {
-      "smol-toml": "^1.7.1"
-    },
     "editorconfig": {
       "minimatch": "^10.2.3"
     }
