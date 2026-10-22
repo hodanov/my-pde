@@ -52,9 +52,7 @@ jobs:
 
       - name: Setup mise
         if: steps.changes.outputs.image == 'true'
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ./.github/actions/setup-mise
 
       # `type=gha` needs ACTIONS_RUNTIME_TOKEN / ACTIONS_RESULTS_URL, which GitHub
       # only injects into JS actions. This step exports them to later `run:` steps
