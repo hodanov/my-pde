@@ -93,7 +93,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
 # Stage 3: Build Go toolchain and tools
 FROM base AS go-builder
 
-ARG GO_VERSION=1.27.2
+ARG GO_VERSION=1.27.3
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH="$(dpkg --print-architecture)" \
@@ -132,7 +132,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
 # Stage 4: Build Rust-based tools
 FROM base AS rust-builder
 
-ARG RUSTUP_VERSION=1.29.1
+ARG RUSTUP_VERSION=1.29.2
 ARG RUST_TOOLCHAIN=stable
 ARG STYLUA_VERSION=2.6.0
 ARG TREE_SITTER_CLI_VERSION=0.27.1
