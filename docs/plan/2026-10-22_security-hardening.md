@@ -98,11 +98,11 @@ main が汚れるとホストでコードが実行され、手元の資格情報
 1. このリポの `.claude/settings.local.json`（未追跡）: sandbox 無効の上書きを消し、`docker *` を `excludedCommands` に足す。`curl:*`、`npx:*`、`claude *`、`docker container *`、`docker cp *`、`Read(//Users/hodanov/**)` の allow を消し、`docker exec *` は `docker exec nvim-dev *` に絞る。棚卸しは `.claude/skills/permission-review` に沿う。
 2. ユーザー設定 `ai-agents/settings/claude/settings.json`:
    - `permissions.disableBypassPermissionsMode: "disable"` を足す。s1ngularity の手口と、ai-bridge 経由のオプション注入を無効にする。
-   - `permissions.deny` に `~/.ssh/**`、`~/.config/gh/**`、`~/.codex/auth.json`、`~/.docker/config.json`、`~/.aws/**`、`~/.kube/**`、`**/.git-credentials`、`**/*.tfstate`、`**/.envrc` の Read を足す。deny は `grep -r` などには効かないので、sandbox 下で読めてしまうかを実測し、読めれば同じパスを `sandbox.filesystem.denyRead` にも入れる。
+   - 資格情報の読み取りを二層で禁止する。`permissions.deny` は Read ツールと `cat` などの認識できるコマンドにしか効かず、sandbox は既定でホーム全体を読めるため、sandbox 内の Bash とその子プロセスには `sandbox.filesystem.denyRead` が別に要る（ダミーファイルで `grep -r` が止まることを確認済み）。SSH は known_hosts と config を読めるよう、秘密鍵 `~/.ssh/id_*` だけを禁止する。Docker の `config.json` は sandbox 内の docker CLI がコンテキスト解決に使うので対象外にする。
    - `sandbox.allowUnsandboxedCommands: false` で sandbox 外での再実行を禁止し、足りないものは `excludedCommands` に明示する。
-   - `enableWeakerNetworkIsolation` は、対象の gh / terraform が `excludedCommands` に入っているので、外して困らないか確かめてから外す。
+   - `enableWeakerNetworkIsolation` は main で編集中の設定なので、この計画では触らない。
 3. Codex（`~/.codex/config.toml`、リポ管理外）: `[sandbox_workspace_write]` の下に入っている `notify` / `model` / `model_reasoning_effort` をトップレベルへ移す。`network_access = true` を外せるか試す。
-4. `dotfiles/.zshrc` から、存在せず書き込み可能な `/usr/local/opt/curl/bin` の PATH 追加を消し、`HIST_IGNORE_SPACE` を足す。`.gitignore` に秘密ファイルのパターンと `.claude/settings.local.json` を足す。
+4. `dotfiles/.zshrc` から、存在せず書き込み可能な `/usr/local/opt/curl/bin` の PATH 追加を消す。`.gitignore` に秘密ファイルのパターンと `.claude/settings.local.json` を足す。
 
 ### P3: Routine とプロンプトインジェクション（AP3）
 
@@ -171,5 +171,4 @@ P0、P2-1、P2-3 はリポの外の操作で、PR にしない。
 ## Open questions
 
 - Routine の `allowed_tools` が `Bash(gh issue create:*)` のようなパターン指定に対応しているか。
-- sandbox が有効なとき、`permissions.deny` の Read ルールが `grep -r` などのサブプロセスにも効くか。
 - Codex の `network_access` を外して普段の作業が回るか。
