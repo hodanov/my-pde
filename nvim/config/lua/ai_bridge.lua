@@ -13,7 +13,6 @@ local function open_prompt_editor(initial_prompt, cwd)
 
 	local lines = vim.split(initial_prompt, "\n")
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-	vim.bo[buf].modified = false
 
 	local width = math.floor(vim.o.columns * 0.8)
 	local height = math.floor(vim.o.lines * 0.6)
@@ -32,15 +31,19 @@ local function open_prompt_editor(initial_prompt, cwd)
 		title_pos = "center",
 	})
 
+	local function current_prompt()
+		return table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+	end
+
 	local function submit()
-		local content = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+		local content = current_prompt()
 		vim.api.nvim_win_close(win, true)
 		vim.api.nvim_buf_delete(buf, { force = true })
 		M.send_prompt(content, cwd)
 	end
 
 	local function cancel()
-		if vim.bo[buf].modified and vim.fn.confirm("Discard prompt?", "&Yes\n&No", 2) ~= 1 then
+		if current_prompt() ~= initial_prompt and vim.fn.confirm("Discard prompt?", "&Yes\n&No", 2) ~= 1 then
 			return
 		end
 		vim.api.nvim_win_close(win, true)
