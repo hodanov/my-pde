@@ -144,8 +144,7 @@
       "Read(**/.git-credentials)",
       "Read(**/.envrc)",
       "Read(**/*.tfstate*)",
-      "Read(~/.codex/auth.json)",
-      "Read(~/.config/gh/hosts.yml)"
+      "Read(~/.codex/auth.json)"
     ],
     "disableBypassPermissionsMode": "disable"
   },
@@ -297,10 +296,8 @@
     ],
     "filesystem": {
       "denyRead": [
-        "~/.ssh/id_*",
         "~/.aws/credentials",
         "~/.codex/auth.json",
-        "~/.config/gh/hosts.yml",
         "~/.git-credentials",
         "~/.netrc"
       ],
@@ -321,8 +318,7 @@
         "sum.golang.org",
         "registry.npmjs.org"
       ]
-    },
-    "allowUnsandboxedCommands": false
+    }
   },
   "askUserQuestionTimeout": "10m",
   "statusLine": {
