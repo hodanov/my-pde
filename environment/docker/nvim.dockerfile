@@ -170,7 +170,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # Stage 5: Build Python venv with uv
 FROM base AS python-builder
 
-ARG UV_VERSION=0.13.1
+ARG UV_VERSION=0.13.5
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
 RUN set -eux; \
