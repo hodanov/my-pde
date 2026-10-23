@@ -79,7 +79,7 @@ main が汚れるとホストでコードが実行され、手元の資格情報
 3. 使っていない secret `CLAUDE_CODE_OAUTH_TOKEN`（ADR-0006）と environment `copilot`（ADR-0009）を削除する。
 4. private vulnerability reporting を有効にする。secret scanning の汎用パターンと validity checks は GitHub Secret Protection が必要で、有効にできなかった。
 5. main のブランチ保護で `enforce_admins` を有効にする。P1 のマージ後、必須チェックに `gitleaks` と `actions-lint` を足す。
-6. gh トークンから `admin:public_key` と `gist` を外す（`gh auth refresh --remove-scopes`）。`workflow` は Cloud Routine が使うので残す。
+6. gh トークンから `admin:public_key` と `gist` を外す（`gh auth refresh --remove-scopes`）。`workflow` は Cloud Routine が使うので残す。`gist` は gh CLI がログイン時に必ず要求するので外れず、ADR-0011 で受け入れた。Routine 側のトークンは `/web-setup` をやり直して揃える。
 7. アカウントを手で点検する。2FA が passkey かセキュリティキーか、security log、承認済みの OAuth App / GitHub App、SSH 鍵の用途。
 
 ### P1: 自動マージと CI の関門（AP1 / AP3）
@@ -109,7 +109,7 @@ main が汚れるとホストでコードが実行され、手元の資格情報
 1. Adopted-Issue PR Bot は Issue を `--author hodanov` で取得する。ラベルは triage 権限が要るが、本文は起票者が後から書き換えられる。
 2. PR Care Bot と Monthly Routine Improve は、コメントを取得する時点で jq の `select(.user.login == "hodanov")` に絞る。
 3. スキャン系 5 本は WebFetch と Bash と広い gh トークンが同居する。Routine の `allowed_tools` でのパターン指定はドキュメントに記述が無く、効くか確かめられないので変えない。ADR-0011 で受容し、出力が人の triage（`adopted` ラベル）を通ることと、Routine の push が自動マージされず main に直接入らないことで補う。
-4. クラウド環境のネットワーク設定を claude.ai で確認する。
+4. クラウド環境のネットワーク設定を claude.ai で確認する。Routine 8 本は同じ環境を使い、Limited（追加の許可ドメインなし、既定のパッケージマネージャーのみ）だったので変えない。
 
 ### P4: コンテナ、ai-bridge、依存（AP2）
 

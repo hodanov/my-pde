@@ -74,4 +74,8 @@ Claude Code で sandbox 外への再実行を禁止したので、sandbox で動
 - actionlint が `$/` 構文に対応したとき: zizmor の `self-repository` を有効に戻す。
 - Docker Desktop がバインドマウントの所有者の見せ方を変えたとき: `cap_drop: [ALL]` で書き込めなくなるので、必要な capability だけを戻す。
 
+2026-10-23 追記: Routine 8 本が使うクラウド環境（`routines/*.json` の `environment_id` は全て同じ）のネットワークを確かめた。Limited で、追加の許可ドメインは無く、既定のパッケージマネージャーのリストだけを許可していた。スキャン系 Routine が操られても、任意のドメインへは送れない。
+
+2026-10-23 追記: ホストの gh トークンから `admin:public_key` を外した。盗まれたトークンで攻撃者が自分の SSH 鍵を登録すると、トークンを失効させても push し続けられるため。`gist` は gh CLI がログイン時に必ず要求するので外せず、受け入れる。秘密 gist への流出経路になりうるが、gh CLI を使う限り代わりが無い。
+
 関連: [ADR-0002](0002-use-github-app-for-workflow-bot-auth.md)、[ADR-0005](0005-auto-bump-checksum-less-binaries-via-release-digests.md)、[ADR-0006](0006-run-llm-automation-on-claude-routines.md)、[ADR-0010](0010-scan-go-dependencies-with-dependabot-and-govulncheck.md)
