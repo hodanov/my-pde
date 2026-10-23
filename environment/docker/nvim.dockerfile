@@ -170,7 +170,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # Stage 5: Build Python venv with uv
 FROM base AS python-builder
 
-ARG UV_VERSION=0.13.1
+ARG UV_VERSION=0.13.5
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
 RUN set -eux; \
@@ -198,10 +198,10 @@ RUN set -eux; \
   apt-get clean -y; \
   rm -rf /var/lib/apt/lists/*
 
-COPY ./environment/tools/python/pyproject.toml /opt/python/
+COPY ./environment/tools/python/pyproject.toml ./environment/tools/python/uv.lock /opt/python/
 WORKDIR /opt/python
 RUN export PATH="$HOME/.local/bin:$PATH" \
-  && uv sync --project .
+  && uv sync --project . --locked
 WORKDIR /
 
 ####################
