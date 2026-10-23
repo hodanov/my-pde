@@ -198,10 +198,10 @@ RUN set -eux; \
   apt-get clean -y; \
   rm -rf /var/lib/apt/lists/*
 
-COPY ./environment/tools/python/pyproject.toml /opt/python/
+COPY ./environment/tools/python/pyproject.toml ./environment/tools/python/uv.lock /opt/python/
 WORKDIR /opt/python
 RUN export PATH="$HOME/.local/bin:$PATH" \
-  && uv sync --project .
+  && uv sync --project . --locked
 WORKDIR /
 
 ####################

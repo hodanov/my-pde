@@ -24,21 +24,26 @@ services:
     # - Note: replace/remove this if you later run a real long-lived service as PID 1
     command: ["sleep", "infinity"]
     restart: always
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     networks:
       - my-nvim
     environment:
       # Container-side path for ai-bridge; matches the volume mount target below.
       # The Lua client reads this via os.getenv("AI_BRIDGE_DIR").
       - AI_BRIDGE_DIR=/.ai-bridge
+    # SECURITY NOTE: The container is not a security boundary for the host.
+    # Code running in it can rewrite anything under ~/workspace that the host
+    # later executes (git hooks, agent settings deployed from this repo), and can
+    # write ~/.ai-bridge/request.json, which the host daemon executes. Accepted as
+    # a design trade-off for the dev-only workflow. Do NOT use in production.
     volumes:
       # - ..:/workspace
       - ${HOME}/workspace:/${HOME}/workspace
       # Host ~/.ai-bridge -> container /.ai-bridge (not under container $HOME).
       # AI_BRIDGE_DIR env var above tells the Lua client where to find it.
-      # SECURITY NOTE: The container can write to ~/.ai-bridge/request.json,
-      # which the host daemon consumes and executes. If the container is
-      # compromised, this becomes an escape vector. Accepted as a design
-      # trade-off for the dev-only workflow. Do NOT use in production.
       - ${HOME}/.ai-bridge:/.ai-bridge
 networks:
   my-nvim:

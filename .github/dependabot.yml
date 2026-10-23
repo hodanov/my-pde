@@ -1,13 +1,13 @@
 version: 2
 updates:
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "./environment/tools/python"
     schedule:
       interval: "weekly"
     cooldown:
       default-days: 14
     groups:
-      pip-dependencies:
+      python-dependencies:
         patterns:
           - "*"
         update-types:
@@ -34,6 +34,19 @@ updates:
       default-days: 14
     groups:
       docker-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker-compose"
+    directory: "./environment/otel"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 14
+    groups:
+      docker-compose-dependencies:
         patterns:
           - "*"
         update-types:
