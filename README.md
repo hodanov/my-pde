@@ -99,7 +99,7 @@ See `ai-agents/` for the full list of available agents and skills.
 
 ### Python
 
-Python environments are managed by uv. A base virtualenv is prebuilt at `/opt/python/.venv`.
+Python environments are managed by uv. A base virtualenv is prebuilt at `/opt/python/.venv` from `environment/tools/python/pyproject.toml` and `uv.lock`. After editing `pyproject.toml`, run `uv lock` in that directory and rebuild.
 
 ```sh
 # Use the prebuilt base venv (global tools)

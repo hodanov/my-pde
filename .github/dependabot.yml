@@ -1,13 +1,13 @@
 version: 2
 updates:
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "./environment/tools/python"
     schedule:
       interval: "weekly"
     cooldown:
       default-days: 14
     groups:
-      pip-dependencies:
+      python-dependencies:
         patterns:
           - "*"
         update-types:
