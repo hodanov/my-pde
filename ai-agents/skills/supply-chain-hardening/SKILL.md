@@ -1,15 +1,15 @@
 ---
 name: supply-chain-hardening
-description: GitHub Actions の SHA ピン留め（pinact 必須）と Dependabot・Renovate のクールダウン設定（14日間）をリポジトリに適用し、サプライチェーン攻撃対策を実施する。ユーザーが「サプライチェーン対策」「GHA ピン留め」「Dependabot クールダウン」「pinact」「supply chain hardening」に言及した場合に使用する。
+description: GitHub Actions の SHA ピン留め（pinact 必須）、Dependabot・Renovate のクールダウン設定（14日間）、自動マージ条件の厳格化、zizmor の導入、リポジトリ設定（既定トークン・SHA 固定の強制・ブランチ保護）をリポジトリに適用し、サプライチェーン攻撃対策を実施する。ユーザーが「サプライチェーン対策」「GHA ピン留め」「Dependabot クールダウン」「pinact」「自動マージの条件」「zizmor」「supply chain hardening」に言及した場合に使用する。
 disable-model-invocation: true
-argument-hint: "[対象スコープ: all / gha / dependabot]"
+argument-hint: "[対象スコープ: all / gha / dependabot / automerge / zizmor / settings]"
 metadata:
-  version: 1
+  version: 2
 ---
 
 # Supply Chain Hardening
 
-GitHub Actions の SHA ピン留めと Dependabot / Renovate のクールダウン設定を段階的に適用するスキル。
+GitHub Actions の SHA ピン留め、Dependabot / Renovate のクールダウン、自動マージの条件、zizmor、リポジトリ設定を段階的に適用するスキル。
 
 ## ワークフロー全体像
 
@@ -18,20 +18,26 @@ Phase 0: pinact インストール確認（必須前提条件）
 Phase 1: 現状分析レポート
 Phase 2: GitHub Actions SHA ピン留め（pinact 使用）
 Phase 3: Dependabot / Renovate クールダウン設定
-Phase 4: 検証
+Phase 4: 自動マージの条件
+Phase 5: zizmor
+Phase 6: リポジトリ設定（GitHub 上の設定変更。1 件ずつ確認を取る）
+Phase 7: 検証
 ```
 
 **スコープ制御**: `$ARGUMENTS` で対象を絞れる。
 
-- `all`（デフォルト）: Phase 2 + 3 の両方
+- `all`（デフォルト）: Phase 2〜6 の全て
 - `gha`: Phase 2 のみ
 - `dependabot`: Phase 3 のみ
+- `automerge`: Phase 4 のみ
+- `zizmor`: Phase 5 のみ
+- `settings`: Phase 6 のみ
 
 ---
 
 ## Phase 0: pinact インストール確認
 
-**pinact は本スキルの必須前提条件である。**
+**スコープに Phase 2 を含む（`all` / `gha`）とき、pinact は必須前提条件である。** それ以外のスコープではこの Phase をスキップする。
 
 ```bash
 which pinact && pinact --version
@@ -57,7 +63,7 @@ https://github.com/suzuki-shunsuke/pinact/blob/main/INSTALL.md
 インストール後に再度このスキルを実行してください。
 ```
 
-**pinact が確認できるまで以降のフェーズには進まないこと。**
+**スコープに Phase 2 を含むときは、pinact が確認できるまで以降のフェーズには進まないこと。**
 
 ---
 
@@ -81,6 +87,9 @@ bash scripts/scan-repo.sh
 - Dependabot / Renovate 設定の存在
 - Dependabot の cooldown 設定状況
 - Renovate の minimumReleaseAge 設定状況
+- 自動マージのワークフローと `dependabot/fetch-metadata` の有無
+- zizmor の設定と CI での利用
+- リポジトリ設定（SHA 固定の強制、既定トークンの権限、Actions による PR 承認、ブランチ保護）
 
 ### 1-2. GitHub Actions 分析
 
@@ -109,6 +118,10 @@ bash scripts/scan-repo.sh
 | GHA        | ピン留め済み Action 数 | Y 箇所            |
 | Dependabot | cooldown 設定          | 未設定 / 設定済み |
 | Renovate   | minimumReleaseAge      | 未設定 / 設定済み |
+| 自動マージ | 条件                   | 無条件 / 条件あり |
+| zizmor     | CI での実行            | なし / あり       |
+| 設定       | 既定トークン           | write / read      |
+| 設定       | SHA 固定の強制         | 無効 / 有効       |
 ```
 
 **全て対策済みの場合**: その旨を報告し、Phase 4 の検証のみ実行する。
@@ -160,6 +173,7 @@ cooldown:
 
 - 既に `cooldown` が設定済みのエコシステムはスキップする
 - `default-days` が 14 未満の場合は 14 に引き上げるかユーザーに確認する
+- 自動マージを使うリポジトリでは、各グループに `update-types: ["minor", "patch"]` を付けてメジャー更新を別 PR に分ける（Phase 4）
 
 ### 3-2. Renovate の場合
 
@@ -181,9 +195,40 @@ cooldown:
 
 ---
 
-## Phase 4: 検証
+## Phase 4: 自動マージの条件
 
-### 4-1. GHA ピン留めの検証
+詳細手順は [references/repo-hardening-guide.md](references/repo-hardening-guide.md) を参照。自動マージのワークフローが無いリポジトリではスキップする。
+
+- Dependabot は `dependabot/fetch-metadata` で判定し、semver の patch / minor だけを自動マージする
+- GitHub Actions の更新（`package-ecosystem == github_actions`）は自動マージしない
+- 自作の bot の PR は、ブランチ名に加えて作成者でも判定する
+- `permissions` はトップレベルを `{}` にし、ジョブ単位で与える
+
+---
+
+## Phase 5: zizmor
+
+詳細手順は [references/repo-hardening-guide.md](references/repo-hardening-guide.md) を参照。
+
+- `zizmor .github` を既定の重大度で実行し、指摘を直す。直さない指摘は理由を書いて `.github/zizmor.yml` で抑制する
+- 全 PR で走る lint ワークフローに zizmor を足す
+
+---
+
+## Phase 6: リポジトリ設定
+
+詳細手順は [references/repo-hardening-guide.md](references/repo-hardening-guide.md) を参照。**どれも GitHub 上の設定を変えるので、1 件ずつユーザーの確認を取ってから実行する。**
+
+- 既定の `GITHUB_TOKEN` を read にし、Actions による PR の承認を禁止する
+- SHA 固定を強制する（Phase 2 で全 `uses:` を固定してから）
+- 既定ブランチの保護で、管理者にも適用し、セキュリティ系のチェックを必須にする
+- private vulnerability reporting を有効にする
+
+---
+
+## Phase 7: 検証
+
+### 7-1. GHA ピン留めの検証
 
 ```bash
 # 未ピン留めの外部 Action がゼロであること
@@ -197,7 +242,7 @@ grep -rn 'uses:' .github/workflows/ \
 > **注意**: `@branch` や `@tag` で意図的に参照している Action（自己参照など）がある場合は、
 > リポジトリに合わせて追加の `grep -v` で除外すること。除外パターンはユーザーに確認する。
 
-### 4-2. Dependabot / Renovate の検証
+### 7-2. Dependabot / Renovate の検証
 
 ```bash
 # dependabot.yml の全エコシステムに cooldown が設定されていること
@@ -207,13 +252,28 @@ grep -c 'cooldown' .github/dependabot.yml
 grep 'minimumReleaseAge' renovate.json
 ```
 
-### 4-3. 結果レポート
+### 7-3. 自動マージ・zizmor・リポジトリ設定の検証
+
+```bash
+# 指摘が 0 件であること（抑制した指摘は suppressed として数えられる）
+zizmor .github
+
+# 自動マージの条件とリポジトリ設定を読み直す
+bash scripts/scan-repo.sh
+```
+
+- 次の Dependabot の PR で、patch / minor だけが自動マージされ、メジャー更新と GitHub Actions の更新が残ることを確かめる
+
+### 7-4. 結果レポート
 
 最終的な対策状況をテーブル形式で報告する。
 
 ```markdown
-| カテゴリ            | 対策前 | 対策後 |
-| ------------------- | ------ | ------ |
-| GHA 未ピン留め      | X 箇所 | 0 箇所 |
-| Dependabot cooldown | 未設定 | 14 日  |
+| カテゴリ            | 対策前 | 対策後    |
+| ------------------- | ------ | --------- |
+| GHA 未ピン留め      | X 箇所 | 0 箇所    |
+| Dependabot cooldown | 未設定 | 14 日     |
+| 自動マージの条件    | 無条件 | 条件あり  |
+| zizmor              | なし   | CI で実行 |
+| 既定トークン        | write  | read      |
 ```

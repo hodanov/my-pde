@@ -91,7 +91,7 @@ main が汚れるとホストでコードが実行され、手元の資格情報
 5. CI の mise 本体は、14 か所の `jdx/mise-action` をローカルの composite action `.github/actions/setup-mise` に集約し、`minimum_release_age` で 14 日以上前のリリースを選ばせる。版を固定すると bump の仕組みが別に要るため、cooldown で同じ目的を満たす。
 6. zizmor の `--min-severity high` を外し、対象を `.github` 全体（`dependabot.yml` と composite action を含む）に広げる。info の template-injection（tools-bump の `run:` への出力値の展開）は env 経由に直す。
 7. 週次で全 Go モジュールの govulncheck を回す（ADR-0010 で受容した穴を塞ぐ）。
-8. npm の Dependabot アラート 7 件（`environment/tools/node/package-lock.json`）を解消する。
+8. npm の Dependabot アラート 7 件（`environment/tools/node/package-lock.json`）を解消する。#923 で親パッケージを上げて 6 件を閉じた。修正版の無い `braces` の 1 件は open のまま残す。
 
 ### P2: AI エージェントとホストの設定（AP2 / AP4）
 
@@ -101,30 +101,30 @@ main が汚れるとホストでコードが実行され、手元の資格情報
    - 資格情報の読み取りを二層で禁止する。`permissions.deny` は Read ツールと `cat` などの認識できるコマンドにしか効かず、sandbox は既定でホーム全体を読めるため、sandbox 内の Bash とその子プロセスには `sandbox.filesystem.denyRead` が別に要る（ダミーファイルで `grep -r` が止まることを確認済み）。SSH は known_hosts と config を読めるよう、秘密鍵 `~/.ssh/id_*` だけを禁止する。Docker の `config.json` は sandbox 内の docker CLI がコンテキスト解決に使うので対象外にする。
    - `sandbox.allowUnsandboxedCommands: false` で sandbox 外での再実行を禁止し、足りないものは `excludedCommands` に明示する。
    - `enableWeakerNetworkIsolation` は main で編集中の設定なので、この計画では触らない。
-3. Codex（`~/.codex/config.toml`、リポ管理外）: `[sandbox_workspace_write]` の下に入っている `notify` / `model` / `model_reasoning_effort` をトップレベルへ移す。`network_access = true` を外せるか試す。
+3. Codex（`~/.codex/config.toml`、リポ管理外）: `[sandbox_workspace_write]` の下に入っていた `notify` をトップレベルへ移し、トップレベルと重複して効いていなかった `model` / `model_reasoning_effort` を消す。`network_access` は false にする。Codex の sandbox は `~/.ssh` の秘密鍵や gh のトークンを読めるため、外部送信の側を断つ。通信が要るコマンドは `approval_policy = "on-request"` で承認を求めてくる。
 4. `dotfiles/.zshrc` から、存在せず書き込み可能な `/usr/local/opt/curl/bin` の PATH 追加を消す。`.gitignore` に秘密ファイルのパターンと `.claude/settings.local.json` を足す。
 
 ### P3: Routine とプロンプトインジェクション（AP3）
 
 1. Adopted-Issue PR Bot は Issue を `--author hodanov` で取得する。ラベルは triage 権限が要るが、本文は起票者が後から書き換えられる。
 2. PR Care Bot と Monthly Routine Improve は、コメントを取得する時点で jq の `select(.user.login == "hodanov")` に絞る。
-3. スキャン系 5 本は WebFetch と Bash と広い gh トークンが同居する。`allowed_tools` がパターン指定に対応していれば Bash を必要なコマンドに絞り、対応していなければ ADR-0011 で受容する。
+3. スキャン系 5 本は WebFetch と Bash と広い gh トークンが同居する。Routine の `allowed_tools` でのパターン指定はドキュメントに記述が無く、効くか確かめられないので変えない。ADR-0011 で受容し、出力が人の triage（`adopted` ラベル）を通ることと、Routine の push が自動マージされず main に直接入らないことで補う。
 4. クラウド環境のネットワーク設定を claude.ai で確認する。
 
 ### P4: コンテナ、ai-bridge、依存（AP2）
 
-1. compose に `cap_drop: [ALL]` と `no-new-privileges` を足し、SECURITY NOTE を「コンテナは `~/workspace` に対する境界ではない」と書き直す。
-2. `npm ci` に `--ignore-scripts` を付ける。
-3. Python を `uv lock` し、`uv sync --locked` にする。
-4. otel-lgtm のイメージを digest で固定し、Dependabot の対象に足す。
-5. ai-bridge はプロンプトの前に `--` を入れ、`~/.ai-bridge` を 0700、`history.jsonl` を 0600 にし、cwd を `$HOME/workspace` 配下に制限する。
-6. marp skill の `npx --yes …@latest` の版を固定する。
+1. compose に `cap_drop: [ALL]` と `no-new-privileges` を足し、SECURITY NOTE を「コンテナはホストに対する境界ではない」と書き直す。Docker Desktop の virtiofs はバインドマウントのファイルをコンテナ内で root 所有に見せるので、`DAC_OVERRIDE` を落としても書き込める。
+2. `environment/tools/node/.npmrc` に `ignore-scripts=true` を置く。イメージの npm 12 は依存の install script を既定で止める（`allowScripts`）が、ホストと CI の `tools:node-install` は mise の Node に同梱の npm 11 で動き、止まらない。フラグではなく `.npmrc` にすると、`npm --prefix` 経由の呼び出しにも手動の `npm install` にも効く。
+3. Python を `uv lock` し、`uv sync --locked` にする。ロックはイメージと同じ版の uv で作る。Dependabot の `pip` は `uv.lock` を更新しないので、エコシステムを `uv` に切り替える。
+4. otel-lgtm のイメージを digest で固定し、Dependabot の `docker-compose` エコシステムで更新する。
+5. ai-bridge はプロンプトの前に `--` を入れ、`~/.ai-bridge` を 0700、`history.jsonl` を 0600 にする（#922）。cwd を `$HOME/workspace` 配下に制限する案は見送った。コンテナが境界でない以上、cwd を絞っても実行される CLI の権限は変わらない。
+6. marp skill の `npx --yes …@latest` の版を固定する。markdownlint-cli2 は `environment/tools/node/package.json` と同じ版にする。npx の版は Dependabot の対象外なので、手で上げる。
 
 ### P5: 文書化と展開
 
 1. ADR-0011 に脅威モデル、自動マージの方針、受容したリスクを書く。ADR-0002（peter-evans 前提）と ADR-0006（secret 削除）のずれを直す。
 2. 侵害時の手順書 `docs/runbook/supply-chain-incident.md` を短く書く。確認先（lockfile、該当期間の Actions 実行、新しい repo / workflow）と、失効させる資格情報（gh トークン、App の秘密鍵、Claude / Codex の認証、SSH 鍵）。
-3. OpenSSF Scorecard の CLI を着手前と完了後に 1 回ずつ実行して比べる。
+3. OpenSSF Scorecard の CLI を着手前と完了後に 1 回ずつ実行して比べる。着手前のリポ設定は再現できないので、`--commit` で比べられる項目だけを比べる。結果は ADR-0011 に書く。
 4. リポ設定、自動マージ条件、zizmor の項目を `ai-agents/skills/supply-chain-hardening` に足す。
 
 ### PR の分割
@@ -135,10 +135,10 @@ main が汚れるとホストでコードが実行され、手元の資格情報
 | PR-B | P1-4〜7    |
 | PR-C | P2-2、P2-4 |
 | PR-D | P3         |
-| PR-E | P4、P1-8   |
+| PR-E | P4         |
 | PR-F | P5         |
 
-P0、P2-1、P2-3 はリポの外の操作で、PR にしない。
+P0、P2-1、P2-3 はリポの外の操作で、PR にしない。P1-8 は #923 で、P4-5 の ai-bridge は #922 で別に入れた。
 
 ## File changes
 
@@ -146,8 +146,8 @@ P0、P2-1、P2-3 はリポの外の操作で、PR にしない。
 - PR-B: `mise.toml`、`.github/workflows/automation-tools-bump.yml`、新規 `.github/actions/setup-mise/action.yml`、`jdx/mise-action` を使う全ワークフロー、新規 `.github/zizmor.yml`、新規 `.github/workflows/automation-go-vuln-scan.yml` と `mise.toml` の `go:vuln` タスク、`.github/dependabot.yml`、`AGENTS.md`、`README.md`
 - PR-C: `ai-agents/settings/claude/settings.json`、`dotfiles/.zshrc`、`.gitignore`
 - PR-D: `routines/prompts/weekly-adopted-issue-pr-bot.md`、`routines/prompts/weekly-pr-care-bot.md`、`routines/prompts/monthly-routine-improve.md`、`routines/*.json`
-- PR-E: `environment/docker/docker-compose.yml`、`environment/docker/nvim.dockerfile`、`environment/tools/python/`、`environment/tools/node/package-lock.json`、`environment/otel/docker-compose.yml`、`scripts/ai-bridge/internal/`、`ai-agents/skills/marp-deck-export/scripts/`
-- PR-F: `docs/adr/0011-*.md`、`docs/adr/0002-*.md`、`docs/adr/0006-*.md`、`docs/runbook/supply-chain-incident.md`、`ai-agents/skills/supply-chain-hardening/`
+- PR-E: `environment/docker/docker-compose.yml`、`environment/docker/nvim.dockerfile`、新規 `environment/tools/python/uv.lock`、新規 `environment/tools/node/.npmrc`、`environment/otel/docker-compose.yml`、`.github/dependabot.yml`、`ai-agents/skills/marp-deck-export/scripts/`、`README.md`
+- PR-F: 新規 `docs/adr/0011-set-security-baseline-and-accept-residual-risks.md`、`docs/adr/0002-*.md` / `0005-*.md` / `0006-*.md` / `0010-*.md` への追記、新規 `docs/runbook/supply-chain-incident.md`、`AGENTS.md`、`ai-agents/skills/supply-chain-hardening/`、この計画
 
 ## Risks and mitigations
 
@@ -170,5 +170,4 @@ P0、P2-1、P2-3 はリポの外の操作で、PR にしない。
 
 ## Open questions
 
-- Routine の `allowed_tools` が `Bash(gh issue create:*)` のようなパターン指定に対応しているか。
-- Codex の `network_access` を外して普段の作業が回るか。
+- Codex の `network_access` を外して普段の作業が回るか。承認の頻度が高すぎれば、よく使うコマンドを許可する方法を探す。

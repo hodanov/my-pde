@@ -35,3 +35,5 @@ Routine が作る変更の品質も、CI を足さずに Routine の手順の中
 Routine の実行は、対話作業と同じサブスクの使用量枠を消費する。Routine を増やすときは、頻度と 1 回あたりの対象範囲を絞る。
 
 Routine 内のセルフレビューは、作った本人が見直すだけなので見落としが残りうる。漏れが続くなら、まず `routines/prompts/weekly-pr-care-bot.md` に後追いのチェックを足す。CI に戻すなら、この ADR を supersede する新しい ADR で、トークン管理の問題をどう解いたかを示す。
+
+2026-10-23 追記: 使っていなかった Secret `CLAUDE_CODE_OAUTH_TOKEN` は、2026-10-22 にリポジトリから削除した（[ADR-0011](0011-set-security-baseline-and-accept-residual-risks.md)）。

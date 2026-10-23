@@ -46,4 +46,6 @@ $ gh run list --branch chore/bump-tool-versions
 
 `.github/workflows/automation-deps-auto-merge.yml` の発火条件は `startsWith(github.head_ref, 'chore/bump-tool-versions')` なので、PR author が変わっても追従する。変更は不要。
 
+2026-10-23 追記: #850 で `peter-evans/create-pull-request` を外し、bump PR は git と gh で直接作るようになった。App の installation token を使う点は変わらない。また #918 で、tools-bump の自動マージはブランチ名に加えて作成者が bump 用 App であることを条件にした。上の「PR author が変わっても追従する」は当てはまらなくなった。理由は [ADR-0011](0011-set-security-baseline-and-accept-residual-risks.md) にある。
+
 関連: [#787](https://github.com/hodanov/my-pde/issues/787)
