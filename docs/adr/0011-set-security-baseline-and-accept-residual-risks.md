@@ -62,6 +62,8 @@
 
 Claude Code で sandbox 外への再実行を禁止したので、sandbox で動かないコマンドは `excludedCommands` に明示的に足す必要がある。marp skill が npx で取得するパッケージの版は Dependabot の対象外で、手で上げる。
 
+2026-10-23 追記: sandbox 外での再実行の禁止（`allowUnsandboxedCommands: false`）は戻した。作業ディレクトリの外にある worktree への書き込みと、`.git/config` を書く `git worktree add` は sandbox の中では通らず、`excludedCommands` に足しても `git -C <worktree>` のように別の場所を指す呼び出しは sandbox の中で動く。再実行できないと、worktree を使う普段の流れが毎回止まる。外での再実行は 1 件ずつ承認を通るので、境界は承認に置く。あわせて `sandbox.filesystem.denyRead` から `~/.ssh/id_*` と `~/.config/gh/hosts.yml` を外し、`permissions.deny` の `Read(~/.config/gh/hosts.yml)` も外した。秘密鍵は `permissions.deny` の `Read(**/id_rsa*)` などが sandbox にも効くので読めないままで、gh のトークンはキーチェーンにあり `hosts.yml` には無い。
+
 着手前と後で OpenSSF Scorecard（v5.5.0）を測った。コミットを指定して比べられる 9 項目の集計は 5.1 から 6.5 に上がった。差は Token-Permissions（0 → 10）で、自動マージのワークフローの write 権限をジョブ単位に移したことによる。全 18 項目の現状は 6.4 になる。残る低い項目は、1 人のリポであることに起因する Code-Review と Branch-Protection の承認関連、および今回の範囲外の License、Security-Policy、Fuzzing、CII-Best-Practices である。
 
 次の条件で、この ADR を見直す。
