@@ -67,6 +67,8 @@ mise run zshrc-link                    # dotfiles/.zshrc  -> ~/.zshrc
 
 `zshrc-link` is intentionally separate from `dotfiles-link` because it replaces the login shell config. An existing regular `~/.zshrc` is moved to `~/.zshrc.bak` first, and `mise run zshrc-unlink` removes the symlink and restores that backup.
 
+`mise run zshrc-verify` parse-checks `dotfiles/.zshrc` with `zsh -n` without executing it; run it before linking a change, because a syntax error in the linked file breaks every shell that starts afterwards. Like `wezterm-verify` it is local-only — `ubuntu-latest` ships no zsh, so it is not part of `mise run lint` or CI.
+
 ## Features
 
 - **LSP / Linter / Formatter**: Go (gopls, golangci-lint), Python (pyright, ruff), JavaScript (eslint, prettier), Lua (stylua), Terraform (terraform-ls, tflint, terraform fmt), YAML, TOML, Markdown, etc.

@@ -438,6 +438,13 @@ if [ -n "$backup" ]; then
 fi
 '''
 
+# Deliberately outside the `lint` aggregate: that set claims CI parity, and
+# ubuntu-latest ships no zsh, so wiring this in would break every workflow run.
+[tasks.zshrc-verify]
+description = "Parse-check dotfiles/.zshrc without executing it"
+dir = "{{config_root}}"
+run = "zsh -n dotfiles/.zshrc"
+
 # ---- Repo-local node toolchain ----
 
 [tasks."tools:node-install"]
