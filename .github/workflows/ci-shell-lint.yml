@@ -6,6 +6,7 @@ on:
   pull_request:
     paths:
       - "**/*.sh"
+      - dotfiles/.zshrc
       - .github/workflows/ci-shell-lint.yml
       - mise.toml
 
@@ -27,3 +28,11 @@ jobs:
 
       - name: Run shfmt and shellcheck
         run: mise run lint:shell
+
+      - name: Install zsh
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends zsh
+
+      - name: Parse-check dotfiles/.zshrc
+        run: mise run zshrc-verify

@@ -65,6 +65,7 @@ go_apps=""
 declare -a lua_files=() sh_files=() md_files=() fmt_files=() docker_files=()
 run_tombi=0
 run_actionlint=0
+run_zshrc_verify=0
 unmapped=""
 
 while IFS= read -r f; do
@@ -111,6 +112,10 @@ while IFS= read -r f; do
 		;;
 	*.dockerfile)
 		docker_files+=("$f")
+		mapped=1
+		;;
+	dotfiles/.zshrc)
+		run_zshrc_verify=1
 		mapped=1
 		;;
 	esac
@@ -160,6 +165,9 @@ if [ "$run_actionlint" -eq 1 ]; then
 fi
 if [ "${#docker_files[@]}" -gt 0 ]; then
 	run_check hadolint hadolint "${docker_files[@]}"
+fi
+if [ "$run_zshrc_verify" -eq 1 ]; then
+	run_check zsh zsh -n dotfiles/.zshrc
 fi
 
 echo "----"

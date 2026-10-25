@@ -67,7 +67,7 @@ mise run zshrc-link                    # dotfiles/.zshrc  -> ~/.zshrc
 
 `zshrc-link` is intentionally separate from `dotfiles-link` because it replaces the login shell config. An existing regular `~/.zshrc` is moved to `~/.zshrc.bak` first, and `mise run zshrc-unlink` removes the symlink and restores that backup.
 
-`mise run zshrc-verify` parse-checks `dotfiles/.zshrc` with `zsh -n` without executing it; run it before linking a change, because a syntax error in the linked file breaks every shell that starts afterwards. Like `wezterm-verify` it is local-only — `ubuntu-latest` ships no zsh, so it is not part of `mise run lint` or CI.
+`mise run zshrc-verify` parse-checks `dotfiles/.zshrc` with `zsh -n` without executing it; run it before linking a change, because a syntax error in the linked file breaks every shell that starts afterwards. It also runs automatically: `[CI] Shell Lint` installs zsh and runs it on PRs that touch `dotfiles/.zshrc`, and `mise run verify:changed` runs `zsh -n` when the file is in the change set. It stays out of `mise run lint`, because that aggregate mirrors CI jobs that run without zsh.
 
 ## Features
 
