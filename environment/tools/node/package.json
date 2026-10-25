@@ -15,11 +15,11 @@
     "textlint": "^15.2.1",
     "textlint-rule-preset-ja-technical-writing": "^12.0.2",
     "textlint-rule-preset-japanese": "^10.0.4",
-    "tombi": "^1.7.3",
+    "tombi": "^1.8.0",
     "typescript": "^7.0.2",
-    "typescript-language-server": "^6.0.1",
+    "typescript-language-server": "^6.0.2",
     "vscode-langservers-extracted": "^4.10.0",
-    "yaml-language-server": "^1.18.0",
+    "yaml-language-server": "^1.25.0",
     "yarn": "^1.22.22"
   },
   "overrides": {
