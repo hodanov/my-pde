@@ -228,6 +228,7 @@ jobs:
           BODY: |-
             This PR bumps tool versions pinned in `mise.toml` and regenerates the
             derived artifacts (`mise.lock`, `environment/tools/go/go-tools.txt`,
+            `dotfiles/mise/go-tools.toml`,
             and the ARG defaults in `environment/docker/nvim.dockerfile`).
 
             Releases newer than `minimum_release_age` in `mise.toml` are skipped,

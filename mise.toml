@@ -364,19 +364,21 @@ depends = ["claude-settings-copy", "codex-settings-copy"]
 # ---- Dotfiles ----
 
 [tasks.dotfiles-link]
-description = "Symlink dotfiles/wezterm -> ~/.config/wezterm"
+description = "Symlink dotfiles/wezterm -> ~/.config/wezterm and dotfiles/mise/go-tools.toml -> ~/.config/mise/conf.d/"
 run = '''
-mkdir -p "$HOME/.config"
+mkdir -p "$HOME/.config/mise/conf.d"
 rm -f "$HOME/.wezterm.lua"
 ln -sfn "{{config_root}}/dotfiles/wezterm" "$HOME/.config/wezterm"
 echo "Linked {{config_root}}/dotfiles/wezterm -> $HOME/.config/wezterm"
+ln -sf "{{config_root}}/dotfiles/mise/go-tools.toml" "$HOME/.config/mise/conf.d/go-tools.toml"
+echo "Linked {{config_root}}/dotfiles/mise/go-tools.toml -> $HOME/.config/mise/conf.d/go-tools.toml"
 '''
 
 [tasks.dotfiles-unlink]
-description = "Remove the ~/.config/wezterm symlink"
+description = "Remove the ~/.config/wezterm and ~/.config/mise/conf.d/go-tools.toml symlinks"
 run = '''
-rm -f "$HOME/.config/wezterm"
-echo "Unlinked $HOME/.config/wezterm"
+rm -f "$HOME/.config/wezterm" "$HOME/.config/mise/conf.d/go-tools.toml"
+echo "Unlinked $HOME/.config/wezterm and $HOME/.config/mise/conf.d/go-tools.toml"
 '''
 
 # WezTerm tracks the nightly channel (see docs/plan/2026-09-05_wezterm-nightly-migration.md),
@@ -543,10 +545,10 @@ docker buildx build \
 # ---- Pinned artifacts (generated from mise.toml) ----
 
 [tasks."pins:sync"]
-description = "Regenerate go-tools.txt and Dockerfile ARG defaults from mise.toml"
+description = "Regenerate go-tools.txt, Dockerfile ARG defaults, and the global mise go-tools.toml from mise.toml"
 run = '"{{config_root}}/environment/tools/sync-pins.sh"'
 
 [tasks."pins:check"]
 description = "Verify generated pins are in sync with mise.toml"
 depends = ["pins:sync"]
-run = "git diff --exit-code -- environment/tools/go/go-tools.txt environment/docker/nvim.dockerfile"
+run = "git diff --exit-code -- environment/tools/go/go-tools.txt environment/docker/nvim.dockerfile dotfiles/mise/go-tools.toml"
