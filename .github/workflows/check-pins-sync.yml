@@ -9,6 +9,7 @@ on:
       - environment/tools/go/go-tools.txt
       - environment/tools/sync-pins.sh
       - environment/docker/nvim.dockerfile
+      - dotfiles/mise/go-tools.toml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -26,5 +27,5 @@ jobs:
       - name: Setup mise
         uses: ./.github/actions/setup-mise
 
-      - name: Verify go-tools.txt and Dockerfile ARGs are in sync with mise.toml
+      - name: Verify generated pins are in sync with mise.toml
         run: mise run pins:check

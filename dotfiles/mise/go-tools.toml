@@ -1,0 +1,4 @@
+# Generated from mise.toml by `mise run pins:sync`. Do not edit.
+[tools]
+golangci-lint = "2.15.0"
+"go:golang.org/x/tools/gopls" = "0.24.0"

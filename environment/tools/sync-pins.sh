@@ -2,6 +2,7 @@
 # Regenerate pinned artifacts from mise.toml (single source of truth):
 #   - environment/tools/go/go-tools.txt (consumed by the Docker image build)
 #   - ARG defaults in environment/docker/nvim.dockerfile
+#   - dotfiles/mise/go-tools.toml (global mise config, linked by `mise run dotfiles-link`)
 # Run via `mise run pins:sync`; CI verifies sync with `mise run pins:check`.
 set -euo pipefail
 
@@ -10,6 +11,7 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MISE_TOML="$ROOT/mise.toml"
 GO_TOOLS="$ROOT/environment/tools/go/go-tools.txt"
 DOCKERFILE="$ROOT/environment/docker/nvim.dockerfile"
+GLOBAL_GO_TOOLS="$ROOT/dotfiles/mise/go-tools.toml"
 
 # Extract the value of a `key = "value"` line. Pass quoted keys as-is
 # (e.g. '"go:golang.org/x/tools/gopls"').
@@ -46,6 +48,14 @@ mvdan.cc/sh/v3/cmd/shfmt@v${shfmt}
 github.com/rhysd/actionlint/cmd/actionlint@v${actionlint}
 EOF
 echo "Generated $GO_TOOLS"
+
+cat >"$GLOBAL_GO_TOOLS" <<EOF
+# Generated from mise.toml by \`mise run pins:sync\`. Do not edit.
+[tools]
+golangci-lint = "${golangci_lint}"
+"go:golang.org/x/tools/gopls" = "${gopls}"
+EOF
+echo "Generated $GLOBAL_GO_TOOLS"
 
 go_version=$(pin 'go')
 node_version=$(pin 'node')
