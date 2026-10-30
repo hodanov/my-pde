@@ -49,15 +49,17 @@ github.com/rhysd/actionlint/cmd/actionlint@v${actionlint}
 EOF
 echo "Generated $GO_TOOLS"
 
+go_version=$(pin 'go')
+
 cat >"$GLOBAL_GO_TOOLS" <<EOF
 # Generated from mise.toml by \`mise run pins:sync\`. Do not edit.
 [tools]
+go = "${go_version}"
 golangci-lint = "${golangci_lint}"
 "go:golang.org/x/tools/gopls" = "${gopls}"
 EOF
 echo "Generated $GLOBAL_GO_TOOLS"
 
-go_version=$(pin 'go')
 node_version=$(pin 'node')
 neovim_version=$(pin 'NEOVIM_VERSION')
 npm_version=$(pin 'NPM_VERSION')

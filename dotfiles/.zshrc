@@ -79,7 +79,7 @@ nvim() {
 ####################
 # Go path
 ####################
-export PATH="$PATH:$(go env GOPATH)/bin"
+export PATH="$PATH:${GOPATH:-$HOME/go}/bin"
 
 ####################
 # Add Docker Desktop for Mac (docker)

@@ -69,7 +69,7 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 - `mise.toml` is the single source of truth for tool versions. Weekly CI (`automation-tools-bump.yml`) bumps the pins and regenerates the derived artifacts.
 - New releases wait out the cooldown in `[settings] minimum_release_age` (14 days, matching Dependabot's `cooldown`): `mise upgrade --bump` and the tools-bump workflow pick the newest release older than it and never downgrade a pin. Go and rustup are exempt because their sources publish no release date. CI's own mise binary follows the same cooldown through `.github/actions/setup-mise`.
 - `mise run pins:sync` — regenerate `environment/tools/go/go-tools.txt`, the Dockerfile ARG defaults, and `dotfiles/mise/go-tools.toml` from `mise.toml` (CI verifies sync via `pins:check`).
-- `dotfiles/mise/go-tools.toml` is the global mise config for Go tools used outside mise-managed repos (golangci-lint, and gopls for Claude Code's `gopls-lsp` plugin). `dotfiles-link` symlinks it into `~/.config/mise/conf.d/`; run `mise install` outside any repo after a bump to apply it.
+- `dotfiles/mise/go-tools.toml` is the global mise config for the Go toolchain used outside mise-managed repos (go, golangci-lint, and gopls for Claude Code's `gopls-lsp` plugin; per-repo Go versions come from `go.mod` via `GOTOOLCHAIN=auto`). `dotfiles-link` symlinks it into `~/.config/mise/conf.d/`; run `mise install` outside any repo after a bump to apply it.
 
 ## Parallel Work (git worktrees)
 
