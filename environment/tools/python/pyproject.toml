@@ -6,8 +6,8 @@ dependencies = [
   "debugpy==1.8.22",
   "pyright==1.1.414",
   "pytest==9.1.1",
-  "pytest-mock==3.16.0",
-  "ruff==0.17.0",
+  "pytest-mock==3.17.0",
+  "ruff==0.17.1",
 ]
 
 [tool.uv]
