@@ -9,9 +9,11 @@ on:
     # payload, so without it the job skips and only a later push or reopen runs
     # the build.
     types: [opened, synchronize, reopened, ready_for_review, labeled]
+  push:
+    branches: [main]
 
 concurrency:
-  group: ci-docker-build-${{ github.event.pull_request.number }}
+  group: ci-docker-build-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
