@@ -19,7 +19,7 @@
     "typescript": "^7.0.2",
     "typescript-language-server": "^6.0.2",
     "vscode-langservers-extracted": "^4.10.0",
-    "yaml-language-server": "^1.25.0",
+    "yaml-language-server": "^2.0.0",
     "yarn": "^1.22.22"
   },
   "overrides": {
