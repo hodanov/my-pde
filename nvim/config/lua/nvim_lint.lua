@@ -9,12 +9,19 @@ vim.filetype.add({
 	},
 })
 
+-- zizmor は既定の stdin 実行をやめてファイルパス渡しに上書きする。stdin 入力では
+-- .github/zizmor.yml の `self-repository: disable` が効かず (--config 明示でも同じ)、
+-- composite action を使う workflow 全部に誤検知が出る。stdin = false にすると
+-- nvim-lint がファイル名を末尾に付けるため、mise run lint:zizmor と同じ呼び出しになる。
+lint.linters.zizmor.stdin = false
+lint.linters.zizmor.args = { "--format", "json-v1" }
+
 lint.linters_by_ft = {
 	markdown = { "markdownlint-cli2" },
 	dockerfile = { "hadolint" },
 	terraform = { "tflint" },
 	sh = { "shellcheck" },
-	ghaction = { "actionlint" },
+	ghaction = { "actionlint", "zizmor" },
 }
 
 -- Run it when you open, save or exit insert mode (you can adjust the events to your liking).
