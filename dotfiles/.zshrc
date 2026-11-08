@@ -56,6 +56,14 @@ RPROMPT="%F{#6c7086}%D{%m/%d %H:%M}%f"
 export LC_ALL=en_US.UTF-8
 
 ####################
+# History
+####################
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=100000
+SAVEHIST=100000
+setopt SHARE_HISTORY HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANKS EXTENDED_HISTORY
+
+####################
 # Homebrew (Apple Silicon / arm64)
 # Must be evaluated before anyenv/go so /opt/homebrew/bin precedes /usr/local/bin
 ####################
