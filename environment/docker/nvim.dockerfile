@@ -132,7 +132,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
 # Stage 4: Build Rust-based tools
 FROM base AS rust-builder
 
-ARG RUSTUP_VERSION=1.29.2
+ARG RUSTUP_VERSION=1.29.3
 ARG RUST_TOOLCHAIN=stable
 ARG STYLUA_VERSION=2.6.0
 ARG TREE_SITTER_CLI_VERSION=0.27.1
@@ -235,7 +235,7 @@ RUN set -eux; \
 # Stage 7: Fetch Terraform CLI binary only
 FROM base AS terraform-builder
 
-ARG TERRAFORM_VERSION=1.16.6
+ARG TERRAFORM_VERSION=1.16.7
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
