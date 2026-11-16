@@ -55,7 +55,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Stage 2: Build Node runtime and npm tools
 FROM base AS node-builder
 
-ARG NODE_VERSION=24.22.1
+ARG NODE_VERSION=26.13.0
 ARG NPM_VERSION=12.2.1
 ENV NODE_HOME="/opt/node"
 ENV PATH="${NODE_HOME}/bin:${PATH}"
@@ -93,7 +93,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
 # Stage 3: Build Go toolchain and tools
 FROM base AS go-builder
 
-ARG GO_VERSION=1.27.3
+ARG GO_VERSION=1.27.4
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH="$(dpkg --print-architecture)" \
@@ -170,7 +170,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # Stage 5: Build Python venv with uv
 FROM base AS python-builder
 
-ARG UV_VERSION=0.13.5
+ARG UV_VERSION=0.13.6
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
 RUN set -eux; \
@@ -235,7 +235,7 @@ RUN set -eux; \
 # Stage 7: Fetch Terraform CLI binary only
 FROM base AS terraform-builder
 
-ARG TERRAFORM_VERSION=1.16.7
+ARG TERRAFORM_VERSION=1.17.1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \
