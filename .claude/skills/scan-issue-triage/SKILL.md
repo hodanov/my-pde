@@ -7,7 +7,7 @@ description: >-
   「adopted にして」などと言われたときに `/scan-issue-triage <Issue URL | 番号>` で使う。
 argument-hint: "<Issue URL | 番号>"
 metadata:
-  version: 1
+  version: 2
 ---
 
 # /scan-issue-triage スキル
@@ -52,7 +52,7 @@ metadata:
 
 **採用**: `adopted` ラベルを付け、Open のまま残す。壁打ちで実装方針を直したなら、直した点をコメントに残す。PR Bot は Issue 本文とコメントを読んで実装する。
 
-コメント本文は `$TMPDIR` のファイルに書き、`--comment "$(cat <file>)"` で渡す。
+コメント本文は Write で `$TMPDIR` のファイルに書き、`gh issue comment <番号> --body-file <file>` で投稿する。`"$(cat <file>)"` で展開すると、本文に `rm -rf` のような文字列が入ったとき Bash コマンドに現れ、`guard-dangerous-bash` に止められる（#969）。
 
 ### Step 5: memory に残す
 
