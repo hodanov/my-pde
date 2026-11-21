@@ -84,6 +84,17 @@ nvim() {
     bash --login -c 'nvim "$@"' nvim "$@"
 }
 
+wtst() {
+  local base=${1:-origin/HEAD} wt ab dirty age
+  git worktree list --porcelain | sed -n 's/^worktree //p' | while read -r wt; do
+    [[ -d $wt ]] || { printf '%-40s missing\n' "$wt"; continue; }
+    ab=$(git -C "$wt" rev-list --left-right --count "$base...HEAD" 2>/dev/null) || ab="? ?"
+    dirty=$(git -C "$wt" status --porcelain | wc -l | tr -d ' ')
+    age=$(git -C "$wt" log -1 --format=%cr)
+    printf '%-40s behind %s ahead %s  dirty %s  %s\n' "${wt:t}" ${=ab} "$dirty" "$age"
+  done
+}
+
 ####################
 # Go path
 ####################
