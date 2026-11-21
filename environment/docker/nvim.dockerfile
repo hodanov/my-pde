@@ -200,8 +200,10 @@ RUN set -eux; \
 
 COPY ./environment/tools/python/pyproject.toml ./environment/tools/python/uv.lock /opt/python/
 WORKDIR /opt/python
+ARG ZIZMOR_VERSION=1.31.1
 RUN export PATH="$HOME/.local/bin:$PATH" \
-  && uv sync --project . --locked
+  && uv sync --project . --locked \
+  && uv pip install --python .venv/bin/python "zizmor==${ZIZMOR_VERSION}"
 WORKDIR /
 
 ####################
