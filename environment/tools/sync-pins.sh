@@ -70,6 +70,7 @@ uv_version=$(pin 'UV_VERSION')
 stylua_version=$(pin 'stylua')
 terraform_version=$(pin 'TERRAFORM_VERSION')
 hadolint_version=$(pin 'hadolint')
+zizmor_version=$(pin 'zizmor')
 lua_ls_version=$(pin 'LUA_LS_VERSION')
 marksman_version=$(pin 'MARKSMAN_VERSION')
 lua_ls_sha256_amd64=$(pin 'LUA_LS_SHA256_AMD64')
@@ -89,6 +90,7 @@ sed -i.bak -E \
 	-e "s|^ARG STYLUA_VERSION(=.*)?$|ARG STYLUA_VERSION=${stylua_version}|" \
 	-e "s|^ARG TERRAFORM_VERSION(=.*)?$|ARG TERRAFORM_VERSION=${terraform_version}|" \
 	-e "s|^ARG HADOLINT_VERSION(=.*)?$|ARG HADOLINT_VERSION=${hadolint_version}|" \
+	-e "s|^ARG ZIZMOR_VERSION(=.*)?$|ARG ZIZMOR_VERSION=${zizmor_version}|" \
 	-e "s|^ARG LUA_LS_VERSION(=.*)?$|ARG LUA_LS_VERSION=${lua_ls_version}|" \
 	-e "s|^ARG MARKSMAN_VERSION(=.*)?$|ARG MARKSMAN_VERSION=${marksman_version}|" \
 	-e "s|^ARG LUA_LS_SHA256_AMD64(=.*)?$|ARG LUA_LS_SHA256_AMD64=${lua_ls_sha256_amd64}|" \
