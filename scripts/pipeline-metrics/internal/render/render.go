@@ -123,12 +123,12 @@ func Flow(r *metrics.Report) (string, error) {
 
 	b.WriteString("\n### triage と PR 化\n\n")
 	writeTable(&b,
-		[]string{"スキャン", "最古の未 triage（日）", "却下まで p50（日）", "PR 化率", "PR 化待ち", "起票→PR p50（日）"},
+		[]string{"スキャン", "最古の未 triage（日）", "却下まで p50（日）", "PR 化率", "PR 化待ち", "オーナー引き取り", "起票→PR p50（日）"},
 		scanRows(r, func(s *metrics.ScanMetrics) []string {
 			return []string{
 				daysCell(s.OldestUntriagedDays), daysCell(s.RejectLatencyP50),
-				rateCell(s.PRCreatedRate, s.AdoptedWithPR, s.Adopted, 0),
-				itoa(s.PRPending), daysCell(s.PRLagP50),
+				rateCell(s.PRCreatedRate, s.AdoptedWithPR, s.PRCreatedSample(), 0),
+				itoa(s.PRPending), itoa(s.OwnerTakeover), daysCell(s.PRLagP50),
 			}
 		}))
 
