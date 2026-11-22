@@ -37,7 +37,7 @@ actionlint=$(pin 'actionlint')
 
 # NOTE: no comments or blank lines — the Dockerfile `go install`s every line.
 cat >"$GO_TOOLS" <<EOF
-golang.org/x/tools/cmd/...@v${goimports}
+golang.org/x/tools/cmd/goimports@v${goimports}
 golang.org/x/tools/gopls@v${gopls}
 github.com/go-delve/delve/cmd/dlv@v${dlv}
 github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v${golangci_lint}
