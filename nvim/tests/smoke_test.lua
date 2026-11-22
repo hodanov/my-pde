@@ -54,6 +54,29 @@ local function expect_all_plugins_load_cleanly()
 	expect(vim.v.errmsg == "", "v:errmsg after loading plugins: " .. vim.v.errmsg)
 end
 
+local function expect_formatters_available()
+	local conform = require("conform")
+	for ft, chain in pairs(conform.formatters_by_ft) do
+		for _, name in ipairs(chain) do
+			local info = conform.get_formatter_info(name)
+			expect(info.available, ("%s: formatter %s unavailable: %s"):format(ft, name, tostring(info.available_msg)))
+		end
+	end
+end
+
+local function expect_linter_commands_executable()
+	local lint = require("lint")
+	for ft, names in pairs(lint.linters_by_ft) do
+		for _, name in ipairs(names) do
+			local cmd = lint.linters[name].cmd
+			if type(cmd) == "function" then
+				cmd = cmd()
+			end
+			expect(vim.fn.executable(cmd) == 1, ("%s: linter %s command %s not executable"):format(ft, name, cmd))
+		end
+	end
+end
+
 local function expect_blink_rust_fuzzy()
 	local fuzzy = require("blink.cmp.fuzzy")
 	local ready = vim.wait(30 * 1000, function()
@@ -91,6 +114,8 @@ for _, check in ipairs({
 	expect_plugins_match_lockfile,
 	expect_blink_binary_installed,
 	expect_all_plugins_load_cleanly,
+	expect_formatters_available,
+	expect_linter_commands_executable,
 	expect_blink_rust_fuzzy,
 	expect_treesitter_highlights,
 }) do
