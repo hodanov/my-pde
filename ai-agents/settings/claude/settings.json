@@ -136,10 +136,17 @@
       "Read(**/*.p12)",
       "Read(**/*.pfx)",
       "Read(**/id_rsa*)",
+      "Read(**/id_ed25519*)",
+      "Read(**/id_ecdsa*)",
       "Read(**/.netrc)",
       "Read(**/.npmrc)",
-      "Read(**/credentials*)"
-    ]
+      "Read(**/credentials*)",
+      "Read(**/.git-credentials)",
+      "Read(**/.envrc)",
+      "Read(**/*.tfstate*)",
+      "Read(~/.codex/auth.json)"
+    ],
+    "disableBypassPermissionsMode": "disable"
   },
   "hooks": {
     "PreCompact": [
@@ -288,6 +295,12 @@
       "gh *"
     ],
     "filesystem": {
+      "denyRead": [
+        "~/.aws/credentials",
+        "~/.codex/auth.json",
+        "~/.git-credentials",
+        "~/.netrc"
+      ],
       "allowWrite": [
         "~/Library/Caches/go-build",
         "~/Library/Caches/golangci-lint",
@@ -317,6 +330,6 @@
     "gopls-lsp@claude-plugins-official": true
   },
   "effortLevel": "high",
-  "autoUpdatesChannel": "latest",
+  "autoUpdatesChannel": "stable",
   "editorMode": "vim"
 }

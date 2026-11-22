@@ -18,7 +18,7 @@ lint_dir="$(cd "$(dirname "$0")/../lint" && pwd)"
 if command -v markdownlint-cli2 >/dev/null 2>&1; then
 	cli=(markdownlint-cli2)
 else
-	cli=(npx --yes markdownlint-cli2@latest)
+	cli=(npx --yes markdownlint-cli2@0.24.0)
 fi
 
 label="$deck"

@@ -55,8 +55,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Stage 2: Build Node runtime and npm tools
 FROM base AS node-builder
 
-ARG NODE_VERSION=24.22.0
-ARG NPM_VERSION=12.2.0
+ARG NODE_VERSION=26.13.0
+ARG NPM_VERSION=12.2.1
 ENV NODE_HOME="/opt/node"
 ENV PATH="${NODE_HOME}/bin:${PATH}"
 
@@ -93,7 +93,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
 # Stage 3: Build Go toolchain and tools
 FROM base AS go-builder
 
-ARG GO_VERSION=1.27.2
+ARG GO_VERSION=1.27.4
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH="$(dpkg --print-architecture)" \
@@ -132,7 +132,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
 # Stage 4: Build Rust-based tools
 FROM base AS rust-builder
 
-ARG RUSTUP_VERSION=1.29.1
+ARG RUSTUP_VERSION=1.29.3
 ARG RUST_TOOLCHAIN=stable
 ARG STYLUA_VERSION=2.6.0
 ARG TREE_SITTER_CLI_VERSION=0.27.1
@@ -170,7 +170,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # Stage 5: Build Python venv with uv
 FROM base AS python-builder
 
-ARG UV_VERSION=0.13.1
+ARG UV_VERSION=0.13.6
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
 RUN set -eux; \
@@ -198,10 +198,12 @@ RUN set -eux; \
   apt-get clean -y; \
   rm -rf /var/lib/apt/lists/*
 
-COPY ./environment/tools/python/pyproject.toml /opt/python/
+COPY ./environment/tools/python/pyproject.toml ./environment/tools/python/uv.lock /opt/python/
 WORKDIR /opt/python
+ARG ZIZMOR_VERSION=1.31.1
 RUN export PATH="$HOME/.local/bin:$PATH" \
-  && uv sync --project .
+  && uv sync --project . --locked \
+  && uv pip install --python .venv/bin/python "zizmor==${ZIZMOR_VERSION}"
 WORKDIR /
 
 ####################
@@ -235,7 +237,7 @@ RUN set -eux; \
 # Stage 7: Fetch Terraform CLI binary only
 FROM base AS terraform-builder
 
-ARG TERRAFORM_VERSION=1.16.6
+ARG TERRAFORM_VERSION=1.17.1
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
   ARCH="$(dpkg --print-architecture)"; \

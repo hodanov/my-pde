@@ -111,19 +111,11 @@ return {
 	},
 	{ -- Debug Adapter Protocol
 		"mfussenegger/nvim-dap",
-		lazy = true,
-		event = { "BufRead", "BufNewFile" },
+		ft = { "go", "python" },
 		dependencies = {
-			{
-				"leoluz/nvim-dap-go",
-				lazy = true,
-				event = { "BufRead", "BufNewFile" },
-			},
-			{
-				"mfussenegger/nvim-dap-python",
-				lazy = true,
-				event = { "BufRead", "BufNewFile" },
-			},
+			"leoluz/nvim-dap-go",
+			-- rockspec 同梱のため lazy.nvim の既定が lazy = false になり、省くと起動時にロードされる
+			{ "mfussenegger/nvim-dap-python", lazy = true },
 		},
 		config = function()
 			require("nvim_dap")

@@ -85,7 +85,7 @@ docker cp nvim/config/lua/ai_bridge.lua nvim-dev:/root/.config/nvim/lua/ai_bridg
 ./scripts/ai-bridge/ai-bridge replay --last
 ```
 
-`replay` は稼働中のデーモンが既存の watcher → launcher 経路で consume するため、デーモンが起動している必要がある。プロンプト全文が平文で `history.jsonl` に残る点に注意する（`~/.ai-bridge/` 配下に閉じる）。
+`replay` は稼働中のデーモンが既存の watcher → launcher 経路で consume するため、デーモンが起動している必要がある。プロンプト全文が平文で `history.jsonl` に残る点に注意する（`~/.ai-bridge/` 配下に閉じる）。デーモンが新しく作る `~/.ai-bridge/` は 0700、`history.jsonl` は 0600 で、所有者だけが読める。
 
 ### フローティングウィンドウのキーマップ
 

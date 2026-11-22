@@ -1,0 +1,4 @@
+rules:
+  self-repository:
+    # actionlint rejects the `$/` syntax (rhysd/actionlint#711), so same-repository references stay `./`.
+    disable: true

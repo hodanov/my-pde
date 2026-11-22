@@ -42,3 +42,5 @@ gosec は次の条件で見直す。
 - 既存 CLI が、他人が書いた入力（共有リポジトリの設定、ネットワーク越しのデータ）を解釈するようになったとき。
 
 その場合は G301/G302/G304/G306 を除外して有効化し、残った指摘には安全である理由を書いた `//nolint` を付ける形から始める。
+
+2026-10-23 追記: 上で受け入れた「触らないモジュールは検査されない」隙間は、#919 で塞いだ。`.github/workflows/automation-go-vuln-scan.yml` が毎週 `mise run go:vuln` で全 Go モジュールの govulncheck を回す。理由は [ADR-0011](0011-set-security-baseline-and-accept-residual-risks.md) にある。

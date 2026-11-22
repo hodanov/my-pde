@@ -148,6 +148,13 @@ func TestHistoryRepositoryAppendAndLoad(t *testing.T) {
 			t.Fatalf("Append(%q): %v", rec.Prompt, appendErr)
 		}
 	}
+	info, statErr := os.Stat(filepath.Join(dir, historyFileName))
+	if statErr != nil {
+		t.Fatal(statErr)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Errorf("history file mode %o, want 600", perm)
+	}
 
 	got, loadErr := HistoryRepository{}.Load(dir)
 	if loadErr != nil {
@@ -260,6 +267,13 @@ func TestDir(t *testing.T) {
 		}
 		if !(Dir{}).IsDir(target) {
 			t.Error("Ensure did not create directory")
+		}
+		info, statErr := os.Stat(target)
+		if statErr != nil {
+			t.Fatal(statErr)
+		}
+		if perm := info.Mode().Perm(); perm != 0o700 {
+			t.Errorf("Ensure created %q with mode %o, want 700", target, perm)
 		}
 	})
 

@@ -19,7 +19,7 @@ Neovim runs inside a Docker container; AI agent configs and dotfiles live on the
   - Skills that rewrite this repository's own paths live in `.claude/skills/` instead and are not distributed. Placement rules: `.claude/rules/skill-authoring.md`.
   - Deployment to each CLI (Claude, Codex) is done via mise tasks (`mise.toml` at the repo root).
 - `dotfiles/`: Shell and terminal configs (`.zshrc`, `wezterm/`). Both are deployed as symlinks (`mise run zshrc-link` / `dotfiles-link`), so host edits show up as repo diffs.
-- `docs/plan/`: implementation plans. `docs/adr/`: architecture decision records (why, not how). `docs/log/`: work logs.
+- `docs/plan/`: implementation plans. `docs/adr/`: architecture decision records (why, not how). `docs/runbook/`: incident response procedures. `docs/log/`: work logs.
 - `assets/`: screenshots and static media.
 - `.github/workflows/`: CI workflows (lint, test, version bumps).
 
@@ -47,6 +47,7 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 - `mise run <app>:build` — build the binary (e.g. `mise run ai-bridge:build`).
 - `mise run <app>:test` — run Go tests; `mise run go:test` runs all apps.
 - `mise run <app>:lint` — golangci-lint + goimports check; `mise run go:lint` runs all apps.
+- `mise run go:vuln` — govulncheck for every app (also run weekly by `automation-go-vuln-scan.yml`).
 - `mise run ai-bridge:install` — sign and register with launchd (local only).
 - `mise run ai-bridge:generate` — regenerate mocks.
 
@@ -60,13 +61,15 @@ Tasks and host tool versions are managed by [mise](https://mise.jdx.dev) via `mi
 
 ### Dotfiles
 
-- `mise run dotfiles-link` — symlink WezTerm config to `~/.config/wezterm`.
+- `mise run dotfiles-link` — symlink WezTerm config to `~/.config/wezterm` and the global Go tools config to `~/.config/mise/conf.d/go-tools.toml`.
 - `mise run zshrc-link` — symlink `dotfiles/.zshrc` to `~/.zshrc` (backs up an existing regular file; `zshrc-unlink` reverts). Kept separate from `dotfiles-link` because it replaces the login shell config.
 
 ### Tool version updates
 
 - `mise.toml` is the single source of truth for tool versions. Weekly CI (`automation-tools-bump.yml`) bumps the pins and regenerates the derived artifacts.
-- `mise run pins:sync` — regenerate `environment/tools/go/go-tools.txt` and the Dockerfile ARG defaults from `mise.toml` (CI verifies sync via `pins:check`).
+- New releases wait out the cooldown in `[settings] minimum_release_age` (14 days, matching Dependabot's `cooldown`): `mise upgrade --bump` and the tools-bump workflow pick the newest release older than it and never downgrade a pin. Go and rustup are exempt because their sources publish no release date. CI's own mise binary follows the same cooldown through `.github/actions/setup-mise`.
+- `mise run pins:sync` — regenerate `environment/tools/go/go-tools.txt`, the Dockerfile ARG defaults, and `dotfiles/mise/go-tools.toml` from `mise.toml` (CI verifies sync via `pins:check`).
+- `dotfiles/mise/go-tools.toml` is the global mise config for the Go toolchain used outside mise-managed repos (go, golangci-lint, and gopls for Claude Code's `gopls-lsp` plugin; per-repo Go versions come from `go.mod` via `GOTOOLCHAIN=auto`). `dotfiles-link` symlinks it into `~/.config/mise/conf.d/`; run `mise install` outside any repo after a bump to apply it.
 
 ## Parallel Work (git worktrees)
 

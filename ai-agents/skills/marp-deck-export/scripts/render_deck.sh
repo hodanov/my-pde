@@ -38,7 +38,7 @@ fi
 
 TMPBASE="${TMPDIR:-/tmp}"
 THEMES="$(cd "$(dirname "$0")/../assets/themes" && pwd)"
-MARP=(npx --yes @marp-team/marp-cli@latest)
+MARP=(npx --yes @marp-team/marp-cli@4.5.1)
 # --no-stdin: marp waits for Markdown on a non-TTY stdin, which hangs in agent shells.
 MARP_OPTS=(--no-stdin --theme-set "$THEMES" --allow-local-files)
 

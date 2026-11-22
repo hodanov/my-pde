@@ -4,13 +4,14 @@ paths:
   - "mise.lock"
   - "environment/docker/nvim.dockerfile"
   - "environment/tools/**"
+  - "dotfiles/mise/**"
 ---
 
 # Toolchain version rules
 
 - `mise.toml` at the repo root is the source of truth for tool versions: host tools in `[tools]`, Docker-only versions (Neovim/npm/Rust/rustup/tree-sitter-cli/uv/Terraform/lua-language-server/marksman) in `[env]`. `[env]` also holds the per-asset SHA256 of release binaries whose upstream publishes no checksum file (`LUA_LS_SHA256_*` / `MARKSMAN_SHA256_*`); the weekly bump resolves them from GitHub release asset digests (ADR-0005).
-- `environment/tools/go/go-tools.txt` and the `ARG` defaults in `environment/docker/nvim.dockerfile` are generated from `mise.toml` by `mise run pins:sync` (CI verifies sync via `pins:check`). Keep `ARG` lines unindented and single-line; `sync-pins.sh` edits them by pattern.
-- Do NOT manually bump pinned tool versions. Update via `mise use --pin <tool>@<version>` (`[tools]`) or `mise set <KEY>=<value>` (`[env]`) + `mise run pins:sync` (Bash), or the weekly `automation-tools-bump.yml` workflow. This is enforced deterministically by the `guard-version-pins.sh` PreToolUse hook (`.claude/settings.json`), which blocks Edit/Write on `mise.toml` `[tools]`/`[env]` pin lines, `ARG *_VERSION=`/`*_TOOLCHAIN=`/`*_SHA256_AMD64=`/`*_SHA256_ARM64=` lines, and the generated manifests `environment/tools/go/go-tools.txt` and `environment/tools/node/package.json`.
+- `environment/tools/go/go-tools.txt`, `dotfiles/mise/go-tools.toml`, and the `ARG` defaults in `environment/docker/nvim.dockerfile` are generated from `mise.toml` by `mise run pins:sync` (CI verifies sync via `pins:check`). Keep `ARG` lines unindented and single-line; `sync-pins.sh` edits them by pattern.
+- Do NOT manually bump pinned tool versions. Update via `mise use --pin <tool>@<version>` (`[tools]`) or `mise set <KEY>=<value>` (`[env]`) + `mise run pins:sync` (Bash), or the weekly `automation-tools-bump.yml` workflow. This is enforced deterministically by the `guard-version-pins.sh` PreToolUse hook (`.claude/settings.json`), which blocks Edit/Write on `mise.toml` `[tools]`/`[env]` pin lines, `ARG *_VERSION=`/`*_TOOLCHAIN=`/`*_SHA256_AMD64=`/`*_SHA256_ARM64=` lines, and the generated manifests `environment/tools/go/go-tools.txt`, `dotfiles/mise/go-tools.toml`, and `environment/tools/node/package.json`.
 - `mise.lock` records the download URL and checksum of each `[tools]` entry for the platforms in `lockfile_platforms`; `mise use --pin` and `mise upgrade --bump` update it alongside `mise.toml`, so never hand-edit it. A checksum mismatch on `mise install` means the upstream asset changed: stop and report it instead of rewriting the checksum or running `mise lock` to accept it.
 - The `go` directive in every `scripts/*/go.mod` tracks the `[tools] go` pin. Nothing bumps it automatically (`automation-tools-bump.yml` moves the mise pin only), so raise it deliberately with `go mod edit -go=<version>` across all modules at once. `scripts/scaffold` copies the directive from the `--from` module's live `go.mod`, so a generated module inherits whatever the existing ones carry.
 - Rebuild the image after changing tool versions or `environment/tools/node/package.json`.

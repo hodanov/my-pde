@@ -98,7 +98,7 @@ type HistoryRepository struct{}
 // Append writes req as one JSON line to <bridgeDir>/history.jsonl, creating the
 // file if needed. A single O_APPEND write keeps concurrent lines from interleaving.
 func (HistoryRepository) Append(bridgeDir string, req *domain.Request) error {
-	f, openErr := os.OpenFile(filepath.Join(bridgeDir, historyFileName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, openErr := os.OpenFile(filepath.Join(bridgeDir, historyFileName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if openErr != nil {
 		return fmt.Errorf("open history: %w", openErr)
 	}
@@ -200,7 +200,7 @@ func (Dir) IsDir(path string) bool {
 
 // Ensure creates dir (and parents) if it does not already exist.
 func (Dir) Ensure(dir string) error {
-	return os.MkdirAll(dir, 0o755)
+	return os.MkdirAll(dir, 0o700)
 }
 
 // StatDir reports whether path is a directory; err is non-nil when the path

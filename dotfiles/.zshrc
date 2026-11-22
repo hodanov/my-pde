@@ -56,6 +56,14 @@ RPROMPT="%F{#6c7086}%D{%m/%d %H:%M}%f"
 export LC_ALL=en_US.UTF-8
 
 ####################
+# History
+####################
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=100000
+SAVEHIST=100000
+setopt SHARE_HISTORY HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANKS EXTENDED_HISTORY
+
+####################
 # Homebrew (Apple Silicon / arm64)
 # Must be evaluated before anyenv/go so /opt/homebrew/bin precedes /usr/local/bin
 ####################
@@ -76,10 +84,21 @@ nvim() {
     bash --login -c 'nvim "$@"' nvim "$@"
 }
 
+wtst() {
+  local base=${1:-origin/HEAD} wt ab dirty age
+  git worktree list --porcelain | sed -n 's/^worktree //p' | while read -r wt; do
+    [[ -d $wt ]] || { printf '%-40s missing\n' "$wt"; continue; }
+    ab=$(git -C "$wt" rev-list --left-right --count "$base...HEAD" 2>/dev/null) || ab="? ?"
+    dirty=$(git -C "$wt" status --porcelain | wc -l | tr -d ' ')
+    age=$(git -C "$wt" log -1 --format=%cr)
+    printf '%-40s behind %s ahead %s  dirty %s  %s\n' "${wt:t}" ${=ab} "$dirty" "$age"
+  done
+}
+
 ####################
 # Go path
 ####################
-export PATH="$PATH:$(go env GOPATH)/bin"
+export PATH="$PATH:${GOPATH:-$HOME/go}/bin"
 
 ####################
 # Add Docker Desktop for Mac (docker)
@@ -122,11 +141,6 @@ if [[ -n ${HOME}/.zcompdump(#qN.mh+24) ]]; then
 else
   compinit -C
 fi
-
-####################
-# curl
-####################
-export PATH="/usr/local/opt/curl/bin:$PATH"
 
 ####################
 # ghq & peco

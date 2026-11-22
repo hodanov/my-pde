@@ -1,7 +1,7 @@
 services:
   otel-lgtm:
     container_name: claude-otel-lgtm
-    image: grafana/otel-lgtm:0.35.0
+    image: grafana/otel-lgtm:0.40.0@sha256:72e05804790e6e0d8c0b70a6d5ff1f721ef7b203463374631e99aa3429bd0cf6
     restart: unless-stopped
     environment:
       LOKI_EXTRA_ARGS: -ingester.wal-disk-full-threshold=0.98

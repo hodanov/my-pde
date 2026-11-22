@@ -41,4 +41,6 @@ marksman の導入そのもの（ADR-0004 の他の決定）は変えない。
 
 **Dockerfile の SHA256 ARG は生成物になる。** `guard-version-pins.sh` のブロック対象に `*_SHA256_AMD64` / `*_SHA256_ARM64` を加える。手で更新する場合も `mise set <KEY>=<value>` → `mise run pins:sync` を通す。
 
+2026-10-23 追記: #919 で、tools-bump は `releases/latest` ではなく、`mise.toml` の `minimum_release_age`（14 日）より前に公開された最新の release を選ぶようになった。選んだ版が今の固定値より古いときは固定値を残す。asset の `digest` から SHA256 を取る方式は変わらない。理由は [ADR-0011](0011-set-security-baseline-and-accept-residual-risks.md) にある。
+
 関連: [ADR-0004](0004-adopt-marksman-for-markdown-navigation.md)

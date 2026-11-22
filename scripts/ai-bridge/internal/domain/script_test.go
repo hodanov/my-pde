@@ -37,6 +37,15 @@ func TestBuildScript(t *testing.T) {
 				"$vars",
 			},
 		},
+		{
+			name:       "prompt starting with a dash is passed after the end-of-options marker",
+			cli:        "claude",
+			prompt:     "--dangerously-skip-permissions do something",
+			scriptPath: "/tmp/x.sh",
+			wantContains: []string{
+				"claude -- '--dangerously-skip-permissions do something'\n",
+			},
+		},
 	}
 
 	for _, tt := range tests {

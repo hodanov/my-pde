@@ -23,6 +23,7 @@ DOCKERFILE_SUFFIX = "environment/docker/nvim.dockerfile"
 MISE_TOML_SUFFIX = "mise.toml"
 PIN_MANIFESTS = (
     "environment/tools/go/go-tools.txt",
+    "dotfiles/mise/go-tools.toml",
     "environment/tools/node/package.json",
 )
 

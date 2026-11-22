@@ -2,6 +2,7 @@
 # Regenerate pinned artifacts from mise.toml (single source of truth):
 #   - environment/tools/go/go-tools.txt (consumed by the Docker image build)
 #   - ARG defaults in environment/docker/nvim.dockerfile
+#   - dotfiles/mise/go-tools.toml (global mise config, linked by `mise run dotfiles-link`)
 # Run via `mise run pins:sync`; CI verifies sync with `mise run pins:check`.
 set -euo pipefail
 
@@ -10,6 +11,7 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MISE_TOML="$ROOT/mise.toml"
 GO_TOOLS="$ROOT/environment/tools/go/go-tools.txt"
 DOCKERFILE="$ROOT/environment/docker/nvim.dockerfile"
+GLOBAL_GO_TOOLS="$ROOT/dotfiles/mise/go-tools.toml"
 
 # Extract the value of a `key = "value"` line. Pass quoted keys as-is
 # (e.g. '"go:golang.org/x/tools/gopls"').
@@ -35,7 +37,7 @@ actionlint=$(pin 'actionlint')
 
 # NOTE: no comments or blank lines — the Dockerfile `go install`s every line.
 cat >"$GO_TOOLS" <<EOF
-golang.org/x/tools/cmd/...@v${goimports}
+golang.org/x/tools/cmd/goimports@v${goimports}
 golang.org/x/tools/gopls@v${gopls}
 github.com/go-delve/delve/cmd/dlv@v${dlv}
 github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v${golangci_lint}
@@ -48,6 +50,16 @@ EOF
 echo "Generated $GO_TOOLS"
 
 go_version=$(pin 'go')
+
+cat >"$GLOBAL_GO_TOOLS" <<EOF
+# Generated from mise.toml by \`mise run pins:sync\`. Do not edit.
+[tools]
+go = "${go_version}"
+golangci-lint = "${golangci_lint}"
+"go:golang.org/x/tools/gopls" = "${gopls}"
+EOF
+echo "Generated $GLOBAL_GO_TOOLS"
+
 node_version=$(pin 'node')
 neovim_version=$(pin 'NEOVIM_VERSION')
 npm_version=$(pin 'NPM_VERSION')
@@ -58,6 +70,7 @@ uv_version=$(pin 'UV_VERSION')
 stylua_version=$(pin 'stylua')
 terraform_version=$(pin 'TERRAFORM_VERSION')
 hadolint_version=$(pin 'hadolint')
+zizmor_version=$(pin 'zizmor')
 lua_ls_version=$(pin 'LUA_LS_VERSION')
 marksman_version=$(pin 'MARKSMAN_VERSION')
 lua_ls_sha256_amd64=$(pin 'LUA_LS_SHA256_AMD64')
@@ -77,6 +90,7 @@ sed -i.bak -E \
 	-e "s|^ARG STYLUA_VERSION(=.*)?$|ARG STYLUA_VERSION=${stylua_version}|" \
 	-e "s|^ARG TERRAFORM_VERSION(=.*)?$|ARG TERRAFORM_VERSION=${terraform_version}|" \
 	-e "s|^ARG HADOLINT_VERSION(=.*)?$|ARG HADOLINT_VERSION=${hadolint_version}|" \
+	-e "s|^ARG ZIZMOR_VERSION(=.*)?$|ARG ZIZMOR_VERSION=${zizmor_version}|" \
 	-e "s|^ARG LUA_LS_VERSION(=.*)?$|ARG LUA_LS_VERSION=${lua_ls_version}|" \
 	-e "s|^ARG MARKSMAN_VERSION(=.*)?$|ARG MARKSMAN_VERSION=${marksman_version}|" \
 	-e "s|^ARG LUA_LS_SHA256_AMD64(=.*)?$|ARG LUA_LS_SHA256_AMD64=${lua_ls_sha256_amd64}|" \
