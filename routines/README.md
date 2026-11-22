@@ -39,8 +39,13 @@ Routine は Anthropic クラウド上の使い捨てセッションで、リポ�
 | repo の `.claude/rules/`（`paths:` にマッチしたときロード）             | 有効                                                                             |
 | repo の `.claude/skills/` / `.claude/agents/` / `.claude/commands/`     | 有効                                                                             |
 | repo の `.claude/settings.json` の hooks                                | 有効（`guard-version-pins.sh` と `test-changed.sh` は Routine 実行中も発火する） |
-| repo の `.mcp.json`、`.claude/settings.json` で宣言した plugins         | 有効                                                                             |
+| repo の `.mcp.json`                                                     | 有効                                                                             |
+| repo の `.claude/settings.json` で宣言した plugins                      | 無効。クラウドではインストールされない                                           |
 | `~/.claude/` 配下（`agents.xml`、汎用 rules、skills、subagents、hooks） | 無効。`ai-agents/` から配っているものはクラウドに届かない                        |
+
+GitHub の操作は `gh` ではなく GitHub MCP（`mcp__github__*`）で行われる。2026-11 の scan 4 本の実行ログで確かめた。クラウドの GitHub proxy は GraphQL を 403 で拒否するので、`gh issue` / `gh pr` は使えない。プロンプトに `gh` のコマンドを書いても、モデルが MCP の呼び出しに置き換えて実行する。そのため、プロンプトにはコマンドではなく取得したい条件を書く。
+
+- MCP の `list_issues` は `labels` を **OR** で扱う。`gh issue list --label A --label B`（AND）のつもりで 2 つのラベルを渡すと、片方しか付いていない Issue まで返る。2 つのラベルで絞るときは、取得した後で両方のラベルを持つものに絞るよう書く。
 
 この前提から、プロンプト本文には次を書かない。
 

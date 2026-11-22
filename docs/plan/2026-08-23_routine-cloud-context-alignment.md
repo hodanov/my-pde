@@ -80,6 +80,8 @@ Phase 2 は未確定事項が多いため PoC を先行させ、結果を設計�
 
 Routine を新規作成する必要はない。ドキュメントに「同じ環境が web / `claude --cloud` / routines すべてに適用される」とあるので、Routine と同じ環境 ID を使って `claude --cloud` でセッションを 1 本起動し、利用可能なスキル・サブエージェント・呼び出し名・plugin のインストール有無を報告させる。
 
+> 2026-11-22 追記: 前提が崩れたので、Phase 2-2 以降は打ち切る。[Configure cloud environments](https://code.claude.com/docs/en/cloud-environments) の "What carries over from your setup" に、repo の `.claude/settings.json` の `enabledPlugins` / `extraKnownMarketplaces` は「クラウドセッションではインストールしない」と明記されている。plugin（`ai-agents/.claude-plugin/`）はローカル配布専用として扱う。あわせて、Routine の GitHub 操作は `gh` ではなく GitHub MCP で行われていることを実行ログで確かめた。詳細は [`routines/README.md`](../../routines/README.md) の「クラウド実行で効く設定・効かない設定」にある（#909）。
+
 ### Phase 2-3: 設計記録と本適用
 
 検証結果を `docs/plan/<日付>_ai-agents-plugin-distribution.md` に残したうえで、hooks の移植（`ai-agents/settings/claude/settings.json` の hooks ブロックを `ai-agents/hooks/hooks.json` へ切り出し、`~/.claude/hooks/*.sh` を `${CLAUDE_PLUGIN_ROOT}/settings/claude/hooks/*.sh` へ書き換える。macOS 通知系やローカル依存の hook は選別する）、mise 配布との併存方針、`version` bump 運用を決める。skills / subagents を Routine に実際に使わせるなら、最後に `routines/*.json` の `allowed_tools` へ `Skill` / `Task` を追加し `/schedule` で手動 apply する。
