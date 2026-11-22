@@ -16,7 +16,6 @@ vim.opt.tabstop = 4 -- Display a tab character as 4 columns wide
 vim.opt.shiftwidth = 4 -- Change the number of spaces inserted for indentation
 -- vim.opt.softtabstop = 4 -- Make spaces feel like real tabs
 vim.opt.expandtab = true -- Convert tabs to spaces
-vim.opt.smartindent = true -- Add a new line with autoindent
 vim.opt.colorcolumn = "120" -- Add a color on 120th column
 vim.opt.inccommand = "split" -- :substitute の置換結果を入力中にライブプレビュー（下部スプリットに before/after 一覧）
 vim.opt.ignorecase = true -- 小文字のみの検索パターンは大文字小文字を無視する
