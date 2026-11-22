@@ -9,18 +9,18 @@
 | `scan:alpha` | 11 | 11 | 10 | 1 | 0 | 0 | 91% (10/11) | 0.0% (0/11) |
 | `scan:beta` | 11 | 3 | 5 | 5 | 0 | 1 | 50% (5/10) | 9.1% (1/11) |
 | `scan:delta` | 3 | 3 | 1 | 1 | 1 | 0 | — (n=2) | — (n=3) |
-| `scan:gamma` | 8 | 0 | 7 | 1 | 0 | 0 | 88% (7/8) | 0.0% (0/8) |
-| **合計** | **33** | **17** | **23** | **8** | **1** | **1** | **74% (23/31)** | **3.0% (1/33)** |
+| `scan:gamma` | 9 | 0 | 8 | 1 | 0 | 0 | 89% (8/9) | 0.0% (0/9) |
+| **合計** | **34** | **17** | **24** | **8** | **1** | **1** | **75% (24/32)** | **2.9% (1/34)** |
 
 ### triage と PR 化
 
-| スキャン | 最古の未 triage（日） | 却下まで p50（日） | PR 化率 | PR 化待ち | 起票→PR p50（日） |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `scan:alpha` | — | 1 | 70% (7/10) | 3 | 1 |
-| `scan:beta` | — | 2.5 | 100% (5/5) | 0 | 1 |
-| `scan:delta` | 26.6 | 1 | — (n=1) | 0 | 1 |
-| `scan:gamma` | — | 2 | 100% (7/7) | 0 | 1 |
-| **合計** | **26.6** | **2** | **87% (20/23)** | **3** | **1** |
+| スキャン | 最古の未 triage（日） | 却下まで p50（日） | PR 化率 | PR 化待ち | オーナー引き取り | 起票→PR p50（日） |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `scan:alpha` | — | 1 | 70% (7/10) | 3 | 0 | 1 |
+| `scan:beta` | — | 2.5 | 100% (5/5) | 0 | 0 | 1 |
+| `scan:delta` | 26.6 | 1 | — (n=1) | 0 | 0 | 1 |
+| `scan:gamma` | — | 2 | 100% (7/7) | 0 | 1 | 1 |
+| **合計** | **26.6** | **2** | **87% (20/23)** | **3** | **1** | **1** |
 
 ### マージ
 
@@ -37,7 +37,7 @@
 | 月 | 起票 | 採用 | 却下 | 未 triage | 採用率 | マージ済 | 起票→マージ p50 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 2026-06 | 2 | 2 | 0 | 0 | — (n=2) | 2 | 2 |
-| 2026-07 | 19 | 12 | 5 | 1 | 71% (12/17) | 12 | 2 |
+| 2026-07 | 20 | 13 | 5 | 1 | 72% (13/18) | 12 | 2 |
 | 2026-08 | 12 | 9 | 3 | 0 | 75% (9/12) | 4 | 2 |
 
 ### ラベル運用の異常
@@ -82,6 +82,7 @@
       "oldest_untriaged_issue": 0,
       "reject_latency_days_p50": 1,
       "adopted_with_pr": 7,
+      "owner_takeover": 0,
       "pr_created_rate": 0.7,
       "pr_pending": 3,
       "pr_lag_days_p50": 1,
@@ -109,6 +110,7 @@
       "oldest_untriaged_issue": 0,
       "reject_latency_days_p50": 2.5,
       "adopted_with_pr": 5,
+      "owner_takeover": 0,
       "pr_created_rate": 1,
       "pr_pending": 0,
       "pr_lag_days_p50": 1,
@@ -136,6 +138,7 @@
       "oldest_untriaged_issue": 129,
       "reject_latency_days_p50": 1,
       "adopted_with_pr": 1,
+      "owner_takeover": 0,
       "pr_created_rate": null,
       "pr_pending": 0,
       "pr_lag_days_p50": 1,
@@ -150,19 +153,20 @@
     },
     {
       "scan": "scan:gamma",
-      "opened": 8,
+      "opened": 9,
       "opened_last_28d": 0,
-      "adopted": 7,
+      "adopted": 8,
       "rejected": 1,
       "untriaged": 0,
       "untracked_close": 0,
       "rejected_after_pr": 0,
-      "adopted_rate": 0.875,
+      "adopted_rate": 0.8889,
       "rejected_after_pr_rate": 0,
       "oldest_untriaged_days": null,
       "oldest_untriaged_issue": 0,
       "reject_latency_days_p50": 2,
       "adopted_with_pr": 7,
+      "owner_takeover": 1,
       "pr_created_rate": 1,
       "pr_pending": 0,
       "pr_lag_days_p50": 1,
@@ -178,19 +182,20 @@
   ],
   "total": {
     "scan": "all",
-    "opened": 33,
+    "opened": 34,
     "opened_last_28d": 17,
-    "adopted": 23,
+    "adopted": 24,
     "rejected": 8,
     "untriaged": 1,
     "untracked_close": 1,
     "rejected_after_pr": 1,
-    "adopted_rate": 0.7419,
-    "rejected_after_pr_rate": 0.0303,
+    "adopted_rate": 0.75,
+    "rejected_after_pr_rate": 0.0294,
     "oldest_untriaged_days": 26.6,
     "oldest_untriaged_issue": 129,
     "reject_latency_days_p50": 2,
     "adopted_with_pr": 20,
+    "owner_takeover": 1,
     "pr_created_rate": 0.8696,
     "pr_pending": 3,
     "pr_lag_days_p50": 1,
@@ -216,11 +221,11 @@
     },
     {
       "month": "2026-07",
-      "opened": 19,
-      "adopted": 12,
+      "opened": 20,
+      "adopted": 13,
       "rejected": 5,
       "untriaged": 1,
-      "adopted_rate": 0.7059,
+      "adopted_rate": 0.7222,
       "merged": 12,
       "e2e_lead_days_p50": 2
     },
@@ -249,7 +254,7 @@
       "value": 0,
       "threshold": 1,
       "observed": 0,
-      "sample": 8,
+      "sample": 9,
       "owner_prompt": ""
     },
     {
