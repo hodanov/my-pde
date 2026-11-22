@@ -115,7 +115,7 @@ func TestJSONContract(t *testing.T) {
 	for _, key := range []string{
 		"scan", "opened", "opened_last_28d", "adopted", "rejected", "untriaged", "untracked_close",
 		"adopted_rate", "rejected_after_pr_rate", "oldest_untriaged_days", "reject_latency_days_p50",
-		"pr_created_rate", "pr_pending", "pr_lag_days_p50", "merge_rate", "merge_lead_days_p50",
+		"owner_takeover", "pr_created_rate", "pr_pending", "pr_lag_days_p50", "merge_rate", "merge_lead_days_p50",
 		"merge_lead_days_p90", "e2e_lead_days_p50",
 	} {
 		if _, found := scan[key]; !found {

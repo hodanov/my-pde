@@ -367,6 +367,7 @@ func TestComputePRJoin(t *testing.T) {
 		{Number: 1, Labels: []string{"scan:a", "adopted", "pr-created"}, CreatedAt: "2026-07-01T00:00:00Z"},
 		{Number: 2, Labels: []string{"scan:a", "adopted", "pr-created"}, CreatedAt: "2026-07-01T00:00:00Z"}, // label lies: no PR
 		{Number: 3, Labels: []string{"scan:a", "adopted"}, CreatedAt: "2026-07-01T00:00:00Z"},               // PR without the label
+		{Number: 4, Labels: []string{"scan:a", "adopted", "pr-created"}, CreatedAt: "2026-07-01T00:00:00Z", ClosedAt: "2026-07-05T00:00:00Z"},
 	}
 	prs := []prSpec{
 		{Number: 101, HeadRefName: "auto/issue-1-a", CreatedAt: "2026-07-02T00:00:00Z", MergedAt: "2026-07-03T00:00:00Z"},
@@ -389,6 +390,12 @@ func TestComputePRJoin(t *testing.T) {
 	if a.PRPending != 1 {
 		t.Errorf("pr_pending = %d, want 1", a.PRPending)
 	}
+	if a.OwnerTakeover != 1 {
+		t.Errorf("owner_takeover = %d, want 1", a.OwnerTakeover)
+	}
+	if a.PRCreatedSample() != 3 {
+		t.Errorf("pr_created_rate sample = %d, want 3 (owner takeover leaves the denominator)", a.PRCreatedSample())
+	}
 	if got := report.Anomalies.MetaBranchPRs; len(got) != 1 || got[0] != 104 {
 		t.Errorf("meta branch prs = %v, want [104]", got)
 	}
@@ -396,7 +403,7 @@ func TestComputePRJoin(t *testing.T) {
 		t.Errorf("orphan prs = %v, want [105] (hand written branches are not anomalies)", got)
 	}
 	if got := report.Anomalies.PRLabelWithoutPR; len(got) != 1 || got[0] != 2 {
-		t.Errorf("pr label without pr = %v, want [2]", got)
+		t.Errorf("pr label without pr = %v, want [2] (closed issues are owner takeovers)", got)
 	}
 	if got := report.Anomalies.PRWithoutLabel; len(got) != 1 || got[0] != 3 {
 		t.Errorf("pr without label = %v, want [3]", got)
@@ -499,6 +506,12 @@ func TestEvaluateAlerts(t *testing.T) {
 				Scan: "scan:a", Opened: 10, OpenedLast28d: 4, Adopted: 10, AdoptedWithPR: 7, PRPending: 3,
 			},
 			wantKinds: []string{AlertPRCreatedRate},
+		},
+		{
+			name: "owner takeovers leave the PR rate sample",
+			scan: ScanMetrics{
+				Scan: "scan:a", Opened: 10, OpenedLast28d: 4, Adopted: 10, AdoptedWithPR: 4, OwnerTakeover: 3, PRPending: 3,
+			},
 		},
 		{
 			name: "low PR rate without a queue stays quiet",

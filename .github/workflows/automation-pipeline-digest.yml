@@ -28,11 +28,16 @@ jobs:
       - name: Export issues and pull requests
         run: |
           set -euo pipefail
-
-          gh issue list --state all --limit 1000 \
-            --json number,title,state,labels,createdAt,closedAt > "$RUNNER_TEMP/issues.json"
-          gh pr list --state all --limit 1000 \
-            --json number,title,state,headRefName,createdAt,closedAt,mergedAt > "$RUNNER_TEMP/prs.json"
+          limit=5000
+          export_list() {
+            gh "$1" list --state all --limit "$limit" --json "$2" >"$3"
+            if [ "$(jq length "$3")" -ge "$limit" ]; then
+              echo "::error::$1 list reached --limit $limit" >&2
+              exit 1
+            fi
+          }
+          export_list issue number,title,state,labels,createdAt,closedAt "$RUNNER_TEMP/issues.json"
+          export_list pr number,title,state,headRefName,createdAt,closedAt,mergedAt "$RUNNER_TEMP/prs.json"
 
       # Everything below tolerates this step failing: the digest still gets
       # published with the stock section, and says so in the body.

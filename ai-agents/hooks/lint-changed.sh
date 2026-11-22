@@ -4,6 +4,8 @@ export PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$PATH"
 # Stop hook: lint files changed in the working tree and surface issues.
 # Non-blocking — it only reports; it never fails the turn.
 set -u
+INPUT=$(cat)
+[ "$(jq -r '.stop_hook_active // false' <<<"$INPUT")" = "false" ] || exit 0
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 
@@ -72,7 +74,8 @@ if command -v golangci-lint >/dev/null 2>&1; then
 	done
 fi
 
-if [ -n "$issues" ]; then
-	printf 'lint issues on changed files (fix before marking the task done):\n%s' "$issues"
-fi
+[ -n "$issues" ] || exit 0
+
+jq -n --arg ctx "lint issues on changed files (fix before marking the task done):
+$issues" '{hookSpecificOutput:{hookEventName:"Stop",additionalContext:$ctx}}'
 exit 0

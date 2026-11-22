@@ -58,6 +58,9 @@ go run ./cmd/pipeline-metrics --issues issues.json --prs prs.json --format json
   最もコストの高い失敗）。
 - **PR ↔ Issue の join** は head ブランチ `^auto/issue-(\d+)-` から。マッチしない `auto/*` は
   meta ブランチとして別勘定（`anomalies.meta_branch_prs`）、`auto/` 以外の手書き PR は完全に対象外。
+- **オーナー引き取り**（`owner_takeover`）= adopted のまま auto PR 無しで Close された Issue。
+  課題は採用したが Bot の実装は採用しなかった信号として件数だけ出し、`pr_created_rate` の分母から外す。
+  同じ理由で `anomalies.pr_label_without_pr` は Open な Issue に限る。
 - PR 段階の指標は **PR 自身の作成日**で窓を切る。Issue 段階の指標は Issue の作成日で切る。
 - パース不能なレコードは落として `anomalies.parse_warnings` に残す。`gh` 側のスキーマが変わっても
   digest 全体は落ちない。
@@ -67,21 +70,22 @@ go run ./cmd/pipeline-metrics --issues issues.json --prs prs.json --format json
 スキャン別（+ 合計行）に、パイプラインの段階ごとへ分解する。どのスキャンが効いていないかの
 特定が目的なので、全体値だけを見ない。
 
-| 段階         | 指標                          | 定義                                                                       |
-| ------------ | ----------------------------- | -------------------------------------------------------------------------- |
-| スキャン品質 | `opened`                      | 窓内に起票された scan Issue 数                                             |
-|              | `opened_last_28d`             | うち直近 28 日の起票数（Routine の生存確認）                               |
-|              | `adopted_rate`                | `adopted` / (`adopted` + `rejected`)（未 triage・追跡外 Close は含めない） |
-|              | `rejected_after_pr_rate`      | PR まで作ってから却下 / `opened`                                           |
-|              | `untracked_close`             | ラベル無しで Close された数                                                |
-| triage       | `oldest_untriaged_days`       | 最古の未 triage Issue の経過日数                                           |
-|              | `reject_latency_days_p50`     | 起票 → `rejected` で Close の中央値                                        |
-| PR 化        | `pr_created_rate`             | PR が存在する adopted Issue / adopted Issue（ラベルではなく join で判定）  |
-|              | `pr_pending`                  | adopted かつ Open かつ PR 無し（PR 化待ち）                                |
-|              | `pr_lag_days_p50`             | 起票 → 最初の PR 作成の中央値                                              |
-| マージ       | `merge_rate`                  | merged / (merged + 未マージ Close)。Open な PR は分母に入れない            |
-|              | `merge_lead_days_p50` / `p90` | PR 作成 → マージ                                                           |
-|              | `e2e_lead_days_p50`           | 起票 → マージ                                                              |
+| 段階         | 指標                          | 定義                                                                            |
+| ------------ | ----------------------------- | ------------------------------------------------------------------------------- |
+| スキャン品質 | `opened`                      | 窓内に起票された scan Issue 数                                                  |
+|              | `opened_last_28d`             | うち直近 28 日の起票数（Routine の生存確認）                                    |
+|              | `adopted_rate`                | `adopted` / (`adopted` + `rejected`)（未 triage・追跡外 Close は含めない）      |
+|              | `rejected_after_pr_rate`      | PR まで作ってから却下 / `opened`                                                |
+|              | `untracked_close`             | ラベル無しで Close された数                                                     |
+| triage       | `oldest_untriaged_days`       | 最古の未 triage Issue の経過日数                                                |
+|              | `reject_latency_days_p50`     | 起票 → `rejected` で Close の中央値                                             |
+| PR 化        | `pr_created_rate`             | PR が存在する adopted Issue / (adopted Issue − `owner_takeover`)（join で判定） |
+|              | `pr_pending`                  | adopted かつ Open かつ PR 無し（PR 化待ち）                                     |
+|              | `owner_takeover`              | adopted かつ Close 済みかつ auto PR 無し（オーナーが実装し直した）              |
+|              | `pr_lag_days_p50`             | 起票 → 最初の PR 作成の中央値                                                   |
+| マージ       | `merge_rate`                  | merged / (merged + 未マージ Close)。Open な PR は分母に入れない                 |
+|              | `merge_lead_days_p50` / `p90` | PR 作成 → マージ                                                                |
+|              | `e2e_lead_days_p50`           | 起票 → マージ                                                                   |
 
 - 分位点は order statistics の線形補間（R type 7）。母数が偶数のときの p50 は中央 2 値の平均。
 - 日数は小数第 1 位、率は小数第 4 位で丸める。

@@ -10,6 +10,8 @@ export PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$PATH"
 # (the human `mise run verify:changed` / verify-runner entry point). Keep the two
 # in sync when the repo layout changes.
 set -u
+INPUT=$(cat)
+[ "$(jq -r '.stop_hook_active // false' <<<"$INPUT")" = "false" ] || exit 0
 
 [ "${TEST_CHANGED_DISABLE:-0}" = "1" ] && exit 0
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
@@ -49,7 +51,8 @@ for app in $go_apps; do
 		failures="${failures}- [go test] scripts/$app"$'\n'
 done
 
-if [ -n "$failures" ]; then
-	printf 'test failures on changed Go apps (fix before marking the task done):\n%s' "$failures"
-fi
+[ -n "$failures" ] || exit 0
+
+jq -n --arg ctx "test failures on changed Go apps (fix before marking the task done):
+$failures" '{hookSpecificOutput:{hookEventName:"Stop",additionalContext:$ctx}}'
 exit 0

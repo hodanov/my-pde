@@ -125,6 +125,7 @@ type ScanMetrics struct {
 
 	// PR stage.
 	AdoptedWithPR int      `json:"adopted_with_pr"`
+	OwnerTakeover int      `json:"owner_takeover"`
 	PRCreatedRate *float64 `json:"pr_created_rate"`
 	PRPending     int      `json:"pr_pending"`
 	PRLagP50      *float64 `json:"pr_lag_days_p50"`
@@ -139,6 +140,10 @@ type ScanMetrics struct {
 	MergeLeadP90   *float64 `json:"merge_lead_days_p90"`
 	E2ELeadP50     *float64 `json:"e2e_lead_days_p50"`
 }
+
+// PRCreatedSample is the pr_created_rate denominator: adopted issues minus the
+// ones the owner closed after implementing them by hand.
+func (s *ScanMetrics) PRCreatedSample() int { return s.Adopted - s.OwnerTakeover }
 
 // MonthMetrics is one cohort of the monthly trend, keyed by the month an issue
 // was opened in. Cohorts cover everything since Options.Since, not just the
@@ -295,7 +300,7 @@ func Compute(d *model.Dataset, opt *Options) Report {
 			anomalies.RejectedStillOpen = append(anomalies.RejectedStillOpen, issue.Number())
 		}
 		linked := prsByIssue[issue.Number()]
-		if issue.HasPRLabel() && len(linked) == 0 {
+		if issue.HasPRLabel() && len(linked) == 0 && !issue.IsClosed() {
 			anomalies.PRLabelWithoutPR = append(anomalies.PRLabelWithoutPR, issue.Number())
 		}
 		if !issue.HasPRLabel() && len(linked) > 0 {
@@ -387,6 +392,7 @@ type accumulator struct {
 	untrackedClose  int
 	rejectedAfterPR int
 	adoptedWithPR   int
+	ownerTakeover   int
 	prPending       int
 
 	oldestUntriagedAt    time.Time
@@ -422,10 +428,13 @@ func (a *accumulator) addIssue(issue *model.Issue, linked []*model.PullRequest, 
 	switch issue.Triage() {
 	case model.TriageAdopted:
 		a.adopted++
-		if len(linked) > 0 {
+		switch {
+		case len(linked) > 0:
 			a.adoptedWithPR++
 			a.prLag = append(a.prLag, daysBetween(issue.CreatedAt(), linked[0].CreatedAt()))
-		} else if !issue.IsClosed() {
+		case issue.IsClosed():
+			a.ownerTakeover++
+		default:
 			a.prPending++
 		}
 	case model.TriageRejected:
@@ -470,6 +479,7 @@ func (a *accumulator) merge(other *accumulator) {
 	a.untrackedClose += other.untrackedClose
 	a.rejectedAfterPR += other.rejectedAfterPR
 	a.adoptedWithPR += other.adoptedWithPR
+	a.ownerTakeover += other.ownerTakeover
 	a.prPending += other.prPending
 	if !other.oldestUntriagedAt.IsZero() &&
 		(a.oldestUntriagedAt.IsZero() || other.oldestUntriagedAt.Before(a.oldestUntriagedAt)) {
@@ -501,7 +511,7 @@ func (a *accumulator) finish(name string, o *Options) ScanMetrics {
 		OldestUntriagedIssue: a.oldestUntriagedIssue,
 		RejectLatencyP50:     quantile(a.rejectLatency, 0.5),
 		AdoptedWithPR:        a.adoptedWithPR,
-		PRCreatedRate:        rate(a.adoptedWithPR, a.adopted, o.MinSample),
+		OwnerTakeover:        a.ownerTakeover,
 		PRPending:            a.prPending,
 		PRLagP50:             quantile(a.prLag, 0.5),
 		PRs:                  a.prs,
@@ -513,6 +523,7 @@ func (a *accumulator) finish(name string, o *Options) ScanMetrics {
 		MergeLeadP90:         quantile(a.mergeLead, 0.9),
 		E2ELeadP50:           quantile(a.e2eLead, 0.5),
 	}
+	m.PRCreatedRate = rate(m.AdoptedWithPR, m.PRCreatedSample(), o.MinSample)
 	if !a.oldestUntriagedAt.IsZero() {
 		days := round1(daysBetween(a.oldestUntriagedAt, o.Now))
 		m.OldestUntriagedDays = &days
@@ -625,11 +636,11 @@ func EvaluateAlerts(r *Report, opt *Options) []Alert {
 				})
 			}
 		}
-		if s.Adopted >= o.AlertMinSample && s.PRPending >= t.PRPending {
-			if v := ratio(s.AdoptedWithPR, s.Adopted); v < t.PRCreatedRate {
+		if sample := s.PRCreatedSample(); sample >= o.AlertMinSample && s.PRPending >= t.PRPending {
+			if v := ratio(s.AdoptedWithPR, sample); v < t.PRCreatedRate {
 				add(Alert{
 					Kind: AlertPRCreatedRate, Scope: s.Scan,
-					Value: round4(v), Threshold: t.PRCreatedRate, Observed: s.AdoptedWithPR, Sample: s.Adopted,
+					Value: round4(v), Threshold: t.PRCreatedRate, Observed: s.AdoptedWithPR, Sample: sample,
 					OwnerPrompt: PRBotPrompt,
 				})
 			}
