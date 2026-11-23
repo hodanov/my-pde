@@ -56,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM base AS node-builder
 
 ARG NODE_VERSION=26.13.0
-ARG NPM_VERSION=12.2.1
+ARG NPM_VERSION=12.2.2
 ENV NODE_HOME="/opt/node"
 ENV PATH="${NODE_HOME}/bin:${PATH}"
 
@@ -135,7 +135,7 @@ FROM base AS rust-builder
 ARG RUSTUP_VERSION=1.29.3
 ARG RUST_TOOLCHAIN=stable
 ARG STYLUA_VERSION=2.6.0
-ARG TREE_SITTER_CLI_VERSION=0.27.1
+ARG TREE_SITTER_CLI_VERSION=0.27.2
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
 RUN set -eux; \
@@ -170,7 +170,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # Stage 5: Build Python venv with uv
 FROM base AS python-builder
 
-ARG UV_VERSION=0.13.6
+ARG UV_VERSION=0.13.7
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3008
 RUN set -eux; \
@@ -200,7 +200,7 @@ RUN set -eux; \
 
 COPY ./environment/tools/python/pyproject.toml ./environment/tools/python/uv.lock /opt/python/
 WORKDIR /opt/python
-ARG ZIZMOR_VERSION=1.31.1
+ARG ZIZMOR_VERSION=1.32.0
 RUN export PATH="$HOME/.local/bin:$PATH" \
   && uv sync --project . --locked \
   && uv pip install --python .venv/bin/python "zizmor==${ZIZMOR_VERSION}"
