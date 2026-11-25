@@ -4,8 +4,10 @@ export PATH="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims:$PATH"
 # Stop hook: lint files changed in the working tree and surface issues.
 # Non-blocking — it only reports; it never fails the turn.
 set -u
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INPUT=$(cat)
 [ "$(jq -r '.stop_hook_active // false' <<<"$INPUT")" = "false" ] || exit 0
+session_id=$(jq -r '.session_id // empty' <<<"$INPUT")
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 
@@ -41,7 +43,7 @@ while IFS= read -r f; do
 		fi
 		;;
 	*.md)
-		if command -v markdownlint-cli2 >/dev/null 2>&1 && ! markdownlint-cli2 "$f" >/dev/null 2>&1; then
+		if command -v markdownlint-cli2 >/dev/null 2>&1 && ! markdownlint-cli2 --config "$SCRIPT_DIR/.markdownlint-cli2.yaml" "$f" >/dev/null 2>&1; then
 			append_issue "- [markdownlint] $f"
 		fi
 		;;
@@ -74,7 +76,17 @@ if command -v golangci-lint >/dev/null 2>&1; then
 	done
 fi
 
-[ -n "$issues" ] || exit 0
+last_report_file="${TMPDIR:-/tmp}/claude-lint-changed-${session_id}"
+
+if [ -z "$issues" ]; then
+	rm -f "$last_report_file"
+	exit 0
+fi
+
+if [ -n "$session_id" ]; then
+	printf '%s' "$issues" | cmp -s - "$last_report_file" && exit 0
+	printf '%s' "$issues" >"$last_report_file"
+fi
 
 jq -n --arg ctx "lint issues on changed files (fix before marking the task done):
 $issues" '{hookSpecificOutput:{hookEventName:"Stop",additionalContext:$ctx}}'
