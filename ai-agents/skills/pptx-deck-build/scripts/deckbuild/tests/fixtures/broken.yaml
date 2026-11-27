@@ -1,0 +1,60 @@
+deck:
+  title: 壊れた spec
+  date: 2026-11-27
+  mode: projection
+  duration_min: 8
+  claim: 検証用の主張
+  audience:
+    persona: 検証者
+    knows: []
+    unknown: []
+  storyline: result-report
+chapters:
+  - role: goal
+    title: 目的
+    conclusion: 目的の結論
+    slides:
+      - pattern: bullets
+        headline: 短い
+        items: [a, b, c, d]
+      - pattern: numbers
+        headline: 数字から言える結論を書いた見出しの文
+        notes: 補足
+        items:
+          - { value: 10, label: a }
+          - { value: 20, label: b }
+      - pattern: agenda
+        headline: 目次を手書きしてはいけない見出しの文
+        notes: 補足
+  - role: background
+    title: 背景
+    conclusion: 背景の結論
+    slides:
+      - pattern: unknown-pattern
+        headline: 存在しないパターンを指定した見出しの文
+        notes: 補足
+      - pattern: table
+        headline: 表のハイライトが範囲外になっている見出しの文
+        focus: 見てほしい所
+        notes: 補足
+        columns: [a, b]
+        rows: [[1, 2]]
+        highlight: { row: 3, column: 1 }
+      - pattern: bar
+        headline: 棒グラフの値が数値ではない見出しの文を書く
+        focus: 見てほしい所
+        notes: 補足
+        items:
+          - { label: a, value: ten, highlight: true }
+          - { label: b, value: 2 }
+      - pattern: flow
+        headline: ノードが 1 つしかなく強調も無い見出しの文
+        focus: 見てほしい所
+        notes: 補足
+        nodes:
+          - { text: only }
+      - pattern: image
+        headline: 画像が見つからない見出しの文を書いておく
+        focus: 見てほしい所
+        notes: 補足
+        path: missing.png

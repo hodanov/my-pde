@@ -1,0 +1,16 @@
+error: chapters: 章の順序が storyline 'result-report' の role 順 (background, goal, approach, result, learning, next) と違う
+error: chapters: storyline 'result-report' に必須の章 'approach' (やったこと) が無い
+error: chapters: storyline 'result-report' に必須の章 'result' (結果) が無い
+error: chapters: storyline 'result-report' に必須の章 'learning' (学び・考察) が無い
+error: 章1 スライド1: headline が短い (4 < 14): ラベルではなく、そのスライドの結論を言い切る文にする
+error: 章1 スライド1: notes が空 (説明・補足・出典はノートに書く)
+error: 章1 スライド1: 項目が 4 個 (上限 3)
+error: 章1 スライド2: focus が無い (見てほしい所を 1 か所書く)
+error: 章1 スライド2: 数字の highlight は 1 つだけにする (今は 0 個)
+error: 章1 スライド3: pattern 'agenda' は自動生成する。spec には書かない
+error: 章2 スライド1: pattern 'unknown-pattern' は未定義 (使える: statement, bullets, cards, numbers, table, bar, flow, image)
+error: 章2 スライド2: highlight は {row: 1〜1, column: 1〜2} の 1 セルにする
+error: 章2 スライド3: items[1].value は 0 以上の数値にする
+error: 章2 スライド4: ノードが 1 個 (下限 2)
+error: 章2 スライド4: highlight は 1 個以上、全ノード未満にする (今は 0 個)
+error: 章2 スライド5: 画像が見つからない: missing.png (spec からの相対パス)

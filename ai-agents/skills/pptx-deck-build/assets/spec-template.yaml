@@ -1,0 +1,111 @@
+deck:
+  title: 週次レポート作成の自動化 成果報告
+  subtitle: 毎週3時間かかっていた作業を20分に減らした
+  date: 2026-11-27
+  author: 発表者名
+  mode: projection
+  duration_min: 8
+  claim: 週次レポートは、集計を自動化すれば3時間から20分に減らせる
+  audience:
+    persona: 同じチームのエンジニア。週次レポートを毎週手作業で作っている
+    knows: [週次レポート, スプレッドシート]
+    unknown: [集計ジョブ]
+  storyline: result-report
+chapters:
+  - role: background
+    title: 週次レポートに毎週3時間かかっていた
+    conclusion: 手作業の集計が、作成時間の大半を占めていた
+    slides:
+      - pattern: bar
+        headline: 自動化前は、180分のうち集計が120分を占めていた
+        focus: 集計の棒が、ほかの2工程より長いこと
+        unit: 分
+        items:
+          - { label: 集計, value: 120, highlight: true }
+          - { label: 整形, value: 40 }
+          - { label: 確認, value: 20 }
+        notes: 直近4週間の平均。工程ごとの時間は担当者の自己申告で測った。
+      - pattern: bullets
+        headline: 集計は毎週月曜に、3人がそれぞれ手作業で行っていた
+        items:
+          - 売上データを画面から書き出して、表計算に貼り付ける
+          - 担当者ごとに集計の手順が少しずつ違う
+        notes: 手順の違いが、数字のずれの原因になっていた。
+  - role: goal
+    title: 作成時間を30分以内にする
+    conclusion: 目標は、作成時間30分以内と集計ミス0件
+    slides:
+      - pattern: numbers
+        headline: 目標は、作成時間を180分から30分以内に減らすこと
+        focus: 右側の30分以内
+        items:
+          - { value: 180分, label: 自動化前の作成時間 }
+          - { value: 30分以内, label: 目標の作成時間, highlight: true }
+        notes: 30分は、会議の前に確認できる長さとして決めた。
+      - pattern: cards
+        headline: 目標は、時間・正確さ・引き継ぎやすさの3つで決めた
+        items:
+          - { title: 時間, text: 作成時間を30分以内にする }
+          - { title: 正確さ, text: 集計ミスを0件にする }
+          - { title: 引き継ぎ, text: 手順を文書に残す }
+        notes: 3つの目標の優先順位は、時間、正確さ、引き継ぎの順にした。
+  - role: approach
+    title: 取得・集計・整形の3段階に分けた
+    conclusion: 人が確認するのは、最後の1回だけにした
+    slides:
+      - pattern: flow
+        headline: データの取得から整形までを自動にし、人の確認は最後の1回にした
+        focus: 右端の、人が確認する箱
+        nodes:
+          - { text: 売上データを取得する }
+          - { text: 集計ジョブが集計する }
+          - { text: テンプレートに整形する }
+          - { text: 担当者が内容を確認する, highlight: true }
+        notes: 取得と集計は毎週月曜の朝に自動で動く。
+      - pattern: bullets
+        headline: 確認を人に残したのは、数字の意味を判断できるのが人だけだから
+        items:
+          - 異常な数字が出たときの原因は、画面からは分からない
+          - 確認する観点は、3つのチェック項目に絞った
+        notes: 確認の観点は文書にまとめてある。
+  - role: result
+    title: 作成時間は3時間から20分になった
+    conclusion: 作成時間は20分になり、集計ミスは0件になった
+    slides:
+      - pattern: table
+        headline: 導入後の4週間は、作成時間が平均20分で、集計ミスは0件だった
+        focus: 導入後の行の、平均20分
+        columns: [期間, 作成時間, 集計ミス]
+        rows:
+          - [導入前の4週間, 平均180分, 5件]
+          - [導入後の4週間, 平均20分, 0件]
+        highlight: { row: 2, column: 2 }
+        notes: 導入前は手作業の記録から、導入後はジョブの実行記録から数えた。
+      - pattern: bar
+        headline: 導入後は集計が120分から3分になり、整形が最も長い工程になった
+        focus: 整形の棒が、最も長いこと
+        unit: 分
+        items:
+          - { label: 整形, value: 12, highlight: true }
+          - { label: 確認, value: 5 }
+          - { label: 集計, value: 3 }
+        notes: 次に短くするなら整形。集計は 3 分まで減ったので、これ以上は狙わない。
+      - pattern: bullets
+        headline: 空いた時間で、数字の違いの原因を調べられるようになった
+        items:
+          - 以前は、報告書を作るだけで週の初めが終わっていた
+          - 今は、前の週との差の原因を調べる時間が取れる
+        notes: 原因を調べた結果は、チームの定例で共有している。
+  - role: learning
+    title: 手順を文書に残したことが効いた
+    conclusion: 集計の定義を文書に残したことで、引き継ぎやすくなった
+    slides:
+      - pattern: bullets
+        headline: 集計の定義を文書に残したことで、担当者が替わっても同じ数字が出る
+        items:
+          - 集計の定義を、ジョブの設定と同じ場所に置いた
+          - 担当者が替わった週も、数字がずれなかった
+        notes: 定義を直すときは、文書とジョブを同じ変更で直す。
+      - pattern: statement
+        headline: "次は、ほかの定期レポートにも\n同じ仕組みを広げたい"
+        notes: 候補は、月次の売上報告と障害の集計報告。
