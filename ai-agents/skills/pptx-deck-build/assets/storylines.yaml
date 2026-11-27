@@ -1,0 +1,18 @@
+result-report:
+  title: 成果報告
+  roles:
+    - { id: background, label: 背景・課題 }
+    - { id: goal, label: 目的 }
+    - { id: approach, label: やったこと }
+    - { id: result, label: 結果 }
+    - { id: learning, label: 学び・考察 }
+    - { id: next, label: 次にやること, optional: true }
+tech-share:
+  title: 技術共有
+  roles:
+    - { id: problem, label: 解決したい課題 }
+    - { id: options, label: 選択肢の比較 }
+    - { id: decision, label: 採用した方式と理由 }
+    - { id: usage, label: 使い方と結果 }
+    - { id: caveats, label: 注意点 }
+    - { id: takeaway, label: 持ち帰ること, optional: true }
